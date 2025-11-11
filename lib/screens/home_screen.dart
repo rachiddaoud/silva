@@ -3,7 +3,7 @@ import '../models/victory_card.dart';
 import '../models/emotion.dart';
 import '../models/theme_config.dart';
 import '../widgets/victory_card_widget.dart';
-import '../widgets/emotion_checkin_modal.dart';
+import 'day_completion_screen.dart';
 import '../widgets/today_history_toggle.dart';
 import '../widgets/history_view.dart';
 import '../widgets/profile_menu.dart';
@@ -82,16 +82,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showEmotionCheckin() {
-    showDialog(
-      context: context,
-      builder: (context) => EmotionCheckinModal(
-        victoriesCount: _victories.where((v) => v.isAccomplished).length,
-        onValidate: _completeDay,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => DayCompletionScreen(
+          victories: _victories,
+          onComplete: _completeDay,
+        ),
       ),
     );
   }
 
-  void _completeDay(Emotion emotion) {
+  void _completeDay(Emotion emotion, String comment) {
     final accomplishedCount =
         _victories.where((v) => v.isAccomplished).length;
 
@@ -106,13 +107,13 @@ class _HomeScreenState extends State<HomeScreen> {
         SnackBar(
           content: Text(
             "Bravo ! Vous avez terminé $accomplishedCount victoire${accomplishedCount > 1 ? 's' : ''} aujourd'hui.",
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w400,
-              color: Color(0xFF4A6B5A),
+              color: Theme.of(context).colorScheme.onTertiary,
             ),
           ),
-          backgroundColor: const Color(0xFFB5E5CF),
+          backgroundColor: Theme.of(context).colorScheme.tertiary,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -192,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          // Titre Accomplissements
+          // Titre Victoires
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: Row(
@@ -200,49 +201,30 @@ class _HomeScreenState extends State<HomeScreen> {
                 Icon(
                   Icons.star_rounded,
                   color: theme.colorScheme.secondary,
-                  size: 28,
+                  size: 24,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Accomplissements',
+                  'Victoires',
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 20,
                     fontWeight: FontWeight.w600,
                     color: theme.colorScheme.onSurface,
                     letterSpacing: 0.5,
                   ),
                 ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.tertiary.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    '${_victories.where((v) => v.isAccomplished).length}/9',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onTertiary,
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
-          // Grille 3x3 des victoires
+          // Grille 3x3 des victoires (taille réduite)
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.0,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.1,
             ),
             itemCount: _victories.length,
             itemBuilder: (context, index) {

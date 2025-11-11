@@ -28,64 +28,50 @@ class VictoryCardWidget extends StatelessWidget {
                 )
               : null,
           color: card.isAccomplished ? null : Colors.white,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: card.isAccomplished
                 ? const Color(0xFF8FD4B0)
                 : const Color(0xFFD0E8F5),
-            width: card.isAccomplished ? 2 : 1.5,
+            width: card.isAccomplished ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
               color: card.isAccomplished
-                  ? const Color(0xFFB5E5CF).withValues(alpha: 0.3)
-                  : const Color(0xFF89CFF0).withValues(alpha: 0.1),
-              blurRadius: card.isAccomplished ? 8 : 4,
-              offset: const Offset(0, 2),
+                  ? const Color(0xFFB5E5CF).withValues(alpha: 0.2)
+                  : const Color(0xFF89CFF0).withValues(alpha: 0.08),
+              blurRadius: card.isAccomplished ? 6 : 3,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(14.0),
+          padding: const EdgeInsets.all(8.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (card.isAccomplished)
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.3),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  Text(
-                    card.emoji,
-                    style: TextStyle(
-                      fontSize: card.isAccomplished ? 36 : 32,
-                    ),
-                  ),
-                ],
+              Text(
+                card.emoji,
+                style: TextStyle(
+                  fontSize: card.isAccomplished ? 28 : 24,
+                ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Flexible(
                 child: Text(
                   card.text,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     color: card.isAccomplished
                         ? const Color(0xFF4A6B5A)
                         : const Color(0xFF5A7A8A),
                     fontWeight: card.isAccomplished
                         ? FontWeight.w600
                         : FontWeight.w400,
-                    height: 1.3,
+                    height: 1.2,
                   ),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,

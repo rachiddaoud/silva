@@ -15,12 +15,14 @@ class TodayHistoryToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    const buttonWidth = 120.0;
+    final isHistory = selectedMode == ViewMode.history;
     
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 16),
-      padding: const EdgeInsets.all(4),
+      width: buttonWidth * 2,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
@@ -30,20 +32,55 @@ class TodayHistoryToggle extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
         children: [
-          _buildToggleButton(
-            context,
-            'Aujourd\'hui',
-            ViewMode.today,
-            theme,
+          // Pastille animée
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            left: isHistory ? buttonWidth : 0.0,
+            top: 0,
+            bottom: 0,
+            width: buttonWidth,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    theme.colorScheme.primary,
+                    theme.colorScheme.primary.withValues(alpha: 0.8),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+            ),
           ),
-          _buildToggleButton(
-            context,
-            'Historique',
-            ViewMode.history,
-            theme,
+          // Boutons avec texte
+          Row(
+            children: [
+              _buildToggleButton(
+                context,
+                'Aujourd\'hui',
+                ViewMode.today,
+                theme,
+                buttonWidth,
+              ),
+              _buildToggleButton(
+                context,
+                'Historique',
+                ViewMode.history,
+                theme,
+                buttonWidth,
+              ),
+            ],
           ),
         ],
       ),
@@ -55,40 +92,20 @@ class TodayHistoryToggle extends StatelessWidget {
     String label,
     ViewMode mode,
     ThemeData theme,
+    double width,
   ) {
     final isSelected = selectedMode == mode;
     
     return GestureDetector(
       onTap: () => onModeChanged(mode),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          gradient: isSelected
-              ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    theme.colorScheme.primary,
-                    theme.colorScheme.primary.withValues(alpha: 0.8),
-                  ],
-                )
-              : null,
-          color: isSelected ? null : Colors.transparent,
-          borderRadius: BorderRadius.circular(26),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
+      child: Container(
+        width: width,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Text(
           label,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 15,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,

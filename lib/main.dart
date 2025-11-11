@@ -1,73 +1,61 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
+import 'models/theme_config.dart';
+import 'services/preferences_service.dart';
+import 'services/notification_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialiser les notifications
+  await NotificationService.initialize();
+  await NotificationService.requestPermissions();
+  await NotificationService.scheduleDailyNotification();
+  
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  AppTheme _currentTheme = AppTheme.babyBlue;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTheme();
+  }
+
+  Future<void> _loadTheme() async {
+    final theme = await PreferencesService.getTheme();
+    setState(() {
+      _currentTheme = theme;
+    });
+  }
+
+  void _onThemeChanged(AppTheme theme) {
+    setState(() {
+      _currentTheme = theme;
+    });
+    PreferencesService.setTheme(theme);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final themeConfig = ThemeConfig.themes[_currentTheme]!;
+    
     return MaterialApp(
       title: 'Mes Petits Pas',
-      theme: ThemeData(
-        colorScheme: ColorScheme.light(
-          primary: const Color(0xFF89CFF0), // Baby blue joyeux
-          secondary: const Color(0xFFFFD4A3), // Pêche doux et chaleureux
-          tertiary: const Color(0xFFB5E5CF), // Vert menthe doux
-          surface: const Color(0xFFF0F9FF), // Bleu ciel très clair
-          error: const Color(0xFFFFB3BA), // Rose corail doux
-          onPrimary: Colors.white,
-          onSecondary: const Color(0xFF6B5B4F), // Beige foncé doux
-          onTertiary: const Color(0xFF4A6B5A), // Vert foncé doux
-          onSurface: const Color(0xFF5A7A8A), // Bleu-gris doux
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF0F9FF),
-        textTheme: const TextTheme(
-          bodyLarge: TextStyle(
-            fontSize: 18,
-            color: Color(0xFF5A7A8A),
-            fontWeight: FontWeight.w400,
-            height: 1.5,
-          ),
-          bodyMedium: TextStyle(
-            fontSize: 16,
-            color: Color(0xFF5A7A8A),
-            fontWeight: FontWeight.w400,
-            height: 1.5,
-          ),
-          titleLarge: TextStyle(
-            fontSize: 24,
-            color: Color(0xFF4A6B7A),
-            fontWeight: FontWeight.w500,
-            height: 1.4,
-          ),
-          titleMedium: TextStyle(
-            fontSize: 20,
-            color: Color(0xFF4A6B7A),
-            fontWeight: FontWeight.w500,
-            height: 1.4,
-          ),
-        ),
-        cardTheme: CardThemeData(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          elevation: 0,
-          color: Colors.white,
-        ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: const Color(0xFF89CFF0),
-          foregroundColor: Colors.white,
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-        ),
+      theme: themeConfig.toThemeData(),
+      home: HomeScreen(
+        onThemeChanged: _onThemeChanged,
+        currentTheme: _currentTheme,
       ),
-      home: const HomeScreen(),
     );
   }
 }

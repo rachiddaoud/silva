@@ -136,11 +136,13 @@ class _DayCompletionScreenState extends State<DayCompletionScreen> {
     
     final comment = _commentController.text.trim();
     final emotionText = selectedEmotion!.name;
+    final count = _accomplishedCount;
+    final plural = count > 1 ? 's' : '';
     
     final shareText = '''
 🌟 Ma journée du ${_formatDate(DateTime.now())}
 
-$_accomplishedCount victoire${_accomplishedCount > 1 ? 's' : ''} accomplie${_accomplishedCount > 1 ? 's' : ''} :
+$count victoire$plural accomplie$plural :
 $victoriesText
 
 💭 Comment je me sens : $emotionText ${selectedEmotion!.emoji}
@@ -153,8 +155,8 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
     Share.share(shareText);
   }
 
-  String _formatDate(DateTime date) {
-    final months = [
+  static String _formatDate(DateTime date) {
+    const months = [
       'janvier',
       'février',
       'mars',
@@ -186,7 +188,127 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
       selectedEmotion!,
       _commentController.text.trim(),
     );
-    Navigator.of(context).pop();
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  Widget _buildVictoriesRecap(ThemeData theme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.colorScheme.tertiary.withValues(alpha: 0.3),
+            theme.colorScheme.tertiary.withValues(alpha: 0.1),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: theme.colorScheme.tertiary.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_accomplishedCount == 0)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.favorite,
+                  color: theme.colorScheme.secondary,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Chaque petit pas compte, même les plus petits 🌱',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSecondary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          if (_accomplishedVictories.isNotEmpty)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: _accomplishedVictories.map((victory) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: theme.colorScheme.tertiary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        victory.emoji,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        victory.text,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmotionSelector(ThemeData theme) {
+    return Center(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final emotion in Emotion.emotions.take(5))
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: WireframeSmiley(
+                  emoji: emotion.emoji,
+                  isSelected: selectedEmotion == emotion,
+                  moodColor: emotion.moodColor,
+                  onTap: () {
+                    setState(() {
+                      selectedEmotion = emotion;
+                    });
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -211,233 +333,143 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Récapitulatif de la journée
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    theme.colorScheme.tertiary.withValues(alpha: 0.3),
-                    theme.colorScheme.tertiary.withValues(alpha: 0.1),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: theme.colorScheme.tertiary.withValues(alpha: 0.3),
-                  width: 1.5,
-                ),
-              ),
+      body: Column(
+        children: [
+          // Contenu scrollable
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (_accomplishedCount == 0)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.favorite,
-                          color: theme.colorScheme.secondary,
-                          size: 28,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Chaque petit pas compte, même les plus petits 🌱',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: theme.colorScheme.onSecondary,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ),
-                      ],
+                  // Récapitulatif de la journée
+                  _buildVictoriesRecap(theme),
+                  const SizedBox(height: 32),
+
+                  // Sélection de l'émotion
+                  Text(
+                    "Comment vous sentez-vous aujourd'hui ?",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
                     ),
-                  if (_accomplishedVictories.isNotEmpty) ...[
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      alignment: WrapAlignment.center,
-                      children: _accomplishedVictories.map((victory) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: theme.colorScheme.tertiary.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                victory.emoji,
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                victory.text,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: theme.colorScheme.onSurface,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Smileys emoji centrés sur une seule ligne (5 seulement)
+                  _buildEmotionSelector(theme),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
-            const SizedBox(height: 32),
-
-            // Sélection de l'émotion
-            Text(
-              "Comment vous sentez-vous aujourd'hui ?",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Smileys emoji centrés sur une seule ligne (5 seulement)
-            Center(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Prendre seulement les 5 premières émotions
-                    ...Emotion.emotions.take(5).toList().map((emotion) {
-                      final isSelected = selectedEmotion == emotion;
-                      
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: WireframeSmiley(
-                          emoji: emotion.emoji,
-                          isSelected: isSelected,
-                          moodColor: emotion.moodColor,
-                          onTap: () {
-                            setState(() {
-                              selectedEmotion = emotion;
-                            });
-                          },
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Champ de commentaire
-            Text(
-              'Un mot sur votre journée ?',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: TextField(
-                controller: _commentController,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  hintText: _displayedPlaceholder,
-                  hintStyle: TextStyle(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                    fontStyle: FontStyle.italic,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.all(20),
-                ),
-                style: TextStyle(
-                  color: theme.colorScheme.onSurface,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Boutons d'action
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: selectedEmotion != null ? _shareDay : null,
-                    icon: const Icon(Icons.share),
-                    label: const Text('Partager'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      side: BorderSide(
-                        color: theme.colorScheme.primary,
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton.icon(
-                    onPressed: selectedEmotion != null ? _validateDay : null,
-                    icon: const Icon(Icons.check_circle),
-                    label: const Text('Valider'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: theme.colorScheme.onPrimary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      elevation: 2,
-                    ),
-                  ),
+          ),
+          // Zone fixe en bas avec textarea et boutons
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: theme.scaffoldBackgroundColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-          ],
-        ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Champ de commentaire
+                Text(
+                  'Un mot sur votre journée ?',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _commentController,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      hintText: _displayedPlaceholder,
+                      hintStyle: TextStyle(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                        fontStyle: FontStyle.italic,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.all(20),
+                    ),
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Boutons d'action
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: selectedEmotion != null ? _shareDay : null,
+                        icon: const Icon(Icons.share),
+                        label: const Text('Partager'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          side: BorderSide(
+                            color: theme.colorScheme.primary,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        onPressed: selectedEmotion != null ? _validateDay : null,
+                        icon: const Icon(Icons.check_circle),
+                        label: const Text('Valider'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: theme.colorScheme.onPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          elevation: 2,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

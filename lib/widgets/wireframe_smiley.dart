@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// Widget pour afficher un emoji d'émotion dans un cercle avec bordure colorée
 class WireframeSmiley extends StatelessWidget {
   final String emoji;
   final bool isSelected;

@@ -3,6 +3,7 @@ import 'screens/home_screen.dart';
 import 'models/theme_config.dart';
 import 'services/preferences_service.dart';
 import 'services/notification_service.dart';
+import 'app_navigator.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +51,7 @@ class _MyAppState extends State<MyApp> {
     final themeConfig = ThemeConfig.themes[_currentTheme]!;
     
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Mes Petits Pas',
       theme: themeConfig.toThemeData(),
       home: HomeScreen(

@@ -197,6 +197,41 @@ class _ProfileMenuState extends State<ProfileMenu> {
               activeThumbColor: theme.colorScheme.primary,
             ),
           ),
+          // Test de notification
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.secondary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.bug_report,
+                color: theme.colorScheme.secondary,
+              ),
+            ),
+            title: const Text('Tester la notification'),
+            subtitle: Text(
+              'Envoyer une notification de test',
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            trailing: const Icon(Icons.send),
+            onTap: () async {
+              await NotificationService.showTestNotification();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Notification de test envoyée !'),
+                    backgroundColor: theme.colorScheme.secondary,
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+          ),
           const Divider(height: 32),
           // À propos (optionnel)
           ListTile(

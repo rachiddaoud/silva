@@ -5,6 +5,7 @@ class PreferencesService {
   static const String _themeKey = 'selected_theme';
   static const String _notificationsEnabledKey = 'notifications_enabled';
   static const String _historyKey = 'day_history';
+  static const String _lastResetDateKey = 'last_reset_date';
 
   // Thème
   static Future<AppTheme> getTheme() async {
@@ -44,6 +45,30 @@ class PreferencesService {
     history.add(entry);
     // Future: sérialiser en JSON et sauvegarder avec SharedPreferences
     // Pour l'instant, on ne sauvegarde pas vraiment
+  }
+
+  // Date de dernière réinitialisation des victoires
+  static Future<DateTime?> getLastResetDate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final dateString = prefs.getString(_lastResetDateKey);
+    if (dateString == null) return null;
+    return DateTime.parse(dateString);
+  }
+
+  static Future<void> setLastResetDate(DateTime date) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastResetDateKey, date.toIso8601String());
+  }
+
+  static Future<bool> shouldResetVictories() async {
+    final lastReset = await getLastResetDate();
+    if (lastReset == null) return true;
+    
+    final now = DateTime.now();
+    // Vérifier si on est passé à un nouveau jour
+    return now.year != lastReset.year ||
+        now.month != lastReset.month ||
+        now.day != lastReset.day;
   }
 }
 

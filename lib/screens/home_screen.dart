@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/victory_card.dart';
 import '../models/emotion.dart';
 import '../models/theme_config.dart';
@@ -7,6 +8,9 @@ import 'day_completion_screen.dart';
 import '../widgets/today_history_toggle.dart';
 import '../widgets/history_view.dart';
 import '../widgets/profile_menu.dart';
+import '../services/preferences_service.dart';
+import '../services/notification_service.dart';
+import '../app_navigator.dart';
 
 class HomeScreen extends StatefulWidget {
   final AppTheme currentTheme;
@@ -22,7 +26,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late List<VictoryCard> _victories;
   late PageController _pageController;
   ViewMode _currentView = ViewMode.today;
@@ -35,15 +39,59 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _victories = VictoryCard.getDefaultVictories();
     _pageController = PageController(initialPage: 0);
+    _checkAndResetVictories();
+    _setupNotificationCallback();
+  }
+
+  void _setupNotificationCallback() {
+    // Définir le callback pour gérer les clics sur les notifications
+    NotificationService.onNotificationTappedCallback = () {
+      // Naviguer vers l'écran de complétion avec les victoires actuelles
+      final navigator = navigatorKey.currentState;
+      if (navigator != null && mounted) {
+        navigator.push(
+          MaterialPageRoute(
+            builder: (context) => DayCompletionScreen(
+              victories: _victories,
+              onComplete: _completeDay,
+            ),
+          ),
+        );
+      }
+    };
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
+    // Nettoyer le callback
+    NotificationService.onNotificationTappedCallback = null;
     super.dispose();
   }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Vérifier si on doit réinitialiser quand l'app revient au premier plan
+    if (state == AppLifecycleState.resumed) {
+      _checkAndResetVictories();
+    }
+  }
+
+  Future<void> _checkAndResetVictories() async {
+    final shouldReset = await PreferencesService.shouldResetVictories();
+    if (shouldReset && mounted) {
+      setState(() {
+        _victories = VictoryCard.getDefaultVictories();
+      });
+      await PreferencesService.setLastResetDate(DateTime.now());
+    }
+  }
+
 
   void _onViewModeChanged(ViewMode mode) {
     setState(() {
@@ -96,10 +144,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final accomplishedCount =
         _victories.where((v) => v.isAccomplished).length;
 
-    // Réinitialiser toutes les cartes
-    setState(() {
-      _victories = VictoryCard.getDefaultVictories();
-    });
+    // Ne pas réinitialiser les victoires - elles seront réinitialisées à minuit
+    // Les victoires restent telles quelles après avoir terminé la journée
 
     // Afficher le message de félicitations
     if (mounted) {
@@ -143,54 +189,62 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           // Citation du jour
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             margin: const EdgeInsets.only(bottom: 24),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.white,
-                  theme.colorScheme.surface,
+                  theme.colorScheme.primary.withValues(alpha: 0.08),
+                  theme.colorScheme.secondary.withValues(alpha: 0.05),
                 ],
               ),
               borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                width: 2,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                  blurRadius: 12,
+                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                  blurRadius: 16,
                   offset: const Offset(0, 4),
+                  spreadRadius: 0,
                 ),
               ],
             ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.favorite,
-                  color: theme.colorScheme.error,
-                  size: 24,
+            child: RichText(
+              text: TextSpan(
+                style: GoogleFonts.greatVibes(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w400,
+                  color: theme.colorScheme.onSurface,
+                  height: 0.9,
+                  letterSpacing: 0.5,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _currentQuote,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontStyle: FontStyle.italic,
-                      color: theme.colorScheme.onSurface,
-                      height: 1.6,
+                children: [
+                  TextSpan(
+                    text: '❝ ',
+                    style: GoogleFonts.greatVibes(
+                      fontSize: 50,
                       fontWeight: FontWeight.w400,
+                      color: theme.colorScheme.primary,
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Icon(
-                  Icons.favorite,
-                  color: theme.colorScheme.error,
-                  size: 24,
-                ),
-              ],
+                  TextSpan(
+                    text: _currentQuote,
+                  ),
+                  TextSpan(
+                    text: ' ❞',
+                    style: GoogleFonts.greatVibes(
+                      fontSize: 50,
+                      fontWeight: FontWeight.w400,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           // Titre Victoires
@@ -304,4 +358,5 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
 

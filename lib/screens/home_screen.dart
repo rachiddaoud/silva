@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/victory_card.dart';
 import '../models/emotion.dart';
 import '../models/theme_config.dart';
+import '../models/day_entry.dart';
 import '../widgets/victory_card_widget.dart';
 import 'day_completion_screen.dart';
 import '../widgets/today_history_toggle.dart';
@@ -140,9 +141,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  void _completeDay(Emotion emotion, String comment) {
+  void _completeDay(Emotion emotion, String comment) async {
     final accomplishedCount =
         _victories.where((v) => v.isAccomplished).length;
+
+    // Récupérer les victoires accomplies
+    final accomplishedVictories =
+        _victories.where((v) => v.isAccomplished).toList();
+
+    // Créer l'entrée d'historique
+    final dayEntry = DayEntry(
+      date: DateTime.now(),
+      emotion: emotion,
+      comment: comment.isEmpty ? null : comment,
+      victoryCards: accomplishedVictories,
+    );
+
+    // Sauvegarder l'entrée
+    await PreferencesService.saveDayEntry(dayEntry);
 
     // Ne pas réinitialiser les victoires - elles seront réinitialisées à minuit
     // Les victoires restent telles quelles après avoir terminé la journée

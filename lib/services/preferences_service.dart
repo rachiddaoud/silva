@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/theme_config.dart';
+import '../models/day_entry.dart';
 
 class PreferencesService {
   static const String _themeKey = 'selected_theme';
@@ -30,21 +32,31 @@ class PreferencesService {
     await prefs.setBool(_notificationsEnabledKey, enabled);
   }
 
-  // Historique (pour futur usage)
-  static Future<List<Map<String, dynamic>>> getHistory() async {
+  // Historique
+  static Future<List<DayEntry>> getHistory() async {
     final prefs = await SharedPreferences.getInstance();
     final historyJson = prefs.getString(_historyKey);
     if (historyJson == null) return [];
-    // Pour l'instant, retourner une liste vide ou mock
-    // Future: parser le JSON
-    return [];
+    
+    try {
+      final List<dynamic> jsonList = jsonDecode(historyJson);
+      return jsonList
+          .map((json) => DayEntry.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      // En cas d'erreur de parsing, retourner une liste vide
+      return [];
+    }
   }
 
-  static Future<void> saveDayEntry(Map<String, dynamic> entry) async {
+  static Future<void> saveDayEntry(DayEntry entry) async {
     final history = await getHistory();
     history.add(entry);
-    // Future: sérialiser en JSON et sauvegarder avec SharedPreferences
-    // Pour l'instant, on ne sauvegarde pas vraiment
+    
+    // Sérialiser en JSON et sauvegarder
+    final prefs = await SharedPreferences.getInstance();
+    final jsonList = history.map((e) => e.toJson()).toList();
+    await prefs.setString(_historyKey, jsonEncode(jsonList));
   }
 
   // Date de dernière réinitialisation des victoires

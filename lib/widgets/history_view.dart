@@ -26,14 +26,43 @@ class _HistoryViewState extends State<HistoryView> {
       _isLoading = true;
     });
 
+    // Initialiser les données mock si l'historique est vide
+    await PreferencesService.initializeMockData();
+
     final history = await PreferencesService.getHistory();
     
+    // Générer une liste des 7 derniers jours (excluant aujourd'hui)
+    final now = DateTime.now();
+    final List<DayEntry> completeHistory = [];
+    
+    for (int i = 1; i <= 7; i++) {
+      final date = now.subtract(Duration(days: i));
+      // Normaliser la date à minuit pour la comparaison
+      final normalizedDate = DateTime(date.year, date.month, date.day);
+      
+      // Chercher si une entrée existe pour cette date
+      final existingEntry = history.firstWhere(
+        (e) {
+          final eNormalized = DateTime(e.date.year, e.date.month, e.date.day);
+          return eNormalized == normalizedDate;
+        },
+        orElse: () => DayEntry(
+          date: normalizedDate,
+          emotion: null, // Jour vide
+          comment: null,
+          victoryCards: [],
+        ),
+      );
+      
+      completeHistory.add(existingEntry);
+    }
+    
     // Trier par date décroissante (plus récent en premier)
-    history.sort((a, b) => b.date.compareTo(a.date));
+    completeHistory.sort((a, b) => b.date.compareTo(a.date));
 
     if (mounted) {
       setState(() {
-        _history = history;
+        _history = completeHistory;
         _isLoading = false;
       });
     }
@@ -112,15 +141,15 @@ class _HistoryViewState extends State<HistoryView> {
 // Widget pour une entrée de la timeline
 class _TimelineEntry extends StatelessWidget {
   final DateTime date;
-  final Emotion emotion;
+  final Emotion? emotion; // Nullable pour les jours non remplis
   final String? comment;
   final List<VictoryCard> victoryCards;
   final bool isLast;
 
   const _TimelineEntry({
     required this.date,
-    required this.emotion,
-    required this.comment,
+    this.emotion,
+    this.comment,
     required this.victoryCards,
     required this.isLast,
   });
@@ -154,9 +183,12 @@ class _TimelineEntry extends StatelessWidget {
         children: [
           // Timeline node (cercle + ligne)
           _TimelineNode(
-            color: emotion.moodColor,
-            emoji: emotion.emoji,
+            color: emotion != null 
+                ? emotion!.moodColor 
+                : theme.colorScheme.onSurface.withValues(alpha: 0.2),
+            emoji: emotion?.emoji ?? '○',
             isLast: isLast,
+            isEmpty: emotion == null,
           ),
           const SizedBox(width: 16),
           // Contenu
@@ -177,66 +209,103 @@ class _TimelineEntry extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        emotion.moodColor == const Color(0xFFFF6B6B) || 
-                        emotion.moodColor == const Color(0xFFFF8E53) ||
-                        emotion.moodColor == const Color(0xFFFFB347)
-                            ? Icons.mood_bad_rounded
-                            : emotion.moodColor == const Color(0xFFFFD93D)
-                                ? Icons.sentiment_neutral_rounded
-                                : Icons.mood_rounded,
-                        size: 16,
-                        color: emotion.moodColor,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        emotion.name,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurface,
+                  // Afficher l'émotion si présente, sinon "Jour non rempli"
+                  if (emotion != null) ...[
+                    Builder(
+                      builder: (context) {
+                        final e = emotion!; // Non-null dans ce bloc
+                        return Row(
+                          children: [
+                            Icon(
+                              e.moodColor == const Color(0xFFFF6B6B) || 
+                              e.moodColor == const Color(0xFFFF8E53) ||
+                              e.moodColor == const Color(0xFFFFB347)
+                                  ? Icons.mood_bad_rounded
+                                  : e.moodColor == const Color(0xFFFFD93D)
+                                      ? Icons.sentiment_neutral_rounded
+                                      : Icons.mood_rounded,
+                              size: 16,
+                              color: e.moodColor,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              e.name,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ] else
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.circle_outlined,
+                          size: 16,
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
                         ),
-                      ),
-                    ],
-                  ),
-                  // Commentaire si présent
-                  if (comment?.isNotEmpty ?? false) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          'Jour non rempli',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ),
+                  // Commentaire si présent (seulement si jour rempli)
+                  if (emotion != null && (comment?.isNotEmpty ?? false)) ...[
                     const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: emotion.moodColor.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: emotion.moodColor.withValues(alpha: 0.2),
-                          width: 1,
-                        ),
-                      ),
-                      child: Text(
-                        comment!,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
-                          height: 1.4,
-                        ),
-                      ),
+                    Builder(
+                      builder: (context) {
+                        final e = emotion!;
+                        return Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: e.moodColor.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: e.moodColor.withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            comment!,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                              height: 1.4,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
-                  // Tags des victoires
-                  if (victoryCards.isNotEmpty) ...[
+                  // Tags des victoires (seulement si jour rempli)
+                  if (emotion != null && victoryCards.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: victoryCards.map((victory) {
-                        return _VictoryTag(
-                          emoji: victory.emoji,
-                          text: victory.text,
-                          color: emotion.moodColor,
+                    Builder(
+                      builder: (context) {
+                        final e = emotion!;
+                        return Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: victoryCards.map((victory) {
+                            return _VictoryTag(
+                              emoji: victory.emoji,
+                              text: victory.text,
+                              color: e.moodColor,
+                            );
+                          }).toList(),
                         );
-                      }).toList(),
+                      },
                     ),
                   ],
                 ],
@@ -254,11 +323,13 @@ class _TimelineNode extends StatelessWidget {
   final Color color;
   final String emoji;
   final bool isLast;
+  final bool isEmpty;
 
   const _TimelineNode({
     required this.color,
     required this.emoji,
     required this.isLast,
+    this.isEmpty = false,
   });
 
   @override
@@ -272,17 +343,23 @@ class _TimelineNode extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
+              color: isEmpty 
+                  ? Colors.transparent 
+                  : color.withValues(alpha: 0.15),
               shape: BoxShape.circle,
               border: Border.all(
                 color: color,
-                width: 2.5,
+                width: isEmpty ? 1.5 : 2.5,
+                style: isEmpty ? BorderStyle.solid : BorderStyle.solid,
               ),
             ),
             child: Center(
               child: Text(
                 emoji,
-                style: const TextStyle(fontSize: 20),
+                style: TextStyle(
+                  fontSize: isEmpty ? 16 : 20,
+                  color: isEmpty ? color : null,
+                ),
               ),
             ),
           ),

@@ -1,7 +1,10 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/theme_config.dart';
 import '../models/day_entry.dart';
+import '../models/emotion.dart';
+import '../models/victory_card.dart';
 
 class PreferencesService {
   static const String _themeKey = 'selected_theme';
@@ -51,11 +54,105 @@ class PreferencesService {
 
   static Future<void> saveDayEntry(DayEntry entry) async {
     final history = await getHistory();
-    history.add(entry);
+    
+    // Vérifier si une entrée existe déjà pour cette date
+    final existingIndex = history.indexWhere((e) =>
+        e.date.year == entry.date.year &&
+        e.date.month == entry.date.month &&
+        e.date.day == entry.date.day);
+    
+    if (existingIndex >= 0) {
+      // Remplacer l'entrée existante
+      history[existingIndex] = entry;
+    } else {
+      // Ajouter la nouvelle entrée
+      history.add(entry);
+    }
     
     // Sérialiser en JSON et sauvegarder
     final prefs = await SharedPreferences.getInstance();
     final jsonList = history.map((e) => e.toJson()).toList();
+    await prefs.setString(_historyKey, jsonEncode(jsonList));
+  }
+
+  // Initialiser les données mock d'une semaine (seulement si l'historique est vide)
+  static Future<void> initializeMockData() async {
+    final history = await getHistory();
+    if (history.isNotEmpty) return; // Ne pas écraser les données existantes
+
+    final now = DateTime.now();
+    final defaultVictories = VictoryCard.getDefaultVictories();
+    final random = Random();
+    
+    // Liste de commentaires possibles
+    final possibleComments = [
+      'Très belle journée, je me sens vraiment bien !',
+      'Journée tranquille, quelques moments de repos.',
+      'Journée difficile mais j\'ai tenu bon.',
+      'Belle énergie aujourd\'hui !',
+      'Petit à petit, jour après jour.',
+      'J\'ai fait de mon mieux aujourd\'hui.',
+      'Quelques moments difficiles mais j\'ai réussi à tenir.',
+      'Journée calme et reposante.',
+      'Je suis fière de mes petits pas.',
+      'Chaque victoire compte, même les plus petites.',
+      'J\'ai pris soin de moi aujourd\'hui.',
+      'Journée chargée mais j\'ai géré.',
+      null, // Parfois pas de commentaire
+      null,
+    ];
+    
+    final mockEntries = <DayEntry>[];
+    
+    // Générer des données pour les 7 derniers jours
+    // Garantir qu'au moins 4 jours sur 7 sont remplis
+    final filledDaysCount = random.nextInt(4) + 4; // Entre 4 et 7 jours remplis
+    final filledDaysIndices = <int>{};
+    
+    // Choisir aléatoirement quels jours seront remplis
+    while (filledDaysIndices.length < filledDaysCount) {
+      filledDaysIndices.add(random.nextInt(7));
+    }
+    
+    for (int i = 0; i < 7; i++) {
+      final date = now.subtract(Duration(days: i + 1));
+      final isFilled = filledDaysIndices.contains(i);
+      
+      if (isFilled) {
+        // Choisir une émotion aléatoire
+        final emotionIndex = random.nextInt(Emotion.emotions.length);
+        final emotion = Emotion.emotions[emotionIndex];
+        
+        // Choisir un commentaire aléatoire (ou null)
+        final commentIndex = random.nextInt(possibleComments.length);
+        final comment = possibleComments[commentIndex];
+        
+        // Choisir un nombre aléatoire de victoires (entre 2 et 7)
+        final numVictories = random.nextInt(6) + 2; // 2 à 7 victoires
+        final shuffledVictories = List<VictoryCard>.from(defaultVictories);
+        shuffledVictories.shuffle(random);
+        final selectedVictories = shuffledVictories.take(numVictories).toList();
+        
+        mockEntries.add(DayEntry(
+          date: date,
+          emotion: emotion,
+          comment: comment,
+          victoryCards: selectedVictories,
+        ));
+      } else {
+        // Jour vide
+        mockEntries.add(DayEntry(
+          date: date,
+          emotion: null,
+          comment: null,
+          victoryCards: [],
+        ));
+      }
+    }
+
+    // Sauvegarder les données mock
+    final prefs = await SharedPreferences.getInstance();
+    final jsonList = mockEntries.map((e) => e.toJson()).toList();
     await prefs.setString(_historyKey, jsonEncode(jsonList));
   }
 

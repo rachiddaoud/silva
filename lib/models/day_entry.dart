@@ -3,22 +3,25 @@ import 'victory_card.dart';
 
 class DayEntry {
   final DateTime date;
-  final Emotion emotion;
+  final Emotion? emotion; // Nullable pour les jours non remplis
   final String? comment;
   final List<VictoryCard> victoryCards;
 
   DayEntry({
     required this.date,
-    required this.emotion,
+    this.emotion,
     this.comment,
-    required this.victoryCards,
+    this.victoryCards = const [],
   });
+
+  // Vérifier si l'entrée est vide (jour non rempli)
+  bool get isEmpty => emotion == null;
 
   // Sérialisation JSON
   Map<String, dynamic> toJson() {
     return {
       'date': date.toIso8601String(),
-      'emotionIndex': Emotion.emotions.indexOf(emotion),
+      'emotionIndex': emotion != null ? Emotion.emotions.indexOf(emotion!) : null,
       'comment': comment,
       'victoryCardIds': victoryCards.map((v) => v.id).toList(),
     };
@@ -26,10 +29,13 @@ class DayEntry {
 
   // Désérialisation JSON
   factory DayEntry.fromJson(Map<String, dynamic> json) {
-    final emotionIndex = json['emotionIndex'] as int;
-    final emotion = emotionIndex >= 0 && emotionIndex < Emotion.emotions.length
-        ? Emotion.emotions[emotionIndex]
-        : Emotion.emotions[3]; // Par défaut: Bof / Neutre
+    final emotionIndex = json['emotionIndex'] as int?;
+    Emotion? emotion;
+    if (emotionIndex != null && 
+        emotionIndex >= 0 && 
+        emotionIndex < Emotion.emotions.length) {
+      emotion = Emotion.emotions[emotionIndex];
+    }
 
     final victoryCardIds = (json['victoryCardIds'] as List<dynamic>?)
             ?.map((id) => id as int)

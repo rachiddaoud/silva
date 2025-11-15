@@ -11,6 +11,9 @@ class PreferencesService {
   static const String _notificationsEnabledKey = 'notifications_enabled';
   static const String _historyKey = 'day_history';
   static const String _lastResetDateKey = 'last_reset_date';
+  static const String _userNameKey = 'user_name';
+  static const String _dateOfBirthKey = 'date_of_birth';
+  static const String _onboardingCompleteKey = 'onboarding_complete';
 
   // Thème
   static Future<AppTheme> getTheme() async {
@@ -178,6 +181,41 @@ class PreferencesService {
     return now.year != lastReset.year ||
         now.month != lastReset.month ||
         now.day != lastReset.day;
+  }
+
+  // User name
+  static Future<String?> getUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userNameKey);
+  }
+
+  static Future<void> setUserName(String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userNameKey, name);
+  }
+
+  // Date of birth
+  static Future<DateTime?> getDateOfBirth() async {
+    final prefs = await SharedPreferences.getInstance();
+    final dateString = prefs.getString(_dateOfBirthKey);
+    if (dateString == null) return null;
+    return DateTime.parse(dateString);
+  }
+
+  static Future<void> setDateOfBirth(DateTime date) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_dateOfBirthKey, date.toIso8601String());
+  }
+
+  // Onboarding completion
+  static Future<bool> isOnboardingComplete() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_onboardingCompleteKey) ?? false;
+  }
+
+  static Future<void> setOnboardingComplete(bool complete) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_onboardingCompleteKey, complete);
   }
 }
 

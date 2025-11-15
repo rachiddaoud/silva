@@ -19,18 +19,35 @@ class ProfileMenu extends StatefulWidget {
 
 class _ProfileMenuState extends State<ProfileMenu> {
   bool _notificationsEnabled = true;
+  String? _userName;
+  DateTime? _dateOfBirth;
 
   @override
   void initState() {
     super.initState();
-    _loadNotificationsState();
+    _loadData();
   }
 
-  Future<void> _loadNotificationsState() async {
+  Future<void> _loadData() async {
     final enabled = await PreferencesService.areNotificationsEnabled();
+    final name = await PreferencesService.getUserName();
+    final dob = await PreferencesService.getDateOfBirth();
     setState(() {
       _notificationsEnabled = enabled;
+      _userName = name;
+      _dateOfBirth = dob;
     });
+  }
+
+  int? _calculateAge(DateTime? dateOfBirth) {
+    if (dateOfBirth == null) return null;
+    final now = DateTime.now();
+    int age = now.year - dateOfBirth.year;
+    if (now.month < dateOfBirth.month ||
+        (now.month == dateOfBirth.month && now.day < dateOfBirth.day)) {
+      age--;
+    }
+    return age;
   }
 
   Future<void> _toggleNotifications(bool value) async {
@@ -146,6 +163,52 @@ class _ProfileMenuState extends State<ProfileMenu> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
+          // User info section
+          if (_userName != null) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
+                    child: Icon(
+                      Icons.person,
+                      color: theme.colorScheme.primary,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _userName!,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        if (_dateOfBirth != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            '${_calculateAge(_dateOfBirth)} ans',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 32),
+          ],
           // Thème
           ListTile(
             leading: Container(

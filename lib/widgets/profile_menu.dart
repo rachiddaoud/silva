@@ -63,9 +63,25 @@ class _ProfileMenuState extends State<ProfileMenu> {
   }
 
   void _showThemeSelector() {
+    final colorThemes = [
+      AppTheme.babyBlue,
+      AppTheme.lavender,
+      AppTheme.rosePowder,
+      AppTheme.mint,
+      AppTheme.peach,
+    ];
+    
+    final seasonalThemes = [
+      AppTheme.spring,
+      AppTheme.summer,
+      AppTheme.autumn,
+      AppTheme.winter,
+    ];
+    
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) => Container(
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
@@ -80,62 +96,108 @@ class _ProfileMenuState extends State<ProfileMenu> {
               'Choisir un thème',
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
+            // Color themes section
+            Text(
+              'Couleurs',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 16,
-              runSpacing: 16,
-              children: AppTheme.values.map((theme) {
-                final config = ThemeConfig.themes[theme]!;
-                final isSelected = widget.currentTheme == theme;
-                
-                return GestureDetector(
-                  onTap: () {
-                    widget.onThemeChanged(theme);
-                    Navigator.pop(context);
-                  },
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          config.primary,
-                          config.secondary,
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isSelected
-                            ? config.primary
-                            : Colors.transparent,
-                        width: isSelected ? 3 : 0,
-                      ),
-                      boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                color: config.primary.withValues(alpha: 0.4),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: isSelected
-                        ? const Icon(
-                            Icons.check,
-                            color: Colors.white,
-                            size: 32,
-                          )
-                        : null,
-                  ),
-                );
+              runSpacing: 24,
+              children: colorThemes.map((theme) {
+                return _buildThemeButton(theme);
+              }).toList(),
+            ),
+            const SizedBox(height: 32),
+            // Seasonal themes section
+            Text(
+              'Saisons',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 16,
+              runSpacing: 24,
+              children: seasonalThemes.map((theme) {
+                return _buildThemeButton(theme);
               }).toList(),
             ),
             const SizedBox(height: 20),
           ],
         ),
+      ),
+    );
+  }
+  
+  Widget _buildThemeButton(AppTheme appTheme) {
+    final config = ThemeConfig.themes[appTheme]!;
+    final isSelected = widget.currentTheme == appTheme;
+    final theme = Theme.of(context);
+    
+    return GestureDetector(
+      onTap: () {
+        widget.onThemeChanged(appTheme);
+        Navigator.pop(context);
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  config.primary,
+                  config.secondary,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isSelected
+                    ? config.primary
+                    : Colors.transparent,
+                width: isSelected ? 3 : 0,
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: config.primary.withValues(alpha: 0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: isSelected
+                ? const Icon(
+                    Icons.check,
+                    color: Colors.white,
+                    size: 32,
+                  )
+                : null,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            config.name,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              color: theme.colorScheme.onSurface,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

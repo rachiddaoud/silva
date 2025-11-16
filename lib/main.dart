@@ -14,6 +14,7 @@ void main() async {
   await NotificationService.initialize();
   await NotificationService.requestPermissions();
   await NotificationService.scheduleDailyNotification();
+  await NotificationService.scheduleMorningNotification();
   
   runApp(const MyApp());
 }

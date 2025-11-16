@@ -14,6 +14,25 @@ class NotificationService {
   
   // Callback pour gérer la navigation depuis la notification
   static VoidCallback? onNotificationTappedCallback;
+  
+  // Constantes pour identifier le type de notification
+  static const String _morningNotificationType = 'morning_quote';
+  static const String _eveningNotificationType = 'evening_reminder';
+
+  // Citations du jour
+  static const List<String> _dailyQuotes = [
+    "Vous faites de votre mieux, et c'est suffisant.",
+    "Le repos n'est pas une récompense, c'est une nécessité.",
+    "Prendre soin de vous, c'est prendre soin de votre bébé.",
+  ];
+
+  // Obtenir la citation du jour
+  static String _getCurrentQuote() {
+    final dayOfYear = DateTime.now().difference(
+      DateTime(DateTime.now().year, 1, 1),
+    ).inDays;
+    return _dailyQuotes[dayOfYear % _dailyQuotes.length];
+  }
 
   static Future<void> initialize() async {
     tz.initializeTimeZones();
@@ -44,26 +63,35 @@ class NotificationService {
   }
 
   static void _onNotificationTapped(NotificationResponse response) {
-    // Appeler le callback personnalisé si défini (défini par HomeScreen)
-    // Ce callback utilisera les victoires actuelles du HomeScreen
-    if (onNotificationTappedCallback != null) {
-      onNotificationTappedCallback!();
+    final navigator = navigatorKey.currentState;
+    if (navigator == null) return;
+    
+    // Identifier le type de notification via le payload ou l'ID
+    final notificationType = response.payload ?? '';
+    final notificationId = response.id;
+    
+    // Notification du matin (ID 1 ou 998) -> naviguer vers l'accueil
+    if (notificationId == 1 || notificationId == 998 || notificationType == _morningNotificationType) {
+      // Pop toutes les routes jusqu'à la racine (accueil)
+      navigator.popUntil((route) => route.isFirst);
       return;
     }
     
-    // Fallback : naviguer avec des victoires par défaut si le callback n'est pas défini
-    final navigator = navigatorKey.currentState;
-    if (navigator != null) {
-      // Créer les victoires par défaut pour l'écran de complétion
-      final victories = VictoryCard.getDefaultVictories();
+    // Notification du soir (ID 0 ou 999) -> naviguer vers l'écran de complétion
+    if (notificationId == 0 || notificationId == 999 || notificationType == _eveningNotificationType) {
+      // Appeler le callback personnalisé si défini (défini par HomeScreen)
+      if (onNotificationTappedCallback != null) {
+        onNotificationTappedCallback!();
+        return;
+      }
       
-      // Naviguer vers l'écran de complétion
+      // Fallback : naviguer avec des victoires par défaut
+      final victories = VictoryCard.getDefaultVictories();
       navigator.push(
         MaterialPageRoute(
           builder: (context) => DayCompletionScreen(
             victories: victories,
             onComplete: (Emotion emotion, String comment) {
-              // Callback simple qui ferme juste l'écran
               navigator.pop();
             },
           ),
@@ -92,15 +120,24 @@ class NotificationService {
     final enabled = await PreferencesService.areNotificationsEnabled();
     if (!enabled) {
       await cancelDailyNotification();
+      await cancelMorningNotification();
       return;
     }
 
+    // Récupérer le nom de l'utilisateur
+    final userName = await PreferencesService.getUserName();
+    final name = userName ?? 'vous';
+    
+    // Formater le message avec le nom de l'utilisateur
+    final title = 'Terminer votre journée';
+    final body = '$name, n\'oubliez pas de terminer votre journée et de noter votre humeur !';
+
     await _notifications.zonedSchedule(
       0,
-      'Terminer votre journée',
-      'N\'oubliez pas de terminer votre journée et de noter votre humeur !',
+      title,
+      body,
       _nextInstanceOf22PM(),
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
           'daily_reminder',
           'Rappel quotidien',
@@ -118,6 +155,7 @@ class NotificationService {
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
+      payload: _eveningNotificationType,
     );
   }
 
@@ -143,12 +181,113 @@ class NotificationService {
     await _notifications.cancel(0);
   }
 
+  static Future<void> scheduleMorningNotification() async {
+    final enabled = await PreferencesService.areNotificationsEnabled();
+    if (!enabled) {
+      await cancelMorningNotification();
+      return;
+    }
+
+    // Récupérer le nom de l'utilisateur
+    final userName = await PreferencesService.getUserName();
+    final name = userName ?? 'vous';
+    
+    // Récupérer la citation du jour
+    final quote = _getCurrentQuote();
+    
+    // Formater le message avec le nom de l'utilisateur
+    final title = 'Bonjour $name !';
+    final body = 'Votre citation du jour : $quote';
+
+    await _notifications.zonedSchedule(
+      1, // ID différent de la notification du soir (0)
+      title,
+      body,
+      _nextInstanceOf9AM(),
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'morning_quote',
+          'Citation du matin',
+          channelDescription: 'Citation du jour à 9h du matin',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      // Ne pas utiliser matchDateTimeComponents car on reprogramme chaque jour
+      // pour mettre à jour la citation
+      payload: _morningNotificationType,
+    );
+  }
+
+  static tz.TZDateTime _nextInstanceOf9AM() {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      9,
+      0,
+    );
+
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    return scheduledDate;
+  }
+
+  static Future<void> cancelMorningNotification() async {
+    await _notifications.cancel(1);
+  }
+
   static Future<void> showTestNotification() async {
+    // Récupérer le nom de l'utilisateur
+    final userName = await PreferencesService.getUserName();
+    final name = userName ?? 'vous';
+    
+    // Récupérer la citation du jour
+    final quote = _getCurrentQuote();
+    
+    // Notification du matin (citation du jour)
     await _notifications.show(
-      999, // ID différent pour ne pas interférer avec la notification programmée
+      998, // ID différent pour ne pas interférer avec les notifications programmées
+      'Bonjour $name !',
+      'Votre citation du jour : $quote',
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'morning_quote',
+          'Citation du matin',
+          channelDescription: 'Citation du jour à 9h du matin',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      payload: _morningNotificationType,
+    );
+    
+    // Attendre un peu avant d'afficher la deuxième notification
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    // Notification du soir (rappel quotidien)
+    await _notifications.show(
+      999, // ID différent pour ne pas interférer avec les notifications programmées
       'Terminer votre journée',
-      'N\'oubliez pas de terminer votre journée et de noter votre humeur !',
-      const NotificationDetails(
+      '$name, n\'oubliez pas de terminer votre journée et de noter votre humeur !',
+      NotificationDetails(
         android: AndroidNotificationDetails(
           'daily_reminder',
           'Rappel quotidien',
@@ -162,6 +301,7 @@ class NotificationService {
           presentSound: true,
         ),
       ),
+      payload: _eveningNotificationType,
     );
   }
 }

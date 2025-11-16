@@ -57,8 +57,10 @@ class _ProfileMenuState extends State<ProfileMenu> {
     await PreferencesService.setNotificationsEnabled(value);
     if (value) {
       await NotificationService.scheduleDailyNotification();
+      await NotificationService.scheduleMorningNotification();
     } else {
       await NotificationService.cancelDailyNotification();
+      await NotificationService.cancelMorningNotification();
     }
   }
 
@@ -310,7 +312,7 @@ class _ProfileMenuState extends State<ProfileMenu> {
             title: const Text('Notifications'),
             subtitle: Text(
               _notificationsEnabled
-                  ? 'Rappel quotidien à 22h'
+                  ? 'Citation à 9h • Rappel à 22h'
                   : 'Notifications désactivées',
               style: TextStyle(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -335,9 +337,9 @@ class _ProfileMenuState extends State<ProfileMenu> {
                 color: theme.colorScheme.secondary,
               ),
             ),
-            title: const Text('Tester la notification'),
+            title: const Text('Tester les notifications'),
             subtitle: Text(
-              'Envoyer une notification de test',
+              'Envoyer toutes les notifications de test',
               style: TextStyle(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
@@ -348,7 +350,7 @@ class _ProfileMenuState extends State<ProfileMenu> {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: const Text('Notification de test envoyée !'),
+                    content: const Text('Notifications de test envoyées !'),
                     backgroundColor: theme.colorScheme.secondary,
                     behavior: SnackBarBehavior.floating,
                     duration: const Duration(seconds: 2),

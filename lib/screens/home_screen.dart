@@ -46,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _pageController = PageController(initialPage: 0);
     _checkAndResetVictories();
     _setupNotificationCallback();
+    _refreshMorningNotification();
   }
 
   void _setupNotificationCallback() {
@@ -81,6 +82,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Vérifier si on doit réinitialiser quand l'app revient au premier plan
     if (state == AppLifecycleState.resumed) {
       _checkAndResetVictories();
+      _refreshMorningNotification();
+    }
+  }
+
+  Future<void> _refreshMorningNotification() async {
+    // Reprogrammer les notifications pour mettre à jour la citation du jour et le nom de l'utilisateur
+    final enabled = await PreferencesService.areNotificationsEnabled();
+    if (enabled) {
+      await NotificationService.scheduleMorningNotification();
+      await NotificationService.scheduleDailyNotification();
     }
   }
 

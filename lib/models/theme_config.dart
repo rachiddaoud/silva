@@ -6,6 +6,10 @@ enum AppTheme {
   rosePowder,
   mint,
   peach,
+  spring,
+  summer,
+  autumn,
+  winter,
 }
 
 class ThemeConfig {
@@ -20,6 +24,7 @@ class ThemeConfig {
   final Color onTertiary;
   final Color onSurface;
   final Color scaffoldBackground;
+  final String? backgroundPath;
 
   const ThemeConfig({
     required this.name,
@@ -33,6 +38,7 @@ class ThemeConfig {
     required this.onTertiary,
     required this.onSurface,
     required this.scaffoldBackground,
+    this.backgroundPath,
   });
 
   static const Map<AppTheme, ThemeConfig> themes = {
@@ -48,6 +54,7 @@ class ThemeConfig {
       onTertiary: Color(0xFF4A6B5A),
       onSurface: Color(0xFF5A7A8A),
       scaffoldBackground: Color(0xFFF0F9FF),
+      backgroundPath: null,
     ),
     AppTheme.lavender: ThemeConfig(
       name: 'Lavande',
@@ -61,6 +68,7 @@ class ThemeConfig {
       onTertiary: Color(0xFF6B5A7A),
       onSurface: Color(0xFF6B5A8A),
       scaffoldBackground: Color(0xFFF5F0FF),
+      backgroundPath: null,
     ),
     AppTheme.rosePowder: ThemeConfig(
       name: 'Rose Poudré',
@@ -74,6 +82,7 @@ class ThemeConfig {
       onTertiary: Color(0xFF9B7B7D),
       onSurface: Color(0xFF7A6B7A),
       scaffoldBackground: Color(0xFFFFF0F5),
+      backgroundPath: null,
     ),
     AppTheme.mint: ThemeConfig(
       name: 'Menthe',
@@ -87,6 +96,7 @@ class ThemeConfig {
       onTertiary: Color(0xFF5A7B6A),
       onSurface: Color(0xFF5A7A6A),
       scaffoldBackground: Color(0xFFF0FFF5),
+      backgroundPath: null,
     ),
     AppTheme.peach: ThemeConfig(
       name: 'Pêche',
@@ -100,6 +110,63 @@ class ThemeConfig {
       onTertiary: Color(0xFF9B7B5F),
       onSurface: Color(0xFF7A6B5A),
       scaffoldBackground: Color(0xFFFFF8F0),
+      backgroundPath: null,
+    ),
+    AppTheme.spring: ThemeConfig(
+      name: 'Printemps',
+      primary: Color(0xFF90EE90),
+      secondary: Color(0xFFFFB6D9),
+      tertiary: Color(0xFFC8E6C9),
+      surface: Color(0xFFF1F8F4),
+      error: Color(0xFFFFB3BA),
+      onPrimary: Colors.white,
+      onSecondary: Color(0xFF6B4A5A),
+      onTertiary: Color(0xFF4A6B4A),
+      onSurface: Color(0xFF4A6B4A),
+      scaffoldBackground: Color(0xFFF1F8F4),
+      backgroundPath: 'assets/backgrounds/spring_bg.png',
+    ),
+    AppTheme.summer: ThemeConfig(
+      name: 'Été',
+      primary: Color(0xFF87CEEB),
+      secondary: Color(0xFFFFD700),
+      tertiary: Color(0xFFB0E0E6),
+      surface: Color(0xFFF0F8FF),
+      error: Color(0xFFFFB3BA),
+      onPrimary: Colors.white,
+      onSecondary: Color(0xFF6B5A2F),
+      onTertiary: Color(0xFF4A6B7A),
+      onSurface: Color(0xFF4A6B8A),
+      scaffoldBackground: Color(0xFFF0F8FF),
+      backgroundPath: 'assets/backgrounds/summer_bg.png',
+    ),
+    AppTheme.autumn: ThemeConfig(
+      name: 'Automne',
+      primary: Color(0xFFFF8C42),
+      secondary: Color(0xFFD2691E),
+      tertiary: Color(0xFFFFB347),
+      surface: Color(0xFFFFF5E6),
+      error: Color(0xFFFFB3BA),
+      onPrimary: Colors.white,
+      onSecondary: Colors.white,
+      onTertiary: Color(0xFF6B4A2F),
+      onSurface: Color(0xFF6B4A2F),
+      scaffoldBackground: Color(0xFFFFF5E6),
+      backgroundPath: 'assets/backgrounds/autumn_bg.png',
+    ),
+    AppTheme.winter: ThemeConfig(
+      name: 'Hiver',
+      primary: Color(0xFFADD8E6),
+      secondary: Color(0xFFE0F7FA),
+      tertiary: Color(0xFFB0BEC5),
+      surface: Color(0xFFF8FBFF),
+      error: Color(0xFFFFB3BA),
+      onPrimary: Color(0xFF1A4D6B),
+      onSecondary: Color(0xFF4A6B7A),
+      onTertiary: Color(0xFF5A6B7A),
+      onSurface: Color(0xFF4A5A6B),
+      scaffoldBackground: Color(0xFFF8FBFF),
+      backgroundPath: 'assets/backgrounds/winter_bg.png',
     ),
   };
 

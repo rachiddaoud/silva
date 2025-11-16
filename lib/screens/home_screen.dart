@@ -8,6 +8,7 @@ import '../widgets/victory_card_widget.dart';
 import 'day_completion_screen.dart';
 import '../widgets/today_history_toggle.dart';
 import '../widgets/history_view.dart';
+import '../widgets/path_view.dart';
 import '../widgets/profile_menu.dart';
 import '../services/preferences_service.dart';
 import '../services/notification_service.dart';
@@ -98,8 +99,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() {
       _currentView = mode;
     });
+    int pageIndex = 0;
+    if (mode == ViewMode.history) {
+      pageIndex = 1;
+    } else if (mode == ViewMode.path) {
+      pageIndex = 2;
+    }
     _pageController.animateToPage(
-      mode == ViewMode.today ? 0 : 1,
+      pageIndex,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
@@ -107,7 +114,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _onPageChanged(int index) {
     setState(() {
-      _currentView = index == 0 ? ViewMode.today : ViewMode.history;
+      if (index == 0) {
+        _currentView = ViewMode.today;
+      } else if (index == 1) {
+        _currentView = ViewMode.history;
+      } else if (index == 2) {
+        _currentView = ViewMode.path;
+      }
     });
   }
 
@@ -313,47 +326,76 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final themeConfig = ThemeConfig.themes[widget.currentTheme];
+    final backgroundPath = themeConfig?.backgroundPath;
     
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
+      body: Stack(
+        children: [
+          // Background image for seasonal themes
+          if (backgroundPath != null)
+            Positioned.fill(
+              child: Image.asset(
+                backgroundPath,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: theme.scaffoldBackgroundColor,
+                  );
+                },
+              ),
+            ),
+          // Main content
+          SafeArea(
+            child: Column(
+              children: [
+                // Toggle central
+                Center(
+                  child: TodayHistoryToggle(
+                    selectedMode: _currentView,
+                    onModeChanged: _onViewModeChanged,
+                  ),
+                ),
+                // PageView pour basculer entre les vues
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: _onPageChanged,
+                    children: [
+                      _buildTodayView(),
+                      const HistoryView(),
+                      const PathView(growthLevel: 0.5), // 50% par défaut
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Floating profile button
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 16,
             child: GestureDetector(
               onTap: _showProfileMenu,
-              child: CircleAvatar(
-                radius: 20,
-                backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.9),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(12),
                 child: Icon(
                   Icons.person,
-                  color: theme.colorScheme.primary,
+                  color: theme.colorScheme.onPrimary,
                   size: 24,
                 ),
               ),
-            ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Toggle central
-          Center(
-            child: TodayHistoryToggle(
-              selectedMode: _currentView,
-              onModeChanged: _onViewModeChanged,
-            ),
-          ),
-          // PageView pour basculer entre les vues
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: _onPageChanged,
-              children: [
-                _buildTodayView(),
-                const HistoryView(),
-              ],
             ),
           ),
         ],

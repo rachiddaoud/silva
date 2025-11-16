@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum ViewMode { today, history }
+enum ViewMode { today, history, path }
 
 class TodayHistoryToggle extends StatelessWidget {
   final ViewMode selectedMode;
@@ -15,12 +15,18 @@ class TodayHistoryToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const buttonWidth = 120.0;
-    final isHistory = selectedMode == ViewMode.history;
+    const buttonWidth = 100.0;
+    double leftPosition = 0.0;
+    
+    if (selectedMode == ViewMode.history) {
+      leftPosition = buttonWidth;
+    } else if (selectedMode == ViewMode.path) {
+      leftPosition = buttonWidth * 2;
+    }
     
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 16),
-      width: buttonWidth * 2,
+      width: buttonWidth * 3,
       decoration: BoxDecoration(
         color: theme.colorScheme.onSurface.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(30),
@@ -38,7 +44,7 @@ class TodayHistoryToggle extends StatelessWidget {
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
-            left: isHistory ? buttonWidth : 0.0,
+            left: leftPosition,
             top: 0,
             bottom: 0,
             width: buttonWidth,
@@ -77,6 +83,13 @@ class TodayHistoryToggle extends StatelessWidget {
                 context,
                 'Historique',
                 ViewMode.history,
+                theme,
+                buttonWidth,
+              ),
+              _buildToggleButton(
+                context,
+                'Chemin',
+                ViewMode.path,
                 theme,
                 buttonWidth,
               ),

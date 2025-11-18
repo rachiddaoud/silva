@@ -71,6 +71,7 @@ flutter:
     - assets/icons/
     - assets/animations/
     - assets/backgrounds/
+    - assets/doodles/
     - assets/leaf.png
     - assets/terre.png
 

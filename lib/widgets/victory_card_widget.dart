@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/victory_card.dart';
+import '../utils/sprite_utils.dart';
 
 class VictoryCardWidget extends StatelessWidget {
   final VictoryCard card;
@@ -52,11 +53,11 @@ class VictoryCardWidget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                card.emoji,
-                style: TextStyle(
-                  fontSize: card.isAccomplished ? 28 : 24,
-                ),
+              // Display sprite from sprite sheet
+              SpriteDisplay(
+                victoryId: card.spriteId,
+                size: card.isAccomplished ? 64 : 56,
+                showBorder: false,
               ),
               const SizedBox(height: 6),
               Flexible(

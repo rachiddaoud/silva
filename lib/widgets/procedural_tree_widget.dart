@@ -502,7 +502,18 @@ class TreePainter extends CustomPainter {
         // Taille de la feuille
         final leafSeed = branchSeed + addedCount * 100 + existingLeavesOnBranch;
         final leafRandom = math.Random(leafSeed);
-        final maxSize = 0.5 + leafRandom.nextDouble() * 1.0;
+        // Augmenter le minimum pour compenser la réduction de baseSize (0.5 -> 0.625)
+        var maxSize = 0.625 + leafRandom.nextDouble() * 1.0;
+        
+        // Réduire la taille des feuilles sur les branches d'extrémité
+        final sizeReduction = branch.depth >= parameters.maxDepth 
+            ? 0.5  // Réduction de 50% pour les branches finales (extrémités)
+            : (branch.depth >= parameters.maxDepth - 1 
+                ? 0.7  // Réduction de 30% pour les branches proches des extrémités
+                : (branch.depth >= parameters.maxDepth - 2
+                    ? 0.85  // Réduction de 15% pour les branches moyennes
+                    : 1.0)); // Pas de réduction pour les autres branches
+        maxSize *= sizeReduction;
         
         // Position finale : la feuille s'éloigne du centre de la branche d'une distance égale à l'épaisseur / 2
         final side = leafRandom.nextBool() ? 1 : -1;
@@ -618,7 +629,18 @@ class TreePainter extends CustomPainter {
         // 4. Taille maximale aléatoire de la feuille (déterministe basé sur la position)
         final leafSeed = branchSeed + j * 100;
         final leafRandom = math.Random(leafSeed);
-        final maxSize = 0.5 + leafRandom.nextDouble() * 1.0;
+        // Augmenter le minimum pour compenser la réduction de baseSize (0.5 -> 0.625)
+        var maxSize = 0.625 + leafRandom.nextDouble() * 1.0;
+        
+        // Réduire la taille des feuilles sur les branches d'extrémité
+        final sizeReduction = branch.depth >= parameters.maxDepth 
+            ? 0.5  // Réduction de 50% pour les branches finales (extrémités)
+            : (branch.depth >= parameters.maxDepth - 1 
+                ? 0.7  // Réduction de 30% pour les branches proches des extrémités
+                : (branch.depth >= parameters.maxDepth - 2
+                    ? 0.85  // Réduction de 15% pour les branches moyennes
+                    : 1.0)); // Pas de réduction pour les autres branches
+        maxSize *= sizeReduction;
         
         // 5. Position finale : depuis le centre de la branche, aller vers l'extérieur
         // La feuille doit s'éloigner du centre de la branche d'une distance égale à l'épaisseur de la branche / 2

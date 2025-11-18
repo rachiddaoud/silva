@@ -375,7 +375,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     children: [
                       _buildTodayView(),
                       const HistoryView(),
-                      const PathView(growthLevel: 0.5), // 50% par défaut
+                      const PathView(),
                     ],
                   ),
                 ),

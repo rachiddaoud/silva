@@ -54,10 +54,10 @@ class TreeParameters {
   final int seed;
 
   const TreeParameters({
-    this.maxDepth = 10,
+    this.maxDepth = 6,
     this.baseBranchAngle = 32.2 * math.pi / 180,
     this.lengthRatio = 0.78,
-    this.thicknessRatio = 0.64,
+    this.thicknessRatio = 0.54,
     this.angleVariation = 0.25,
     this.curveIntensity = 0.20,
     this.seed = 610940,
@@ -116,11 +116,13 @@ class ProceduralTreeWidget extends StatefulWidget {
 
 class _ProceduralTreeWidgetState extends State<ProceduralTreeWidget> {
   ui.Image? _leafImage;
+  ui.Image? _groundImage;
 
   @override
   void initState() {
     super.initState();
     _loadLeafImage();
+    _loadGroundImage();
   }
 
   Future<void> _loadLeafImage() async {
@@ -140,18 +142,36 @@ class _ProceduralTreeWidgetState extends State<ProceduralTreeWidget> {
     }
   }
 
+  Future<void> _loadGroundImage() async {
+    try {
+      final ByteData data = await rootBundle.load('assets/terre.png');
+      final Uint8List bytes = data.buffer.asUint8List();
+      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+      final ui.FrameInfo frameInfo = await codec.getNextFrame();
+      if (mounted) {
+        setState(() {
+          _groundImage = frameInfo.image;
+        });
+      }
+    } catch (e) {
+      // Si l'image ne peut pas être chargée, on ne dessinera pas de terre
+      _groundImage = null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: widget.size,
       height: widget.size,
       child: CustomPaint(
-        painter: TreePainter(
-          growthLevel: widget.growthLevel,
-          treeSize: widget.size,
-          parameters: widget.parameters,
-          leafImage: _leafImage,
-        ),
+            painter: TreePainter(
+              growthLevel: widget.growthLevel,
+              treeSize: widget.size,
+              parameters: widget.parameters,
+              leafImage: _leafImage,
+              groundImage: _groundImage,
+            ),
       ),
     );
   }
@@ -163,15 +183,20 @@ class TreePainter extends CustomPainter {
   final double treeSize;
   final TreeParameters parameters;
   final ui.Image? leafImage;
+  final ui.Image? groundImage;
   late final List<TreeBranch> _branches;
   List<LeafInfo> _leaves = []; // Mutable car réassigné dans _optimizeLeafDistribution
+  late final double _fractionalDepth; // Profondeur fractionnaire pour croissance progressive
 
   TreePainter({
     required this.growthLevel,
     required this.treeSize,
     required this.parameters,
     this.leafImage,
+    this.groundImage,
   }) {
+    // Calculer la profondeur fractionnaire pour croissance progressive
+    _fractionalDepth = parameters.maxDepth * growthLevel.clamp(0.0, 1.0);
     _branches = [];
     _leaves = [];
     _generateTree();
@@ -232,15 +257,27 @@ class TreePainter extends CustomPainter {
 
   void _generateTree() {
     final random = math.Random(parameters.seed);
-    final effectiveDepth = (parameters.maxDepth * growthLevel.clamp(0.0, 1.0)).ceil();
+    final effectiveDepth = _fractionalDepth.floor();
+    final depthFraction = _fractionalDepth - effectiveDepth; // Fraction du dernier niveau (0.0 à 1.0)
     
-    if (effectiveDepth == 0) return;
+    if (effectiveDepth == 0 && depthFraction < 0.01) return;
 
-    // Position de départ (bas du tronc, centré horizontalement et verticalement)
-    final startX = treeSize / 2;
-    final startY = treeSize * 0.75; // Centré verticalement (75% du bas pour laisser de l'espace)
-    final trunkLength = treeSize * 0.25; // Longueur du tronc principal (réduite)
-    final trunkThickness = treeSize * 0.06; // Épaisseur du tronc (réduite)
+    // Position de départ : centre vertical de la terre (où l'arbre sort de la terre)
+    final treeBase = _getTreeBasePosition();
+    final startX = treeBase.dx;
+    final startY = treeBase.dy;
+    
+    // Le tronc grandit progressivement avec le niveau de croissance
+    // Commence très petit (comme une graine) et s'élargit au fur et à mesure
+    final growthFactor = growthLevel.clamp(0.0, 1.0); // Facteur de croissance (0.0 à 1.0)
+    
+    // Longueur du tronc : commence à 5% et grandit jusqu'à 25% de la taille de l'arbre
+    final trunkLength = treeSize * (0.05 + 0.20 * growthFactor);
+    
+    // Épaisseur du tronc : commence très fine (1%) et s'élargit jusqu'à 6% de la taille de l'arbre
+    // Utiliser une courbe pour que l'élargissement soit plus visible au début
+    final thicknessGrowth = growthFactor * growthFactor; // Courbe quadratique pour un élargissement progressif
+    final trunkThickness = treeSize * (0.01 + 0.05 * thicknessGrowth);
 
     // Calcul de l'extrémité du tronc
     final trunkAngle = -math.pi / 2; // Vers le haut
@@ -269,17 +306,20 @@ class TreePainter extends CustomPainter {
 
     // Génération récursive des branches
     _branches.add(trunk);
-    _generateBranches(trunk, effectiveDepth, random);
+    _generateBranches(trunk, effectiveDepth, depthFraction, random);
   }
 
   void _generateBranches(
     TreeBranch parent,
     int maxDepth,
+    double depthFraction,
     math.Random random,
   ) {
     // Nombre de branches (2 ou 3)
     final numBranches = random.nextBool() ? 2 : 3;
 
+    final newDepth = parent.depth + 1;
+    
     for (int i = 0; i < numBranches; i++) {
       // Angle de branchement avec variation
       final angleVariationFactor = (random.nextDouble() - 0.5) * parameters.angleVariation;
@@ -289,7 +329,12 @@ class TreePainter extends CustomPainter {
 
       // Longueur avec variation
       final lengthVariation = 0.85 + random.nextDouble() * 0.3; // 0.85 à 1.15
-      final branchLength = parent.length * parameters.lengthRatio * lengthVariation;
+      var branchLength = parent.length * parameters.lengthRatio * lengthVariation;
+      
+      // Si on est au dernier niveau partiel, réduire la longueur progressivement
+      if (newDepth == maxDepth && depthFraction < 1.0) {
+        branchLength *= depthFraction; // Réduire la longueur selon la fraction
+      }
 
       // Épaisseur décroissante
       final branchThickness = parent.thickness * parameters.thicknessRatio;
@@ -318,7 +363,6 @@ class TreePainter extends CustomPainter {
 
       // Générer des positions de feuilles le long de la branche
       final leaves = <LeafInfo>[];
-      final newDepth = parent.depth + 1;
       
       // Calculer le nombre de feuilles en fonction de la taille de l'arbre et de la longueur de la branche
       // Plus la branche est longue et plus on est profond, plus il y a de feuilles
@@ -404,7 +448,7 @@ class TreePainter extends CustomPainter {
 
       // Récursion pour les branches enfants
       if (newDepth < maxDepth) {
-        _generateBranches(branch, maxDepth, random);
+        _generateBranches(branch, maxDepth, depthFraction, random);
       }
     }
   }
@@ -423,6 +467,7 @@ class TreePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Dessiner l'arbre en premier (en arrière-plan)
     // Dessiner les branches (du plus profond au moins profond pour le z-ordering)
     final sortedBranches = List<TreeBranch>.from(_branches)
       ..sort((a, b) => b.depth.compareTo(a.depth));
@@ -435,6 +480,76 @@ class TreePainter extends CustomPainter {
     for (final leafInfo in _leaves) {
       _drawLeaf(canvas, leafInfo);
     }
+    
+    // Dessiner la terre par-dessus (en premier plan) pour que l'arbre soit derrière
+    _drawGround(canvas, size);
+  }
+
+  /// Dessine l'image de terre à la base de l'arbre
+  void _drawGround(Canvas canvas, Size size) {
+    if (groundImage == null) return;
+    
+    // Dimensions de l'image de terre
+    final imageWidth = groundImage!.width.toDouble();
+    final imageHeight = groundImage!.height.toDouble();
+    final aspectRatio = imageWidth / imageHeight;
+    
+    // Largeur de la terre : un peu plus large que l'arbre pour un effet naturel
+    final groundWidth = treeSize * 0.8;
+    final groundHeight = groundWidth / aspectRatio;
+    
+    // Position : centrée horizontalement, positionnée pour que le centre vertical soit à la base de l'arbre
+    final groundX = (size.width - groundWidth) / 2;
+    // Le centre vertical de la terre doit être à la position de départ du tronc
+    final treeBaseY = treeSize * 0.75;
+    final groundY = treeBaseY - groundHeight / 2; // Centrer verticalement sur la base de l'arbre
+    
+    // Rectangle de destination
+    final dstRect = Rect.fromLTWH(
+      groundX,
+      groundY,
+      groundWidth,
+      groundHeight,
+    );
+    
+    // Rectangle source (toute l'image)
+    final srcRect = Rect.fromLTWH(0, 0, imageWidth, imageHeight);
+    
+    // Dessiner l'image de terre
+    canvas.drawImageRect(
+      groundImage!,
+      srcRect,
+      dstRect,
+      Paint()..filterQuality = FilterQuality.high,
+    );
+  }
+  
+  /// Calcule la position de départ du tronc (centre vertical de la terre)
+  Offset _getTreeBasePosition() {
+    if (groundImage == null) {
+      // Fallback si pas d'image de terre
+      return Offset(treeSize / 2, treeSize * 0.75);
+    }
+    
+    // Dimensions de l'image de terre
+    final imageWidth = groundImage!.width.toDouble();
+    final imageHeight = groundImage!.height.toDouble();
+    final aspectRatio = imageWidth / imageHeight;
+    
+    // Largeur de la terre
+    final groundWidth = treeSize * 0.8;
+    final groundHeight = groundWidth / aspectRatio;
+    
+    // Position de la terre
+    final groundX = (treeSize - groundWidth) / 2;
+    final treeBaseY = treeSize * 0.75;
+    final groundY = treeBaseY - groundHeight / 2;
+    
+    // Le centre vertical de la terre (où l'arbre doit commencer)
+    final groundCenterX = groundX + groundWidth / 2;
+    final groundCenterY = groundY + groundHeight / 2;
+    
+    return Offset(groundCenterX, groundCenterY);
   }
 
   void _drawBranch(Canvas canvas, TreeBranch branch) {
@@ -458,6 +573,13 @@ class TreePainter extends CustomPainter {
       ..style = PaintingStyle.fill
       ..strokeCap = StrokeCap.round;
 
+    // Vérifier si la branche a des enfants (branches qui commencent à son extrémité)
+    final tolerance = treeSize * 0.01; // Tolérance relative à la taille de l'arbre
+    final hasChildren = _branches.any((b) => 
+      b.depth == branch.depth + 1 && 
+      (b.start - branch.end).distance < tolerance // Tolérance pour les erreurs d'arrondi
+    );
+
     // Dessiner la branche avec une courbe de Bézier arrondie
     // On crée un path avec une épaisseur variable le long de la courbe
     final path = Path();
@@ -465,7 +587,12 @@ class TreePainter extends CustomPainter {
     // Nombre de segments pour créer une courbe lisse
     const numSegments = 20;
     final halfThicknessStart = (branch.thickness / parameters.thicknessRatio) / 2;
-    final halfThicknessEnd = branch.thickness / 2;
+    
+    // Si la branche n'a pas d'enfants, elle se termine en pointe (épaisseur proche de zéro)
+    // Sinon, elle garde une épaisseur minimale pour se connecter aux branches enfants
+    final halfThicknessEnd = hasChildren 
+      ? branch.thickness / 2 // Épaisseur normale si elle a des enfants
+      : branch.thickness * 0.05; // Presque zéro pour terminer en pointe
     
     // Points le long de la courbe pour créer le contour
     final topPoints = <Offset>[];
@@ -479,8 +606,10 @@ class TreePainter extends CustomPainter {
       final tangent = _bezierTangent(branch.start, branch.controlPoint, branch.end, t);
       final perpAngle = math.atan2(tangent.dy, tangent.dx) + math.pi / 2;
       
-      // Épaisseur interpolée
-      final thickness = halfThicknessStart * (1 - t) + halfThicknessEnd * t;
+      // Épaisseur interpolée avec une courbe d'ease-out pour une transition plus naturelle
+      // Utiliser une fonction quadratique pour créer une pointe plus naturelle
+      final easeOut = 1 - (1 - t) * (1 - t); // Courbe d'ease-out quadratique
+      final thickness = halfThicknessStart * (1 - easeOut) + halfThicknessEnd * easeOut;
       
       topPoints.add(Offset(
         point.dx + math.cos(perpAngle) * thickness,
@@ -635,6 +764,7 @@ class TreePainter extends CustomPainter {
     return oldDelegate.growthLevel != growthLevel ||
         oldDelegate.treeSize != treeSize ||
         oldDelegate.leafImage != leafImage ||
+        oldDelegate.groundImage != groundImage ||
         oldDelegate.parameters.seed != parameters.seed ||
         oldDelegate.parameters.maxDepth != parameters.maxDepth ||
         oldDelegate.parameters.baseBranchAngle != parameters.baseBranchAngle ||

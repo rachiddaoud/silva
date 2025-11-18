@@ -4,12 +4,7 @@ import 'procedural_tree_widget.dart';
 
 /// Vue simple du chemin avec seulement l'animation de l'arbre
 class PathView extends StatefulWidget {
-  final double growthLevel; // 0.0 à 1.0 (0% à 100%)
-
-  const PathView({
-    super.key,
-    this.growthLevel = 0.5,
-  });
+  const PathView({super.key});
 
   @override
   State<PathView> createState() => _PathViewState();
@@ -18,6 +13,7 @@ class PathView extends StatefulWidget {
 class _PathViewState extends State<PathView> {
   late TreeParameters _treeParameters;
   final math.Random _random = math.Random();
+  double _growthLevel = 0.05; // Commence petit comme une graine (5%)
 
   @override
   void initState() {
@@ -28,6 +24,15 @@ class _PathViewState extends State<PathView> {
   void _randomizeTree() {
     setState(() {
       _treeParameters = TreeParameters.random(_random);
+    });
+  }
+
+  void _growTree() {
+    setState(() {
+      // Augmenter le niveau de croissance progressivement (moins qu'un niveau complet)
+      // Incrément très petit pour voir la croissance visuellement à chaque clic
+      // Avec maxDepth=10, chaque niveau = 10%, donc 0.02 = 2% = fraction visible d'un niveau
+      _growthLevel = (_growthLevel + 0.02).clamp(0.0, 1.0); // 2% par clic pour progression visible
     });
   }
 
@@ -72,7 +77,7 @@ class _PathViewState extends State<PathView> {
                   0.0,
                   MediaQuery.of(context).size.height * 0.5,
                 ),
-                growthLevel: widget.growthLevel,
+                growthLevel: _growthLevel,
                 parameters: _treeParameters,
               ),
             ),
@@ -83,6 +88,19 @@ class _PathViewState extends State<PathView> {
             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
             child: Column(
               children: [
+                // Bouton pour faire grandir l'arbre
+                ElevatedButton.icon(
+                  onPressed: _growthLevel >= 1.0 ? null : _growTree,
+                  icon: const Icon(Icons.arrow_upward),
+                  label: Text('Faire grandir (${(_growthLevel * 100).toStringAsFixed(0)}%)'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24.0,
+                      vertical: 12.0,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12.0),
                 // Bouton de randomisation
                 ElevatedButton.icon(
                   onPressed: _randomizeTree,

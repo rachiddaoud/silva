@@ -32,7 +32,8 @@ class _PathViewState extends State<PathView> {
       // Augmenter le niveau de croissance progressivement (moins qu'un niveau complet)
       // Incrément très petit pour voir la croissance visuellement à chaque clic
       // Avec maxDepth=10, chaque niveau = 10%, donc 0.02 = 2% = fraction visible d'un niveau
-      _growthLevel = (_growthLevel + 0.02).clamp(0.0, 1.0); // 2% par clic pour progression visible
+      // Permettre de continuer au-delà de 100% pour le cycle de vie des feuilles
+      _growthLevel = _growthLevel + 0.02; // 2% par clic, peut dépasser 100%
     });
   }
 
@@ -88,18 +89,22 @@ class _PathViewState extends State<PathView> {
             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
             child: Column(
               children: [
-                // Bouton pour faire grandir l'arbre
-                ElevatedButton.icon(
-                  onPressed: _growthLevel >= 1.0 ? null : _growTree,
-                  icon: const Icon(Icons.arrow_upward),
-                  label: Text('Faire grandir (${(_growthLevel * 100).toStringAsFixed(0)}%)'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24.0,
-                      vertical: 12.0,
+                    // Bouton pour faire grandir l'arbre
+                    ElevatedButton.icon(
+                      onPressed: _growTree,
+                      icon: const Icon(Icons.arrow_upward),
+                      label: Text(
+                        _growthLevel >= 1.0
+                            ? 'Ajouter des feuilles (${((_growthLevel - 1.0) * 100).toStringAsFixed(0)}%)'
+                            : 'Faire grandir (${(_growthLevel * 100).toStringAsFixed(0)}%)',
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24.0,
+                          vertical: 12.0,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
                 const SizedBox(height: 12.0),
                 // Bouton de randomisation
                 ElevatedButton.icon(

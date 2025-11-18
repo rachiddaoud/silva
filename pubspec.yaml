@@ -71,9 +71,8 @@ flutter:
     - assets/icons/
     - assets/animations/
     - assets/backgrounds/
-    - assets/tree/leaf.png
-    - assets/tree/terre.png
-    - assets/doodles/
+    - assets/leaf.png
+    - assets/terre.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

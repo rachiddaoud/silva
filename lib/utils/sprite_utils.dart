@@ -76,6 +76,40 @@ class SpriteDisplay extends StatefulWidget {
 }
 
 class _SpriteDisplayState extends State<SpriteDisplay> {
+  ui.Image? _cachedImage;
+  ImageStream? _imageStream;
+  ImageStreamListener? _imageListener;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImage();
+  }
+
+  @override
+  void dispose() {
+    if (_imageStream != null && _imageListener != null) {
+      _imageStream!.removeListener(_imageListener!);
+    }
+    super.dispose();
+  }
+
+  void _loadImage() {
+    final ImageProvider provider = AssetImage(VictorySpriteMapper.spriteSheet);
+    final ImageStream stream = provider.resolve(ImageConfiguration.empty);
+    
+    _imageListener = ImageStreamListener((ImageInfo imageInfo, bool synchronousCall) {
+      if (mounted) {
+        setState(() {
+          _cachedImage = imageInfo.image;
+        });
+      }
+    });
+    
+    _imageStream = stream;
+    stream.addListener(_imageListener!);
+  }
+
   @override
   Widget build(BuildContext context) {
     final spriteInfo = VictorySpriteMapper.getSpriteForVictory(widget.victoryId);
@@ -92,7 +126,7 @@ class _SpriteDisplayState extends State<SpriteDisplay> {
           spriteInfo: spriteInfo,
           totalRows: totalRows,
           totalColumns: totalColumns,
-          assetPath: VictorySpriteMapper.spriteSheet,
+          cachedImage: _cachedImage,
         ),
         size: Size(widget.size, widget.size),
       ),
@@ -105,40 +139,20 @@ class _SpriteExtractorPainter extends CustomPainter {
   final SpriteInfo spriteInfo;
   final int totalRows;
   final int totalColumns;
-  final String assetPath;
-  ui.Image? _cachedImage;
+  final ui.Image? cachedImage;
 
   _SpriteExtractorPainter({
     required this.spriteInfo,
     required this.totalRows,
     required this.totalColumns,
-    required this.assetPath,
+    required this.cachedImage,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    // This will be handled by async image loading
-    if (_cachedImage == null) {
-      _loadImage(canvas, size);
-    } else {
-      _drawSprite(canvas, size);
-    }
-  }
+    if (cachedImage == null) return;
 
-  void _loadImage(Canvas canvas, Size size) {
-    ImageProvider provider = AssetImage(assetPath);
-    provider.resolve(ImageConfiguration.empty).addListener(
-      ImageStreamListener((image, synchronousCall) {
-        _cachedImage = image.image;
-        _drawSprite(canvas, size);
-      }),
-    );
-  }
-
-  void _drawSprite(Canvas canvas, Size size) {
-    if (_cachedImage == null) return;
-
-    final image = _cachedImage!;
+    final image = cachedImage!;
     
     // Calculate sprite dimensions in the original image
     final spriteWidth = image.width / totalColumns;
@@ -161,5 +175,6 @@ class _SpriteExtractorPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SpriteExtractorPainter oldDelegate) =>
-      oldDelegate.spriteInfo != spriteInfo;
+      oldDelegate.spriteInfo != spriteInfo ||
+      oldDelegate.cachedImage != cachedImage;
 }

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -288,6 +289,78 @@ class TreePainter extends CustomPainter {
     _updateLeaves();
     // Mettre à jour les positions des feuilles pour suivre leurs branches
     _updateLeafPositions();
+    // Logger l'état de l'arbre et des feuilles
+    _logTreeAndLeavesState();
+  }
+  
+  /// Log l'état de l'arbre et des feuilles
+  void _logTreeAndLeavesState() {
+    debugPrint('=== TREE STATE ===');
+    debugPrint('Growth Level: ${growthLevel.toStringAsFixed(3)}');
+    debugPrint('Tree Size: $treeSize');
+    debugPrint('Fractional Depth: ${_fractionalDepth.toStringAsFixed(3)}');
+    debugPrint('Parameters:');
+    debugPrint('  - maxDepth: ${parameters.maxDepth}');
+    debugPrint('  - baseBranchAngle: ${(parameters.baseBranchAngle * 180 / math.pi).toStringAsFixed(2)}°');
+    debugPrint('  - lengthRatio: ${parameters.lengthRatio.toStringAsFixed(3)}');
+    debugPrint('  - thicknessRatio: ${parameters.thicknessRatio.toStringAsFixed(3)}');
+    debugPrint('  - angleVariation: ${parameters.angleVariation.toStringAsFixed(3)}');
+    debugPrint('  - curveIntensity: ${parameters.curveIntensity.toStringAsFixed(3)}');
+    debugPrint('  - seed: ${parameters.seed}');
+    debugPrint('');
+    debugPrint('Branches: ${_branches.length}');
+    // Grouper les branches par profondeur
+    final branchesByDepth = <int, List<TreeBranch>>{};
+    for (final branch in _branches) {
+      branchesByDepth.putIfAbsent(branch.depth, () => []).add(branch);
+    }
+    for (final depth in branchesByDepth.keys.toList()..sort()) {
+      final branches = branchesByDepth[depth]!;
+      debugPrint('  Depth $depth: ${branches.length} branches');
+      for (int i = 0; i < branches.length && i < 3; i++) {
+        final branch = branches[i];
+        debugPrint('    Branch $i: length=${branch.length.toStringAsFixed(2)}, thickness=${branch.thickness.toStringAsFixed(2)}, angle=${(branch.angle * 180 / math.pi).toStringAsFixed(2)}°');
+      }
+      if (branches.length > 3) {
+        debugPrint('    ... and ${branches.length - 3} more branches');
+      }
+    }
+    debugPrint('');
+    debugPrint('Leaves: ${_leaves.length}');
+    // Compter les feuilles par état de croissance
+    final visibleLeaves = _leaves.where((leaf) => leaf.currentGrowth > 0.0).length;
+    final fullyGrownLeaves = _leaves.where((leaf) => leaf.currentGrowth >= 1.0).length;
+    final growingLeaves = _leaves.where((leaf) => leaf.currentGrowth > 0.0 && leaf.currentGrowth < 1.0).length;
+    debugPrint('  Visible: $visibleLeaves');
+    debugPrint('  Fully grown: $fullyGrownLeaves');
+    debugPrint('  Growing: $growingLeaves');
+    debugPrint('  Not yet appeared: ${_leaves.length - visibleLeaves}');
+    // Grouper les feuilles par profondeur de branche
+    final leavesByBranchDepth = <int, List<LeafInfo>>{};
+    for (final leaf in _leaves) {
+      leavesByBranchDepth.putIfAbsent(leaf.branch.depth, () => []).add(leaf);
+    }
+    for (final depth in leavesByBranchDepth.keys.toList()..sort()) {
+      final leaves = leavesByBranchDepth[depth]!;
+      debugPrint('  On depth $depth branches: ${leaves.length} leaves');
+    }
+    // Afficher quelques détails sur les premières feuilles
+    debugPrint('  Sample leaves (first 5):');
+    for (int i = 0; i < _leaves.length && i < 5; i++) {
+      final leaf = _leaves[i];
+      debugPrint('    Leaf $i:');
+      debugPrint('      Position: (${leaf.position.dx.toStringAsFixed(2)}, ${leaf.position.dy.toStringAsFixed(2)})');
+      debugPrint('      Branch depth: ${leaf.branch.depth}');
+      debugPrint('      tOnBranch: ${leaf.tOnBranch.toStringAsFixed(3)}');
+      debugPrint('      Side: ${leaf.side == 1 ? "right" : "left"}');
+      debugPrint('      Appearance time: ${leaf.appearanceTime.toStringAsFixed(3)}');
+      debugPrint('      Current growth: ${leaf.currentGrowth.toStringAsFixed(3)}');
+      debugPrint('      Max size: ${leaf.maxSize.toStringAsFixed(3)}');
+    }
+    if (_leaves.length > 5) {
+      debugPrint('    ... and ${_leaves.length - 5} more leaves');
+    }
+    debugPrint('=== END TREE STATE ===');
   }
   
   /// Met à jour les positions des feuilles pour suivre leurs branches d'origine
@@ -331,7 +404,7 @@ class TreePainter extends CustomPainter {
   void _addNewLeavesAfterMaturity() {
     if (_branches.isEmpty) return;
     
-    final baseLeafSize = treeSize * 0.08;
+    final baseLeafSize = treeSize * 0.064; // Réduit de 20% (0.08 * 0.8 = 0.064)
     
     // Limite de saturation : nombre maximum de feuilles par branche
     // Réduire drastiquement la limite pour les extrémités
@@ -479,7 +552,7 @@ class TreePainter extends CustomPainter {
   void _generateLeaves() {
     if (_branches.isEmpty) return;
     
-    final baseLeafSize = treeSize * 0.08; // Taille de base d'une feuille
+    final baseLeafSize = treeSize * 0.064; // Réduit de 20% (0.08 * 0.8 = 0.064) // Taille de base d'une feuille
     
     // Créer un identifiant unique pour chaque branche basé sur sa position dans l'arbre
     // Cela permet de générer les mêmes feuilles pour les mêmes branches
@@ -655,12 +728,13 @@ class TreePainter extends CustomPainter {
 
     // Génération récursive des branches
     _branches.add(trunk);
+    // Passer effectiveDepth pour savoir quelles profondeurs sont complètement générées
     _generateBranches(trunk, effectiveDepth, depthFraction, random);
   }
 
   void _generateBranches(
     TreeBranch parent,
-    int maxDepth,
+    int effectiveDepth,
     double depthFraction,
     math.Random random,
   ) {
@@ -668,6 +742,13 @@ class TreePainter extends CustomPainter {
     final numBranches = random.nextBool() ? 2 : 3;
 
     final newDepth = parent.depth + 1;
+    
+    // Déterminer la profondeur maximale à générer
+    // Si depthFraction > 0, on génère aussi le niveau effectiveDepth + 1 (en cours de croissance)
+    final maxDepth = depthFraction > 0.0 ? effectiveDepth + 1 : effectiveDepth;
+    
+    // Ne pas générer de branches au-delà de la profondeur maximale
+    if (newDepth > maxDepth) return;
     
     for (int i = 0; i < numBranches; i++) {
       // Angle de branchement avec variation
@@ -680,8 +761,10 @@ class TreePainter extends CustomPainter {
       final lengthVariation = 0.85 + random.nextDouble() * 0.3; // 0.85 à 1.15
       var branchLength = parent.length * parameters.lengthRatio * lengthVariation;
       
-      // Si on est au dernier niveau partiel, réduire la longueur progressivement
-      if (newDepth == maxDepth && depthFraction < 1.0) {
+      // Scaler la longueur seulement si cette branche est au niveau en cours de croissance
+      // (c'est-à-dire newDepth == effectiveDepth + 1, qui correspond à maxDepth quand depthFraction > 0)
+      // Les branches aux profondeurs <= effectiveDepth sont complètement générées (longueur = 1.0)
+      if (newDepth == maxDepth && depthFraction > 0.0 && depthFraction < 1.0) {
         branchLength *= depthFraction; // Réduire la longueur selon la fraction
       }
 
@@ -724,8 +807,9 @@ class TreePainter extends CustomPainter {
       _branches.add(branch);
 
       // Récursion pour les branches enfants
+      // Continuer la récursion si on n'a pas atteint la profondeur maximale
       if (newDepth < maxDepth) {
-        _generateBranches(branch, maxDepth, depthFraction, random);
+        _generateBranches(branch, effectiveDepth, depthFraction, random);
       }
     }
   }
@@ -932,7 +1016,7 @@ class TreePainter extends CustomPainter {
     if (leafInfo.currentGrowth <= 0.0) return;
     
     // Taille de base de la feuille
-    final baseSize = treeSize * 0.08; // 2x plus grand (0.04 * 2 = 0.08)
+    final baseSize = treeSize * 0.064; // Réduit de 20% (0.08 * 0.8 = 0.064)
     
     // Taille actuelle : baseSize * maxSize * currentGrowth
     final leafSize = baseSize * leafInfo.maxSize * leafInfo.currentGrowth;

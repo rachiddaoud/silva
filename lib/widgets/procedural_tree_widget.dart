@@ -180,20 +180,37 @@ class ProceduralTreeWidget extends StatefulWidget {
   State<ProceduralTreeWidget> createState() => _ProceduralTreeWidgetState();
 }
 
-class _ProceduralTreeWidgetState extends State<ProceduralTreeWidget> {
+class _ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
+    with SingleTickerProviderStateMixin {
   ui.Image? _leafImage;
   ui.Image? _groundImage;
+  late AnimationController _windController;
+  late Animation<double> _windAnimation;
 
   @override
   void initState() {
     super.initState();
     _loadLeafImage();
     _loadGroundImage();
+    
+    // Animation pour l'effet de vent (oscillation continue)
+    _windController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    )..repeat();
+    
+    // Animation sinusoïdale pour un mouvement naturel
+    _windAnimation = Tween<double>(begin: 0.0, end: 2 * math.pi).animate(
+      CurvedAnimation(
+        parent: _windController,
+        curve: Curves.linear,
+      ),
+    );
   }
 
   Future<void> _loadLeafImage() async {
     try {
-      final ByteData data = await rootBundle.load('assets/leaf.png');
+      final ByteData data = await rootBundle.load('assets/tree/leaf.png');
       final Uint8List bytes = data.buffer.asUint8List();
       final ui.Codec codec = await ui.instantiateImageCodec(bytes);
       final ui.FrameInfo frameInfo = await codec.getNextFrame();
@@ -210,7 +227,7 @@ class _ProceduralTreeWidgetState extends State<ProceduralTreeWidget> {
 
   Future<void> _loadGroundImage() async {
     try {
-      final ByteData data = await rootBundle.load('assets/terre.png');
+      final ByteData data = await rootBundle.load('assets/tree/terre.png');
       final Uint8List bytes = data.buffer.asUint8List();
       final ui.Codec codec = await ui.instantiateImageCodec(bytes);
       final ui.FrameInfo frameInfo = await codec.getNextFrame();
@@ -234,23 +251,30 @@ class _ProceduralTreeWidgetState extends State<ProceduralTreeWidget> {
     // Libérer les images pour éviter les fuites mémoire
     _leafImage?.dispose();
     _groundImage?.dispose();
+    _windController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: widget.size,
-      height: widget.size,
-      child: CustomPaint(
-        painter: TreePainter(
-          growthLevel: widget.growthLevel,
-          treeSize: widget.size,
-          parameters: widget.parameters,
-          leafImage: _leafImage,
-          groundImage: _groundImage,
-        ),
-      ),
+    return AnimatedBuilder(
+      animation: _windAnimation,
+      builder: (context, child) {
+        return SizedBox(
+          width: widget.size,
+          height: widget.size,
+          child: CustomPaint(
+            painter: TreePainter(
+              growthLevel: widget.growthLevel,
+              treeSize: widget.size,
+              parameters: widget.parameters,
+              leafImage: _leafImage,
+              groundImage: _groundImage,
+              windPhase: _windAnimation.value,
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -262,9 +286,12 @@ class TreePainter extends CustomPainter {
   final TreeParameters parameters;
   final ui.Image? leafImage;
   final ui.Image? groundImage;
+  final double windPhase; // Phase du vent (0 à 2π) pour l'animation
   late final List<TreeBranch> _branches;
   List<LeafInfo> _leaves = []; // Mutable car réassigné dans _optimizeLeafDistribution
   late final double _fractionalDepth; // Profondeur fractionnaire pour croissance progressive
+  final Map<TreeBranch, Offset> _deformedEnds = {}; // Cache des extrémités déformées
+  final Map<TreeBranch, Offset> _deformedStarts = {}; // Cache des points de départ déformés
 
   TreePainter({
     required this.growthLevel,
@@ -272,6 +299,7 @@ class TreePainter extends CustomPainter {
     required this.parameters,
     this.leafImage,
     this.groundImage,
+    this.windPhase = 0.0,
   }) {
     // Calculer la profondeur fractionnaire pour croissance progressive
     _fractionalDepth = parameters.maxDepth * growthLevel.clamp(0.0, 1.0);
@@ -607,11 +635,13 @@ class TreePainter extends CustomPainter {
       final numLeaves = math.max(minLeaves, baseLeafCount + branchRandom.nextInt(5) - 2);
       
       // Espacement le long de la branche
-      final leafSpacing = 1.0 / (numLeaves + 1);
+      // La dernière feuille doit être à l'extrémité (t = 1.0)
+      final leafSpacing = numLeaves > 1 ? (1.0 - 0.3) / (numLeaves - 1) : 0.0;
       
       for (int j = 0; j < numLeaves; j++) {
         // Position le long de la branche avec espacement régulier
-        final t = 0.3 + (j + 1) * leafSpacing * 0.7; // Entre 30% et 100% de la branche
+        // La dernière feuille (j == numLeaves - 1) est à t = 1.0 (extrémité)
+        final t = j == numLeaves - 1 ? 1.0 : 0.3 + j * leafSpacing;
         
         // Calculer la position sur la courbe de Bézier
         final branchPos = _bezierPoint(branch.start, branch.controlPoint, branch.end, t);
@@ -643,17 +673,16 @@ class TreePainter extends CustomPainter {
         maxSize *= sizeReduction;
         
         // 5. Position finale : depuis le centre de la branche, aller vers l'extérieur
-        // La feuille doit s'éloigner du centre de la branche d'une distance égale à l'épaisseur de la branche / 2
-        // Le point d'ancrage (base de la feuille) touche le bord de la branche
-        final totalOffset = branchRadius; // Distance du centre = épaisseur / 2
-        
-        // Choisir le côté (gauche ou droite) - déterministe
-        final side = (j % 2 == 0) ? 1 : -1;
+        // La dernière feuille (t = 1.0) est positionnée exactement à l'extrémité de la branche
+        // Les autres feuilles sont décalées sur le côté
+        final isLastLeaf = (j == numLeaves - 1);
+        final totalOffset = isLastLeaf ? 0.0 : branchRadius; // Pas de décalage pour la dernière feuille
+        final side = isLastLeaf ? 0 : ((j % 2 == 0) ? 1 : -1); // Pas de côté pour la dernière feuille
         
         // Position de la feuille (centre de la feuille)
         final leafPos = Offset(
-          branchPos.dx + math.cos(perpAngle) * totalOffset * side,
-          branchPos.dy + math.sin(perpAngle) * totalOffset * side,
+          branchPos.dx + (isLastLeaf ? 0.0 : math.cos(perpAngle) * totalOffset * side),
+          branchPos.dy + (isLastLeaf ? 0.0 : math.sin(perpAngle) * totalOffset * side),
         );
         
         // Calculer le niveau de croissance de base pour cette branche
@@ -850,6 +879,9 @@ class TreePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Calculer les positions déformées de manière hiérarchique
+    _calculateDeformedPositions();
+    
     // Dessiner les branches (du plus profond au moins profond pour le z-ordering)
     final sortedBranches = List<TreeBranch>.from(_branches)
       ..sort((a, b) => b.depth.compareTo(a.depth));
@@ -914,6 +946,73 @@ class TreePainter extends CustomPainter {
     }
   }
   
+  /// Calcule les positions déformées de toutes les branches de manière hiérarchique
+  /// pour que les branches enfants suivent la déformation de leur parent
+  void _calculateDeformedPositions() {
+    _deformedEnds.clear();
+    _deformedStarts.clear();
+    
+    // Trier les branches par profondeur (du moins profond au plus profond)
+    final sortedBranches = List<TreeBranch>.from(_branches)
+      ..sort((a, b) => a.depth.compareTo(b.depth));
+    
+    for (final branch in sortedBranches) {
+      // Le point de départ déformé est soit l'extrémité déformée du parent,
+      // soit le point de départ original si c'est le tronc
+      Offset deformedStart;
+      if (branch.depth == 0) {
+        // Le tronc commence à la base (pas de déformation à la base)
+        deformedStart = branch.start;
+      } else {
+        // Trouver la branche parent (celle dont l'extrémité correspond au début de cette branche)
+        final tolerance = treeSize * 0.01;
+        final parent = _branches.firstWhere(
+          (b) => b.depth == branch.depth - 1 && 
+                 (b.end - branch.start).distance < tolerance,
+          orElse: () => branch, // Fallback si pas de parent trouvé
+        );
+        // Utiliser l'extrémité déformée du parent comme point de départ
+        deformedStart = _deformedEnds[parent] ?? branch.start;
+      }
+      
+      _deformedStarts[branch] = deformedStart;
+      
+      // Calculer l'extrémité déformée de cette branche
+      final deformedEnd = _calculateDeformedEnd(branch, deformedStart);
+      _deformedEnds[branch] = deformedEnd;
+    }
+  }
+  
+  /// Calcule l'extrémité déformée d'une branche en fonction du vent
+  Offset _calculateDeformedEnd(TreeBranch branch, Offset deformedStart) {
+    // Calculer les paramètres du vent pour cette branche
+    final depthRatio = branch.depth / parameters.maxDepth;
+    final heightFactor = (treeSize - branch.start.dy) / treeSize;
+    final flexibilityFactor = depthRatio;
+    final windIntensity = 0.4 * heightFactor * flexibilityFactor;
+    final branchPhase = windPhase + branch.start.dx * 0.005 + branch.start.dy * 0.005;
+    
+    // Calculer la direction originale de la branche
+    final originalDirection = branch.end - branch.start;
+    final originalAngle = math.atan2(originalDirection.dy, originalDirection.dx);
+    
+    // Calculer la déformation à l'extrémité (t = 1.0)
+    final t = 1.0;
+    final windAtEnd = math.sin(branchPhase + t * 2.0) * windIntensity * t * t;
+    
+    // La déformation est perpendiculaire à la direction originale
+    final perpAngle = originalAngle + math.pi / 2;
+    final windOffsetX = math.cos(perpAngle) * windAtEnd * treeSize * 0.05;
+    final windOffsetY = math.sin(perpAngle) * windAtEnd * treeSize * 0.05;
+    
+    // L'extrémité déformée est calculée depuis le point de départ déformé
+    // en suivant la direction originale mais avec la déformation du vent
+    return Offset(
+      deformedStart.dx + originalDirection.dx + windOffsetX,
+      deformedStart.dy + originalDirection.dy + windOffsetY,
+    );
+  }
+
   /// Calcule la position de départ du tronc (centre vertical de la terre)
   Offset _getTreeBasePosition() {
     if (groundImage == null) {
@@ -970,6 +1069,32 @@ class TreePainter extends CustomPainter {
       (b.start - branch.end).distance < tolerance // Tolérance pour les erreurs d'arrondi
     );
 
+    // Récupérer les positions déformées (calculées hiérarchiquement)
+    final deformedStart = _deformedStarts[branch] ?? branch.start;
+    final deformedEnd = _deformedEnds[branch] ?? branch.end;
+    
+    // Calculer le point de contrôle déformé
+    // Interpoler entre le point de contrôle original et un point basé sur les extrémités déformées
+    final originalControl = branch.controlPoint;
+    final midPoint = Offset(
+      (deformedStart.dx + deformedEnd.dx) / 2,
+      (deformedStart.dy + deformedEnd.dy) / 2,
+    );
+    // Le point de contrôle déformé suit partiellement la déformation
+    final deformedControl = Offset(
+      originalControl.dx + (midPoint.dx - (branch.start.dx + branch.end.dx) / 2) * 0.7,
+      originalControl.dy + (midPoint.dy - (branch.start.dy + branch.end.dy) / 2) * 0.7,
+    );
+
+    // Effet de vent sur les branches
+    // Les branches plus fines (profondeur élevée) et plus hautes bougent plus
+    final heightFactor = (treeSize - branch.start.dy) / treeSize; // 0 (bas) à 1 (haut)
+    final flexibilityFactor = depthRatio; // Plus flexible quand plus fine (profondeur élevée)
+    final windIntensity = 0.4 * heightFactor * flexibilityFactor; // Intensité du vent (augmentée)
+    
+    // Phase du vent avec variation par branche pour un effet naturel
+    final branchPhase = windPhase + branch.start.dx * 0.005 + branch.start.dy * 0.005;
+
     // Dessiner la branche avec une courbe de Bézier arrondie
     // On crée un path avec une épaisseur variable le long de la courbe
     final path = Path();
@@ -990,11 +1115,27 @@ class TreePainter extends CustomPainter {
     
     for (int i = 0; i <= numSegments; i++) {
       final t = i / numSegments;
-      final point = _bezierPoint(branch.start, branch.controlPoint, branch.end, t);
+      // Utiliser les points déformés pour la courbe de Bézier
+      final point = _bezierPoint(deformedStart, deformedControl, deformedEnd, t);
       
-      // Calculer l'angle tangent à la courbe à ce point
-      final tangent = _bezierTangent(branch.start, branch.controlPoint, branch.end, t);
-      final perpAngle = math.atan2(tangent.dy, tangent.dx) + math.pi / 2;
+      // Calculer l'angle tangent à la courbe déformée à ce point
+      final tangent = _bezierTangent(deformedStart, deformedControl, deformedEnd, t);
+      final branchAngle = math.atan2(tangent.dy, tangent.dx);
+      final perpAngle = branchAngle + math.pi / 2;
+      
+      // Effet de vent supplémentaire : déformation perpendiculaire à la branche
+      // Le vent est plus fort vers l'extrémité de la branche (t augmente)
+      // Mais cette déformation est relative à la branche déjà déformée
+      final windAtPoint = math.sin(branchPhase + t * 2.0) * windIntensity * t * t * 0.3;
+      // Le vent pousse perpendiculairement à la branche
+      final windOffsetX = math.cos(perpAngle) * windAtPoint * treeSize * 0.05;
+      final windOffsetY = math.sin(perpAngle) * windAtPoint * treeSize * 0.05;
+      
+      // Appliquer le déplacement du vent supplémentaire
+      final deformedPoint = Offset(
+        point.dx + windOffsetX,
+        point.dy + windOffsetY,
+      );
       
       // Épaisseur interpolée avec une courbe d'ease-out pour une transition plus naturelle
       // Utiliser une fonction quadratique pour créer une pointe plus naturelle
@@ -1002,12 +1143,12 @@ class TreePainter extends CustomPainter {
       final thickness = halfThicknessStart * (1 - easeOut) + halfThicknessEnd * easeOut;
       
       topPoints.add(Offset(
-        point.dx + math.cos(perpAngle) * thickness,
-        point.dy + math.sin(perpAngle) * thickness,
+        deformedPoint.dx + math.cos(perpAngle) * thickness,
+        deformedPoint.dy + math.sin(perpAngle) * thickness,
       ));
       bottomPoints.add(Offset(
-        point.dx - math.cos(perpAngle) * thickness,
-        point.dy - math.sin(perpAngle) * thickness,
+        deformedPoint.dx - math.cos(perpAngle) * thickness,
+        deformedPoint.dy - math.sin(perpAngle) * thickness,
       ));
     }
     
@@ -1046,36 +1187,111 @@ class TreePainter extends CustomPainter {
     // Si la taille est trop petite, ne pas dessiner
     if (leafSize < 0.01) return;
     
-    // Utiliser directement tOnBranch pour calculer la tangente
+    // Récupérer les positions déformées de la branche
+    final deformedStart = _deformedStarts[leafInfo.branch] ?? leafInfo.branch.start;
+    final deformedEnd = _deformedEnds[leafInfo.branch] ?? leafInfo.branch.end;
+    
+    // Calculer le point de contrôle déformé (même logique que dans _drawBranch)
+    final originalControl = leafInfo.branch.controlPoint;
+    final midPoint = Offset(
+      (deformedStart.dx + deformedEnd.dx) / 2,
+      (deformedStart.dy + deformedEnd.dy) / 2,
+    );
+    final deformedControl = Offset(
+      originalControl.dx + (midPoint.dx - (leafInfo.branch.start.dx + leafInfo.branch.end.dx) / 2) * 0.7,
+      originalControl.dy + (midPoint.dy - (leafInfo.branch.start.dy + leafInfo.branch.end.dy) / 2) * 0.7,
+    );
+    
+    // Calculer la position de la feuille sur la branche déformée
+    final branchPos = _bezierPoint(deformedStart, deformedControl, deformedEnd, leafInfo.tOnBranch);
+    
+    // Utiliser la branche déformée pour calculer la tangente
     final tangent = _bezierTangent(
-      leafInfo.branch.start,
-      leafInfo.branch.controlPoint,
-      leafInfo.branch.end,
+      deformedStart,
+      deformedControl,
+      deformedEnd,
       leafInfo.tOnBranch,
     );
     
-    // Calculer l'angle de base perpendiculaire à la branche (90°)
-    final baseAngle = math.atan2(tangent.dy, tangent.dx) + math.pi / 2;
+    // Calculer l'angle de la tangente (direction de la branche)
+    final branchAngle = math.atan2(tangent.dy, tangent.dx);
     
-    // Ajouter un angle plus doux si à droite, soustraire si à gauche (réduit de 45° à 25°)
-    final angleOffset = leafInfo.side == 1 ? math.pi / 7.2 : -math.pi / 7.2; // +25° ou -25° (180/7.2 ≈ 25°)
-    final rotation = baseAngle + angleOffset;
+    // Calculer l'angle perpendiculaire à la branche (90°)
+    final perpAngle = branchAngle + math.pi / 2;
+    
+    // Plus la feuille est proche de l'extrémité (tOnBranch proche de 1.0),
+    // plus elle doit suivre la tangente de la branche
+    // Pour tOnBranch = 1.0, l'angle doit être exactement branchAngle (parallèle à la branche)
+    // Pour tOnBranch < 1.0, interpoler entre perpAngle + offset et branchAngle
+    final t = leafInfo.tOnBranch;
+    // Normaliser t pour que l'alignement commence vraiment à se faire sentir près de l'extrémité
+    // Les feuilles commencent à t = 0.3, donc on normalise entre 0.3 et 1.0
+    final normalizedT = ((t - 0.3) / 0.7).clamp(0.0, 1.0);
+    // Utiliser une courbe pour une transition plus douce, mais qui s'accélère près de 1.0
+    // Utiliser une courbe exponentielle pour que l'alignement soit plus prononcé près de l'extrémité
+    final alignmentFactor = math.pow(normalizedT, 2.5).toDouble(); // Plus prononcé près de 1.0
+    
+    // Angle de base : interpolation entre perpendiculaire (avec offset) et tangente
+    final angleOffset = leafInfo.side == 1 ? math.pi / 7.2 : -math.pi / 7.2; // +25° ou -25°
+    final basePerpAngle = perpAngle + angleOffset;
+    // Interpoler entre l'angle perpendiculaire (avec offset) et la tangente
+    final baseAngle = basePerpAngle * (1.0 - alignmentFactor) + branchAngle * alignmentFactor;
+    
+    // Calculer l'épaisseur de la branche à ce point pour positionner la feuille
+    final thicknessAtPoint = leafInfo.branch.thickness * (1.0 - leafInfo.tOnBranch * 0.3);
+    final branchRadius = thicknessAtPoint / 2;
+    
+    // Position de la feuille sur la branche déformée
+    // La dernière feuille (t = 1.0) est à l'extrémité, les autres sont décalées sur le côté
+    final isLastLeaf = (leafInfo.tOnBranch >= 0.99);
+    final totalOffset = isLastLeaf ? 0.0 : branchRadius;
+    final side = isLastLeaf ? 0 : leafInfo.side;
+    
+    final leafPos = Offset(
+      branchPos.dx + (isLastLeaf ? 0.0 : math.cos(perpAngle) * totalOffset * side),
+      branchPos.dy + (isLastLeaf ? 0.0 : math.sin(perpAngle) * totalOffset * side),
+    );
+    
+    // Effet de vent : calculer un déplacement et une rotation basés sur la position de la feuille
+    // Les feuilles plus hautes bougent plus que les feuilles basses
+    final heightFactor = (treeSize - leafPos.dy) / treeSize; // 0 (bas) à 1 (haut)
+    final depthFactor = leafInfo.branch.depth / parameters.maxDepth; // Plus flexible si branche fine
+    final windIntensity = 0.3 * heightFactor * (0.5 + depthFactor * 0.5); // Intensité du vent (plus fort en haut et sur branches fines)
+    
+    // Phase du vent avec variation par feuille pour un effet naturel
+    // Utiliser la position de la feuille comme seed pour créer une variation
+    final leafPhase = windPhase + leafPos.dx * 0.01 + leafPos.dy * 0.01;
+    
+    // Déplacement horizontal du vent (oscillation sinusoïdale)
+    // Réduire l'effet du vent pour les feuilles à l'extrémité
+    final windOffsetX = math.sin(leafPhase) * windIntensity * treeSize * 0.03 * (1.0 - alignmentFactor * 0.5);
+    final windOffsetY = math.cos(leafPhase * 0.7) * windIntensity * treeSize * 0.015 * (1.0 - alignmentFactor * 0.5);
+    
+    // Rotation due au vent (les feuilles pivotent légèrement)
+    // Réduire la rotation du vent pour les feuilles à l'extrémité
+    final windRotation = math.sin(leafPhase * 1.3) * windIntensity * 0.4 * (1.0 - alignmentFactor * 0.7);
+    
+    final rotation = baseAngle + windRotation;
     
     // Sauvegarder l'état du canvas
     canvas.save();
     
-    // Appliquer la rotation et translation
-    canvas.translate(leafInfo.position.dx, leafInfo.position.dy);
+    // Appliquer la translation avec l'effet de vent (utiliser la position sur la branche déformée)
+    canvas.translate(
+      leafPos.dx + windOffsetX,
+      leafPos.dy + windOffsetY,
+    );
     canvas.rotate(rotation);
     
     // Si la feuille est du côté gauche, appliquer un miroir horizontal
-    if (leafInfo.side == -1) {
+    // (mais pas pour les feuilles à l'extrémité où side = 0)
+    if (leafInfo.side == -1 && !isLastLeaf) {
       canvas.scale(-1.0, 1.0); // Miroir horizontal
     }
     
     // Dessiner l'image de la feuille
     if (leafImage != null) {
-      _drawLeafImage(canvas, leafSize);
+      _drawLeafImage(canvas, leafSize, leafImage!);
     } else {
       // Fallback : dessin vectoriel simple
       _drawVectorLeafFallback(canvas, leafSize);
@@ -1086,17 +1302,15 @@ class TreePainter extends CustomPainter {
   }
 
   /// Dessine l'image de la feuille
-  void _drawLeafImage(Canvas canvas, double size) {
-    if (leafImage == null) return;
-    
+  void _drawLeafImage(Canvas canvas, double size, ui.Image image) {
     // Vérifier que l'image n'a pas été disposée
     try {
-      final imageWidth = leafImage!.width.toDouble();
-      final imageHeight = leafImage!.height.toDouble();
+      final imageWidth = image.width.toDouble();
+      final imageHeight = image.height.toDouble();
       
       // Calculer les dimensions pour garder les proportions
       final aspectRatio = imageWidth / imageHeight;
-      final drawWidth = size * 2;
+      final drawWidth = size * 2 / 4; // Réduit par 4
       final drawHeight = drawWidth / aspectRatio;
       
       // Le point d'ancrage est au centre horizontal (x = 50%) et en bas (y = 100%)
@@ -1119,7 +1333,7 @@ class TreePainter extends CustomPainter {
       
       // Dessiner l'image
       canvas.drawImageRect(
-        leafImage!,
+        image,
         srcRect,
         dstRect,
         Paint()..filterQuality = FilterQuality.high,
@@ -1132,8 +1346,8 @@ class TreePainter extends CustomPainter {
   
   /// Dessin vectoriel de fallback si l'image n'est pas disponible
   void _drawVectorLeafFallback(Canvas canvas, double size) {
-    final width = size * 1.8;
-    final height = size * 3.0;
+    final width = size * 1.8 / 4; // Réduit par 4
+    final height = size * 3.0 / 4; // Réduit par 4
     
     // Le point d'ancrage est au centre horizontal et en bas
     // Donc on dessine la feuille avec son bas à y = 0
@@ -1162,6 +1376,7 @@ class TreePainter extends CustomPainter {
         oldDelegate.treeSize != treeSize ||
         oldDelegate.leafImage != leafImage ||
         oldDelegate.groundImage != groundImage ||
+        oldDelegate.windPhase != windPhase ||
         oldDelegate.parameters.seed != parameters.seed ||
         oldDelegate.parameters.maxDepth != parameters.maxDepth ||
         oldDelegate.parameters.baseBranchAngle != parameters.baseBranchAngle ||

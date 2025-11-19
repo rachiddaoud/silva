@@ -395,23 +395,8 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
     setState(() {
       final allLeaves = _tree!.getAllLeaves();
       
-      // 1. Supprimer les feuilles en état dead3
-      for (final branch in _tree!.getAllBranches()) {
-        final toRemove = branch.leaves.where((leaf) => leaf.state == tree_model.LeafState.dead3).toList();
-        for (final leaf in toRemove) {
-          branch.removeLeaf(leaf.id);
-        }
-      }
-      
-      // 2. Avancer toutes les feuilles en cours de mort
-      for (final leaf in allLeaves) {
-        if (leaf.state == tree_model.LeafState.dead1 || 
-            leaf.state == tree_model.LeafState.dead2) {
-          leaf.advanceDeathState();
-        }
-      }
-      
-      // 3. Sélectionner 1-2 feuilles vivantes aléatoires pour commencer à mourir
+      // Sélectionner 1-2 feuilles vivantes aléatoires pour lancer le processus de mort
+      // L'évolution (dead_1 → dead_2 → dead_3 → suppression) se fera automatiquement chaque jour
       final aliveLeaves = allLeaves
           .where((l) => l.currentGrowth > 0.0 && l.state == tree_model.LeafState.alive)
           .toList();
@@ -423,7 +408,7 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
         for (int i = 0; i < numToKill && aliveLeaves.isNotEmpty; i++) {
           final index = random.nextInt(aliveLeaves.length);
           final leaf = aliveLeaves[index];
-          leaf.advanceDeathState();
+          leaf.startDeath(); // Lance le processus de mort (passe à dead_1)
           aliveLeaves.removeAt(index);
         }
       }
@@ -431,6 +416,7 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
       debugPrint('=== TUER FEUILLE ===');
       debugPrint('Total feuilles: ${_tree!.getAllLeaves().length}');
       debugPrint('Feuilles visibles: ${allLeaves.where((l) => l.currentGrowth > 0.0).length}');
+      debugPrint('Feuilles en train de mourir: ${allLeaves.where((l) => l.state != tree_model.LeafState.alive).length}');
       
       // Forcer le rebuild
       _treeNotifier.value++;
@@ -503,6 +489,7 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
         maxSize: oldLeaf.maxSize,
         currentGrowth: oldLeaf.currentGrowth,
         state: oldLeaf.state,
+        deathAge: oldLeaf.deathAge,
         position: oldLeaf.position,
         branchPosition: oldLeaf.branchPosition,
       );
@@ -573,24 +560,12 @@ class TreePainter extends CustomPainter {
     this.groundImage,
     this.windPhase = 0.0,
   }) {
-    // Mettre à jour les positions de toutes les feuilles
-    for (final leaf in tree.getAllLeaves()) {
-      leaf.updatePosition(tree.getAllBranches().firstWhere((b) => _isLeafOnBranch(leaf, b)), treeSize);
+    // Mettre à jour les positions de toutes les feuilles en parcourant les branches
+    for (final branch in tree.getAllBranches()) {
+      for (final leaf in branch.leaves) {
+        leaf.updatePosition(branch, treeSize);
+      }
     }
-  }
-  
-  /// Vérifie si une feuille appartient à une branche (en comparant les IDs)
-  bool _isLeafOnBranch(tree_model.Leaf leaf, tree_model.Branch branch) {
-    // L'ID de la feuille est formaté comme: '${branch.id}_${t}_$side'
-    // Il faut extraire l'ID de la branche et le comparer exactement
-    final parts = leaf.id.split('_');
-    if (parts.length < 3) return false;
-    
-    // L'ID de la branche est tout sauf les 2 derniers segments (t et side)
-    final leafBranchId = parts.sublist(0, parts.length - 2).join('_');
-    
-    // Comparaison exacte (pas startsWith pour éviter les faux positifs avec le tronc '0')
-    return leafBranchId == branch.id;
   }
   
   /// Génère la structure Tree avec toutes ses branches de manière procédurale
@@ -822,10 +797,12 @@ class TreePainter extends CustomPainter {
     }
 
     // Dessiner les feuilles (filtrer celles qui ont commencé à grandir)
-    final allLeaves = tree.getAllLeaves();
-    for (final leaf in allLeaves) {
-      if (leaf.currentGrowth > 0.0) {
-        _drawLeaf(canvas, leaf);
+    // Parcourir les branches et leurs feuilles directement (plus efficace)
+    for (final branch in sortedBranches) {
+      for (final leaf in branch.leaves) {
+        if (leaf.currentGrowth > 0.0) {
+          _drawLeaf(canvas, leaf, branch);
+        }
       }
     }
     
@@ -1085,7 +1062,7 @@ class TreePainter extends CustomPainter {
     );
   }
 
-  void _drawLeaf(Canvas canvas, tree_model.Leaf leaf) {
+  void _drawLeaf(Canvas canvas, tree_model.Leaf leaf, tree_model.Branch branch) {
     // Ne dessiner que si la feuille a commencé à grandir
     if (leaf.currentGrowth <= 0.0) return;
     
@@ -1097,14 +1074,6 @@ class TreePainter extends CustomPainter {
     
     // Si la taille est trop petite, ne pas dessiner
     if (leafSize < 0.01) return;
-    
-    // Trouver la branche de cette feuille
-    tree_model.Branch? branch;
-    try {
-      branch = tree.getAllBranches().firstWhere((b) => _isLeafOnBranch(leaf, b));
-    } catch (e) {
-      return; // Branche non trouvée
-    }
     
     // VÉRIFICATION DE SÉCURITÉ : Ne jamais dessiner une feuille sur le tronc
     if (branch.depth == 0) {

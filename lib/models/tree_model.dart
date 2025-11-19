@@ -20,6 +20,7 @@ class Leaf {
   final double maxSize; // Taille maximale (variation aléatoire)
   double currentGrowth; // Niveau de croissance actuel (0.0 à 1.0)
   LeafState state; // État de la feuille
+  int deathAge; // Nombre de jours depuis le début de la mort (0 = pas encore morte)
   Offset position; // Position calculée (mutable)
   Offset branchPosition; // Position sur la branche (mutable)
 
@@ -32,37 +33,53 @@ class Leaf {
     required this.maxSize,
     this.currentGrowth = 0.1,
     this.state = LeafState.alive,
+    this.deathAge = 0,
     required this.position,
     required this.branchPosition,
   });
 
   /// Fait grandir la feuille d'un jour
+  /// Appelée par la branche parent lors de la propagation hiérarchique
+  /// Évolue automatiquement l'état de mort si la feuille est en train de mourir
   void growOneDay() {
-    if (age < maxAge) {
-      age += 0.05; // Augmente l'âge
+    if (state == LeafState.alive && age < maxAge) {
+      // Feuille vivante : croissance normale
+      age += 0.05; // Augmente l'âge (fractionnaire pour croissance progressive)
       // Recalculer currentGrowth avec une courbe d'easing cubic
       final elapsed = (age / maxAge).clamp(0.0, 1.0);
       final t = elapsed;
       currentGrowth = (1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t)).clamp(0.0, 1.0);
+    } else if (state != LeafState.alive) {
+      // Feuille en train de mourir : évolution automatique de l'état chaque jour
+      deathAge++;
+      
+      // Évolution automatique basée sur le nombre de jours depuis le début de la mort :
+      // - Jour 0 (startDeath appelé) : dead_1
+      // - Jour 1 (après 1er growOneDay) : reste dead_1
+      // - Jour 2 (après 2ème growOneDay) : passe à dead_2
+      // - Jour 3 (après 3ème growOneDay) : passe à dead_3
+      // - Jour 4+ : reste dead_3 (peut être supprimée)
+      if (deathAge == 2) {
+        state = LeafState.dead2;
+      } else if (deathAge >= 3) {
+        state = LeafState.dead3;
+      }
+      // Si deathAge == 1, on reste en dead_1 (déjà défini par startDeath)
     }
   }
 
-  /// Fait avancer l'état de mort de la feuille
-  void advanceDeathState() {
-    switch (state) {
-      case LeafState.alive:
-        state = LeafState.dead1;
-        break;
-      case LeafState.dead1:
-        state = LeafState.dead2;
-        break;
-      case LeafState.dead2:
-        state = LeafState.dead3;
-        break;
-      case LeafState.dead3:
-        // Reste en dead3, sera supprimée par la branche
-        break;
+  /// Lance le processus de mort de la feuille
+  /// La feuille passera automatiquement à dead_1, puis dead_2, puis dead_3 au fil des jours
+  void startDeath() {
+    if (state == LeafState.alive) {
+      state = LeafState.dead1;
+      deathAge = 0; // Commence le compteur de mort
     }
+  }
+  
+  /// Vérifie si la feuille doit être supprimée (en état dead_3 depuis au moins 1 jour)
+  bool shouldBeRemoved() {
+    return state == LeafState.dead3 && deathAge >= 3;
   }
 
   /// Met à jour la position de la feuille pour suivre sa branche
@@ -164,16 +181,27 @@ class Branch {
     leaves.removeWhere((leaf) => leaf.id == leafId);
   }
 
-  /// Fait grandir la branche d'un jour (et propage aux enfants et feuilles)
+  /// Fait grandir la branche d'un jour
+  /// Propagation hiérarchique : Branch → ses feuilles → ses branches enfants
   void growOneDay() {
     age++;
 
-    // Faire grandir toutes les feuilles de cette branche
+    // 1. Propager la croissance aux feuilles de cette branche
+    //    (et supprimer celles qui sont complètement mortes)
+    final leavesToRemove = <Leaf>[];
     for (final leaf in leaves) {
       leaf.growOneDay();
+      // Supprimer les feuilles en état dead_3 depuis au moins 1 jour
+      if (leaf.shouldBeRemoved()) {
+        leavesToRemove.add(leaf);
+      }
+    }
+    // Supprimer les feuilles mortes
+    for (final leaf in leavesToRemove) {
+      removeLeaf(leaf.id);
     }
 
-    // Propager la croissance aux branches enfants
+    // 2. Propager la croissance aux branches enfants (qui propageront récursivement)
     for (final child in children) {
       child.growOneDay();
     }
@@ -223,8 +251,10 @@ class Tree {
   });
 
   /// Fait grandir l'arbre d'un jour
+  /// Propagation hiérarchique : Tree → Branch → Leaf
   void growOneDay() {
     age++;
+    // Propager la croissance au tronc (qui propagera récursivement à toutes les branches et feuilles)
     trunk.growOneDay();
   }
 

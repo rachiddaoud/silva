@@ -7,10 +7,10 @@
 # Function to get device ID by name
 get_device_id() {
   case "$1" in
-    "pixel")
+    "pixel" | "rachid")
       echo "192.168.178.79:5555"
       ;;
-    "iphone"|"iphone-pro")
+    "sim")
       echo "B49CA4C3-9C83-49E2-BAF8-36DBC11E12E6"
       ;;
     "yasmine"|"iphone-yasmine")

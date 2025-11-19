@@ -17,7 +17,7 @@ class Leaf {
   final int side; // Côté de la branche (-1 ou 1)
   double age; // Âge en jours (peut être fractionnaire)
   final double maxAge; // Âge maximum (dépend de l'épaisseur de la branche)
-  final double maxSize; // Taille maximale (variation aléatoire)
+  final double randomSizeFactor; // Facteur aléatoire de taille (0.8 à 1.2) pour variation individuelle
   double currentGrowth; // Niveau de croissance actuel (0.0 à 1.0)
   LeafState state; // État de la feuille
   int deathAge; // Nombre de jours depuis le début de la mort (0 = pas encore morte)
@@ -30,13 +30,27 @@ class Leaf {
     required this.side,
     this.age = 0.0,
     required this.maxAge,
-    required this.maxSize,
+    required this.randomSizeFactor,
     this.currentGrowth = 0.1,
     this.state = LeafState.alive,
     this.deathAge = 0,
     required this.position,
     required this.branchPosition,
   });
+  
+  /// Calcule la taille maximale dynamiquement basée sur l'état actuel de la branche
+  double calculateMaxSize(Branch branch) {
+    // Facteur basé sur la profondeur : impact augmenté pour les branches principales
+    // depth 1 = 1.5, depth 2 = 1.2, depth 3 = 0.9, depth 4 = 0.6, depth 5+ = 0.4
+    final depthFactor = 1.5 - (branch.depth - 1) * 0.3; // Décroît de 0.3 par niveau (augmenté)
+    final clampedDepthFactor = depthFactor.clamp(0.4, 1.5); // Min 0.4, max 1.5 pour les branches principales
+    
+    // Facteur basé sur l'âge de la branche : plus vieille = plus grande
+    final ageFactor = 0.5 + (branch.age / 20.0).clamp(0.0, 0.5); // Entre 0.5 et 1.0
+    
+    // maxSize : combine depth (impact augmenté), age et le facteur aléatoire individuel de la feuille
+    return clampedDepthFactor * ageFactor * randomSizeFactor;
+  }
 
   /// Fait grandir la feuille d'un jour
   /// Appelée par la branche parent lors de la propagation hiérarchique
@@ -45,10 +59,8 @@ class Leaf {
     if (state == LeafState.alive && age < maxAge) {
       // Feuille vivante : croissance normale
       age += 0.05; // Augmente l'âge (fractionnaire pour croissance progressive)
-      // Recalculer currentGrowth avec une courbe d'easing cubic
-      final elapsed = (age / maxAge).clamp(0.0, 1.0);
-      final t = elapsed;
-      currentGrowth = (1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t)).clamp(0.0, 1.0);
+      // Calcul simplifié : currentGrowth = ratio d'âge (linéaire)
+      currentGrowth = (age / maxAge).clamp(0.0, 1.0);
     } else if (state != LeafState.alive) {
       // Feuille en train de mourir : évolution automatique de l'état chaque jour
       deathAge++;
@@ -208,8 +220,20 @@ class Branch {
   }
 
   /// Retourne la capacité maximale de feuilles pour cette branche
+  /// Basé sur la profondeur (depth) et l'âge de la branche
   int getCapacity() {
-    return (length / 50.0).ceil();
+    // Base : 1 feuille par 50px de longueur
+    final baseCapacity = (length / 50.0).ceil();
+    
+    // Facteur basé sur la profondeur : branches principales (depth petit) = plus de feuilles
+    // depth 1 = 1.5x, depth 6 = 0.8x
+    final depthFactor = 1.5 - (depth * 0.12).clamp(0.0, 0.7);
+    
+    // Facteur basé sur l'âge : branches plus vieilles = plus de feuilles
+    final ageFactor = 1.0 + (age / 30.0).clamp(0.0, 0.5); // Entre 1.0 et 1.5
+    
+    final totalCapacity = (baseCapacity * depthFactor * ageFactor).ceil();
+    return totalCapacity.clamp(1, 25); // Min 1, max 25 feuilles
   }
 
   /// Vérifie si on peut ajouter une feuille

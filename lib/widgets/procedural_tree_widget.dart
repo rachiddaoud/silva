@@ -241,11 +241,10 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
       return;
     }
     
-    setState(() {
-      final random = math.Random();
-      final baseThickness = widget.size * 0.06;
-      
-      // Récupérer toutes les branches (exclure le tronc)
+      setState(() {
+        final random = math.Random();
+        
+        // Récupérer toutes les branches (exclure le tronc)
       final branches = _tree!.getAllBranches();
       debugPrint('=== DEBUG BRANCHES ===');
       debugPrint('Total branches: ${branches.length}');
@@ -273,12 +272,35 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
         return;
       }
       
-      // Sélectionner 1-2 branches aléatoires
-      final numToAdd = branchesWithSpace.length > 1 ? (1 + random.nextInt(2)) : 1;
+      // Calculer le nombre de feuilles à ajouter proportionnellement à la taille de l'arbre
+      // Basé sur l'âge de l'arbre : plus l'arbre est grand, plus on ajoute de feuilles
+      final treeAge = _tree!.age;
+      final totalBranches = branches.length;
+      
+      // Formule : nombre de feuilles = base (1-2) + bonus basé sur l'âge et le nombre de branches
+      // Arbre jeune (0-5 jours) : 1-2 feuilles
+      // Arbre moyen (5-15 jours) : 2-4 feuilles  
+      // Arbre grand (15+ jours) : 4-8+ feuilles
+      final baseCount = 1 + random.nextInt(2); // 1-2 feuilles de base
+      final ageBonus = (treeAge / 3.0).floor(); // Bonus de 1 feuille tous les 3 jours
+      final branchBonus = (totalBranches / 10.0).floor(); // Bonus de 1 feuille tous les 10 branches
+      
+      // Nombre total à ajouter (avec limite raisonnable)
+      final numToAdd = (baseCount + ageBonus + branchBonus).clamp(1, 15);
+      
+      // Ne pas dépasser le nombre de branches disponibles
+      final actualNumToAdd = math.min(numToAdd, branchesWithSpace.length);
+      
+      debugPrint('=== CALCUL FEUILLES ===');
+      debugPrint('Âge arbre: $treeAge jours');
+      debugPrint('Total branches: $totalBranches');
+      debugPrint('Base: $baseCount, Age bonus: $ageBonus, Branch bonus: $branchBonus');
+      debugPrint('Nombre de feuilles à ajouter: $actualNumToAdd');
+      
       final selectedBranches = <tree_model.Branch>[];
       final availableCopy = List<tree_model.Branch>.from(branchesWithSpace);
       
-      for (int i = 0; i < numToAdd && availableCopy.isNotEmpty; i++) {
+      for (int i = 0; i < actualNumToAdd && availableCopy.isNotEmpty; i++) {
         final index = random.nextInt(availableCopy.length);
         selectedBranches.add(availableCopy[index]);
         availableCopy.removeAt(index);
@@ -306,10 +328,19 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
           branchPos.dy + math.sin(perpAngle) * branchRadius * side,
         );
         
-        final thicknessRatio = (branch.thickness / baseThickness).clamp(0.3, 1.0);
-        final maxAge = 0.6 * thicknessRatio;
-        final baseMaxSize = 0.625 + random.nextDouble() * 1.0;
-        final maxSize = baseMaxSize * thicknessRatio.clamp(0.5, 1.0);
+        // Calcul simplifié basé sur depth et age de la branche
+        // Plus la branche est proche du tronc (depth petit) et plus elle est vieille (age grand), 
+        // plus les feuilles peuvent être grandes
+        
+        // Facteur basé sur la profondeur : depth 1 = 1.0, depth 6 = 0.3
+        final depthFactor = 1.0 - (branch.depth - 1) * 0.12; // Décroît de 0.12 par niveau
+        final clampedDepthFactor = depthFactor.clamp(0.3, 1.0);
+        
+        // Variation aléatoire pour le naturel (stockée dans la feuille pour variation individuelle)
+        final randomSizeFactor = 0.8 + random.nextDouble() * 0.4; // Entre 0.8 et 1.2
+        
+        // maxAge : dépend aussi de la profondeur et de l'âge
+        final maxAge = 0.3 + (clampedDepthFactor * 0.3); // Entre 0.3 et 0.6
         
         // Vérifier distance avec les feuilles existantes
         bool tooClose = false;
@@ -322,7 +353,9 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
         
         if (!tooClose) {
           final leafId = '${branch.id}_${t.toStringAsFixed(3)}_$side';
-          final initialElapsed = 0.0345;
+          // Calculer l'âge initial pour que la feuille soit visible dès l'ajout
+          // On veut currentGrowth = 0.2 (20% de la taille max) pour être bien visible
+          final initialElapsed = 0.2; // 20% de croissance initiale
           final initialAge = initialElapsed * maxAge;
           
           final newLeaf = tree_model.Leaf(
@@ -331,8 +364,8 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
             side: side,
             age: initialAge,
             maxAge: maxAge,
-            maxSize: maxSize,
-            currentGrowth: 0.1,
+            randomSizeFactor: randomSizeFactor,
+            currentGrowth: initialElapsed, // Calculé correctement dès le départ
             state: tree_model.LeafState.alive,
             position: leafPos,
             branchPosition: branchPos,
@@ -486,7 +519,7 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
         side: oldLeaf.side,
         age: oldLeaf.age,
         maxAge: oldLeaf.maxAge,
-        maxSize: oldLeaf.maxSize,
+        randomSizeFactor: oldLeaf.randomSizeFactor,
         currentGrowth: oldLeaf.currentGrowth,
         state: oldLeaf.state,
         deathAge: oldLeaf.deathAge,
@@ -1069,8 +1102,11 @@ class TreePainter extends CustomPainter {
     // Taille de base de la feuille
     final baseSize = treeSize * 0.064;
     
+    // Calculer maxSize dynamiquement selon l'état actuel de la branche
+    final maxSize = leaf.calculateMaxSize(branch);
+    
     // Taille actuelle : baseSize * maxSize * currentGrowth
-    final leafSize = baseSize * leaf.maxSize * leaf.currentGrowth;
+    final leafSize = baseSize * maxSize * leaf.currentGrowth;
     
     // Si la taille est trop petite, ne pas dessiner
     if (leafSize < 0.01) return;

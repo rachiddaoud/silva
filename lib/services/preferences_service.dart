@@ -14,6 +14,7 @@ class PreferencesService {
   static const String _userNameKey = 'user_name';
   static const String _dateOfBirthKey = 'date_of_birth';
   static const String _onboardingCompleteKey = 'onboarding_complete';
+  static const String _todayVictoriesKey = 'today_victories';
 
   // Thème
   static Future<AppTheme> getTheme() async {
@@ -216,6 +217,54 @@ class PreferencesService {
   static Future<void> setOnboardingComplete(bool complete) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_onboardingCompleteKey, complete);
+  }
+
+  // Victoires du jour
+  static Future<List<VictoryCard>> getTodayVictories() async {
+    final prefs = await SharedPreferences.getInstance();
+    final victoriesJson = prefs.getString(_todayVictoriesKey);
+    
+    if (victoriesJson == null) {
+      // Si aucune victoire sauvegardée, retourner les victoires par défaut
+      return VictoryCard.getDefaultVictories();
+    }
+    
+    try {
+      final List<dynamic> jsonList = jsonDecode(victoriesJson);
+      return jsonList.map((json) {
+        final map = json as Map<String, dynamic>;
+        return VictoryCard(
+          id: map['id'] as int,
+          text: map['text'] as String,
+          emoji: map['emoji'] as String,
+          spriteId: map['spriteId'] as int,
+          isAccomplished: map['isAccomplished'] as bool? ?? false,
+        );
+      }).toList();
+    } catch (e) {
+      return VictoryCard.getDefaultVictories();
+    }
+  }
+
+  static Future<void> saveTodayVictories(List<VictoryCard> victories) async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonList = victories.map((v) => {
+      'id': v.id,
+      'text': v.text,
+      'emoji': v.emoji,
+      'spriteId': v.spriteId,
+      'isAccomplished': v.isAccomplished,
+    }).toList();
+    await prefs.setString(_todayVictoriesKey, jsonEncode(jsonList));
+  }
+
+  static Future<void> markVictoryAsAccomplished(int victoryId) async {
+    final victories = await getTodayVictories();
+    final index = victories.indexWhere((v) => v.id == victoryId);
+    if (index >= 0) {
+      victories[index] = victories[index].copyWith(isAccomplished: true);
+      await saveTodayVictories(victories);
+    }
   }
 }
 

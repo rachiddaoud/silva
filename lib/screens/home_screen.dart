@@ -92,6 +92,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (enabled) {
       await NotificationService.scheduleMorningNotification();
       await NotificationService.scheduleDailyNotification();
+      await NotificationService.scheduleDayReminders();
     }
   }
 
@@ -102,6 +103,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _victories = VictoryCard.getDefaultVictories();
       });
       await PreferencesService.setLastResetDate(DateTime.now());
+      await PreferencesService.saveTodayVictories(_victories);
+      // Reprogrammer les rappels de la journée
+      await NotificationService.scheduleDayReminders();
+    } else {
+      // Charger les victoires sauvegardées
+      final savedVictories = await PreferencesService.getTodayVictories();
+      if (mounted) {
+        setState(() {
+          _victories = savedVictories;
+        });
+      }
     }
   }
 
@@ -147,11 +159,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  void _toggleVictory(int index) {
+  void _toggleVictory(int index) async {
     setState(() {
       _victories[index].isAccomplished =
           !_victories[index].isAccomplished;
     });
+    // Sauvegarder les victoires mises à jour
+    await PreferencesService.saveTodayVictories(_victories);
+    // Reprogrammer les rappels si nécessaire
+    await NotificationService.scheduleDayReminders();
   }
 
   void _showEmotionCheckin() {

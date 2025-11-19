@@ -5,12 +5,14 @@ class Emotion {
   final String emoji;
   final String description;
   final int moodScore; // 0 = très négatif (rouge), 5 = très positif (vert)
+  final String imagePath; // Chemin vers l'image doodle
 
   const Emotion({
     required this.name,
     required this.emoji,
     required this.description,
     required this.moodScore,
+    required this.imagePath,
   });
 
   // Retourne la couleur selon le score d'humeur (rouge à vert)
@@ -39,36 +41,42 @@ class Emotion {
       emoji: "😴",
       description: "Épuisée",
       moodScore: 0, // Rouge
+      imagePath: "assets/doodles/crying.png",
     ),
     Emotion(
       name: "Triste / Débordée",
       emoji: "😔",
       description: "Triste / Débordée",
       moodScore: 1, // Rouge-orange
+      imagePath: "assets/doodles/sad.png",
     ),
     Emotion(
       name: "Anxieuse",
       emoji: "😰",
       description: "Anxieuse",
       moodScore: 1, // Rouge-orange
+      imagePath: "assets/doodles/sad.png",
     ),
     Emotion(
       name: "Bof / Neutre",
       emoji: "😐",
       description: "Bof / Neutre",
       moodScore: 3, // Jaune
+      imagePath: "assets/doodles/neutral.png",
     ),
     Emotion(
       name: "OK / Calme",
       emoji: "😌",
       description: "OK / Calme",
       moodScore: 4, // Vert clair
+      imagePath: "assets/doodles/smiling.png",
     ),
     Emotion(
       name: "Fière / Joyeuse",
       emoji: "😊",
       description: "Fière / Joyeuse",
       moodScore: 5, // Vert
+      imagePath: "assets/doodles/happy.png",
     ),
   ];
 }

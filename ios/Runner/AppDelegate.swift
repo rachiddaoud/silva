@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import UserNotifications
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -8,6 +9,52 @@ import UIKit
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
+    
+    // Configurer les catégories de notifications avec actions pour iOS
+    if #available(iOS 10.0, *) {
+      UNUserNotificationCenter.current().delegate = self
+      
+      // Catégorie pour les rappels de la journée
+      let markDoneAction = UNNotificationAction(
+        identifier: "action_mark_done",
+        title: "J'ai fait cette action",
+        options: []
+      )
+      
+      let dayReminderCategory = UNNotificationCategory(
+        identifier: "DAY_REMINDER",
+        actions: [markDoneAction],
+        intentIdentifiers: [],
+        options: []
+      )
+      
+      // Catégorie pour le rappel du soir
+      let completeNowAction = UNNotificationAction(
+        identifier: "action_complete_now",
+        title: "Terminer maintenant",
+        options: [.foreground]
+      )
+      
+      let remindLaterAction = UNNotificationAction(
+        identifier: "action_remind_later",
+        title: "Rappeler plus tard",
+        options: []
+      )
+      
+      let eveningReminderCategory = UNNotificationCategory(
+        identifier: "EVENING_REMINDER",
+        actions: [completeNowAction, remindLaterAction],
+        intentIdentifiers: [],
+        options: []
+      )
+      
+      // Enregistrer les catégories
+      UNUserNotificationCenter.current().setNotificationCategories([
+        dayReminderCategory,
+        eveningReminderCategory
+      ])
+    }
+    
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

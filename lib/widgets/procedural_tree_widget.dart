@@ -88,6 +88,8 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
   ui.Image? _leafDead1Image;
   ui.Image? _leafDead2Image;
   ui.Image? _leafDead3Image;
+  ui.Image? _flowerImage;
+  ui.Image? _jasminImage;
   ui.Image? _groundImage;
   late AnimationController _windController;
   late Animation<double> _windAnimation;
@@ -106,6 +108,8 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
     _loadLeafDead1Image();
     _loadLeafDead2Image();
     _loadLeafDead3Image();
+    _loadFlowerImage();
+    _loadJasminImage();
     _loadGroundImage();
     
     // Animation pour l'effet de vent (oscillation continue)
@@ -199,6 +203,40 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
     }
   }
 
+  Future<void> _loadFlowerImage() async {
+    try {
+      final ByteData data = await rootBundle.load('assets/tree/flower.png');
+      final Uint8List bytes = data.buffer.asUint8List();
+      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+      final ui.FrameInfo frameInfo = await codec.getNextFrame();
+      if (mounted) {
+        setState(() {
+          _flowerImage = frameInfo.image;
+        });
+      }
+    } catch (e) {
+      // Si l'image ne peut pas être chargée, on ne dessinera pas de fleur
+      _flowerImage = null;
+    }
+  }
+
+  Future<void> _loadJasminImage() async {
+    try {
+      final ByteData data = await rootBundle.load('assets/tree/jasmin.png');
+      final Uint8List bytes = data.buffer.asUint8List();
+      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+      final ui.FrameInfo frameInfo = await codec.getNextFrame();
+      if (mounted) {
+        setState(() {
+          _jasminImage = frameInfo.image;
+        });
+      }
+    } catch (e) {
+      // Si l'image ne peut pas être chargée, on ne dessinera pas de jasmin
+      _jasminImage = null;
+    }
+  }
+
   Future<void> _loadGroundImage() async {
     try {
       final ByteData data = await rootBundle.load('assets/tree/terre.png');
@@ -227,6 +265,8 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
     _leafDead1Image?.dispose();
     _leafDead2Image?.dispose();
     _leafDead3Image?.dispose();
+    _flowerImage?.dispose();
+    _jasminImage?.dispose();
     _groundImage?.dispose();
     _windController.dispose();
     _treeNotifier.dispose();
@@ -385,6 +425,113 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
       _treeNotifier.value++;
     });
   }
+
+  /// Ajoute une fleur aléatoirement sur une branche disponible
+  void addRandomFlower() {
+    if (_tree == null) {
+      debugPrint('=== AJOUTER FLEUR ===');
+      debugPrint('Arbre non initialisé');
+      return;
+    }
+    
+    setState(() {
+      final random = math.Random();
+      
+      // Récupérer toutes les branches (exclure le tronc)
+      final branches = _tree!.getAllBranches();
+      final availableBranches = branches.where((branch) => branch.depth > 0).toList();
+      
+      if (availableBranches.isEmpty) {
+        debugPrint('=== AJOUTER FLEUR ===');
+        debugPrint('Aucune branche disponible (tronc exclu)');
+        return;
+      }
+      
+      // Sélectionner une branche avec probabilité pondérée par l'âge
+      // Plus la branche est ancienne, plus elle a de chances d'être sélectionnée
+      final weights = availableBranches.map((branch) {
+        // Poids basé sur l'âge : 1 + age (minimum 1, augmente avec l'âge)
+        // Les branches plus anciennes ont beaucoup plus de chances
+        return 1.0 + (branch.age * 4.0); // Multiplier par 4 pour accentuer l'effet (doublé)
+      }).toList();
+      
+      // Calculer la somme totale des poids
+      final totalWeight = weights.fold(0.0, (sum, weight) => sum + weight);
+      
+      // Sélectionner une branche selon la distribution pondérée
+      final randomValue = random.nextDouble() * totalWeight;
+      double cumulativeWeight = 0.0;
+      tree_model.Branch? selectedBranch;
+      
+      for (int i = 0; i < availableBranches.length; i++) {
+        cumulativeWeight += weights[i];
+        if (randomValue <= cumulativeWeight) {
+          selectedBranch = availableBranches[i];
+          break;
+        }
+      }
+      
+      // Fallback si aucune branche n'a été sélectionnée (ne devrait pas arriver)
+      selectedBranch ??= availableBranches[random.nextInt(availableBranches.length)];
+      
+      // VÉRIFICATION DE SÉCURITÉ : Ne jamais ajouter de fleur sur le tronc
+      if (selectedBranch.depth == 0) {
+        debugPrint('⚠️ ATTENTION: Tentative d\'ajouter une fleur sur le tronc (depth=0) - REFUSÉ');
+        return;
+      }
+      
+      // Position aléatoire sur la branche
+      final t = 0.2 + random.nextDouble() * 0.8;
+      final branchPos = _bezierPoint(selectedBranch.start, selectedBranch.controlPoint, selectedBranch.end, t);
+      final tangent = _bezierTangent(selectedBranch.start, selectedBranch.controlPoint, selectedBranch.end, t);
+      final branchAngle = math.atan2(tangent.dy, tangent.dx);
+      final perpAngle = branchAngle + math.pi / 2;
+      final thicknessAtPoint = selectedBranch.thickness * (1.0 - t * 0.3);
+      final branchRadius = thicknessAtPoint / 2;
+      final side = random.nextBool() ? 1 : -1;
+      final flowerPos = Offset(
+        branchPos.dx + math.cos(perpAngle) * branchRadius * side,
+        branchPos.dy + math.sin(perpAngle) * branchRadius * side,
+      );
+      
+      // Calculer le facteur de taille basé sur la profondeur
+      final sizeFactor = tree_model.Flower.calculateSizeFactor(selectedBranch);
+      
+      // Choisir aléatoirement le type de fleur (0 = flower.png, 1 = jasmin.png)
+      final flowerType = random.nextInt(2);
+      
+      // Vérifier distance avec les fleurs existantes
+      bool tooClose = false;
+      for (final existingFlower in selectedBranch.flowers) {
+        if ((flowerPos - existingFlower.position).distance < 15.0) {
+          tooClose = true;
+          break;
+        }
+      }
+      
+      if (!tooClose) {
+        final flowerId = 'flower_${selectedBranch.id}_${t.toStringAsFixed(3)}_$side';
+        
+        final newFlower = tree_model.Flower(
+          id: flowerId,
+          tOnBranch: t,
+          side: side,
+          sizeFactor: sizeFactor,
+          flowerType: flowerType,
+          position: flowerPos,
+          branchPosition: branchPos,
+        );
+        
+        selectedBranch.addFlower(newFlower);
+        debugPrint('=== AJOUTER FLEUR ===');
+        debugPrint('Fleur ajoutée sur branche depth=${selectedBranch.depth}, id=${selectedBranch.id}');
+        debugPrint('Total fleurs: ${_tree!.getAllFlowers().length}');
+        
+        // Forcer le rebuild
+        _treeNotifier.value++;
+      }
+    });
+  }
   
   /// Fonctions helper pour calculer les points Bézier
   static Offset _bezierPoint(Offset p0, Offset p1, Offset p2, double t) {
@@ -465,8 +612,9 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
         oldWidget.size != widget.size ||
         oldWidget.parameters.seed != widget.parameters.seed) {
       
-      // Sauvegarder les feuilles existantes
+      // Sauvegarder les feuilles et fleurs existantes
       final existingLeaves = _tree?.getAllLeaves() ?? [];
+      final existingFlowers = _tree?.getAllFlowers() ?? [];
       
       // Régénérer l'arbre avec la nouvelle structure
       _tree = TreePainter.generateTreeStructure(
@@ -479,6 +627,11 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
       // Réappliquer les feuilles existantes sur les nouvelles branches
       if (existingLeaves.isNotEmpty) {
         _reapplyLeaves(existingLeaves);
+      }
+      
+      // Réappliquer les fleurs existantes sur les nouvelles branches
+      if (existingFlowers.isNotEmpty) {
+        _reapplyFlowers(existingFlowers);
       }
     }
   }
@@ -541,6 +694,64 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
     }
   }
 
+  /// Réapplique les fleurs existantes sur les nouvelles branches de l'arbre
+  void _reapplyFlowers(List<tree_model.Flower> oldFlowers) {
+    final newBranches = _tree!.getAllBranches();
+    int skippedTrunk = 0;
+    
+    for (final oldFlower in oldFlowers) {
+      // L'ID de la fleur est formaté comme: 'flower_${branch.id}_${t}_$side'
+      // Par exemple: 'flower_0_1_2_0.523_1' où '0_1_2' est l'ID de la branche
+      // Il faut extraire l'ID de la branche (enlever le préfixe "flower_" et les 2 derniers segments)
+      final parts = oldFlower.id.split('_');
+      if (parts.length < 4) continue; // ID invalide (doit avoir au moins "flower" + branchId + t + side)
+      
+      // Enlever le préfixe "flower" et les 2 derniers segments (t et side)
+      // L'ID de la branche est tout sauf le premier segment ("flower") et les 2 derniers
+      final branchId = parts.sublist(1, parts.length - 2).join('_');
+      
+      tree_model.Branch? matchingBranch;
+      try {
+        matchingBranch = newBranches.firstWhere((b) => b.id == branchId);
+      } catch (e) {
+        continue; // Branche non trouvée, skip cette fleur
+      }
+      
+      // VÉRIFICATION DE SÉCURITÉ : Ne jamais réappliquer une fleur sur le tronc
+      if (matchingBranch.depth == 0) {
+        skippedTrunk++;
+        debugPrint('⚠️ Fleur ignorée : était sur le tronc (depth=0)');
+        continue;
+      }
+      
+      // Recalculer le facteur de taille basé sur la nouvelle branche
+      final sizeFactor = tree_model.Flower.calculateSizeFactor(matchingBranch);
+      
+      // Créer une nouvelle fleur avec les mêmes propriétés
+      final newFlower = tree_model.Flower(
+        id: oldFlower.id,
+        tOnBranch: oldFlower.tOnBranch,
+        side: oldFlower.side,
+        sizeFactor: sizeFactor, // Recalculer pour la nouvelle branche
+        flowerType: oldFlower.flowerType, // Conserver le type de fleur
+        position: oldFlower.position,
+        branchPosition: oldFlower.branchPosition,
+      );
+      
+      // Mettre à jour la position pour suivre la nouvelle branche
+      newFlower.updatePosition(matchingBranch, widget.size);
+      
+      // Ajouter la fleur à la nouvelle branche
+      matchingBranch.addFlower(newFlower);
+    }
+    
+    debugPrint('=== RÉAPPLICATION FLEURS ===');
+    debugPrint('Fleurs réappliquées: ${_tree!.getAllFlowers().length}');
+    if (skippedTrunk > 0) {
+      debugPrint('⚠️ Fleurs ignorées (sur le tronc): $skippedTrunk');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -558,6 +769,8 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
               leafDead1Image: _leafDead1Image,
               leafDead2Image: _leafDead2Image,
               leafDead3Image: _leafDead3Image,
+              flowerImage: _flowerImage,
+              jasminImage: _jasminImage,
               groundImage: _groundImage,
               windPhase: _windAnimation.value,
             ),
@@ -577,6 +790,8 @@ class TreePainter extends CustomPainter {
   final ui.Image? leafDead1Image;
   final ui.Image? leafDead2Image;
   final ui.Image? leafDead3Image;
+  final ui.Image? flowerImage;
+  final ui.Image? jasminImage;
   final ui.Image? groundImage;
   final double windPhase; // Phase du vent (0 à 2π) pour l'animation
   final Map<tree_model.Branch, Offset> _deformedEnds = {}; // Cache des extrémités déformées
@@ -590,13 +805,18 @@ class TreePainter extends CustomPainter {
     this.leafDead1Image,
     this.leafDead2Image,
     this.leafDead3Image,
+    this.flowerImage,
+    this.jasminImage,
     this.groundImage,
     this.windPhase = 0.0,
   }) {
-    // Mettre à jour les positions de toutes les feuilles en parcourant les branches
+    // Mettre à jour les positions de toutes les feuilles et fleurs en parcourant les branches
     for (final branch in tree.getAllBranches()) {
       for (final leaf in branch.leaves) {
         leaf.updatePosition(branch, treeSize);
+      }
+      for (final flower in branch.flowers) {
+        flower.updatePosition(branch, treeSize);
       }
     }
   }
@@ -836,6 +1056,13 @@ class TreePainter extends CustomPainter {
         if (leaf.currentGrowth > 0.0) {
           _drawLeaf(canvas, leaf, branch);
         }
+      }
+    }
+
+    // Dessiner les fleurs
+    for (final branch in sortedBranches) {
+      for (final flower in branch.flowers) {
+        _drawFlower(canvas, flower, branch);
       }
     }
     
@@ -1290,6 +1517,134 @@ class TreePainter extends CustomPainter {
     canvas.drawPath(path, paint);
   }
 
+  void _drawFlower(Canvas canvas, tree_model.Flower flower, tree_model.Branch branch) {
+    // VÉRIFICATION DE SÉCURITÉ : Ne jamais dessiner une fleur sur le tronc
+    if (branch.depth == 0) {
+      debugPrint('⚠️ Fleur sur le tronc détectée au dessin - NON DESSINÉE (id: ${flower.id})');
+      return;
+    }
+    
+    // Récupérer les positions déformées de la branche
+    final deformedStart = _deformedStarts[branch] ?? branch.start;
+    final deformedEnd = _deformedEnds[branch] ?? branch.end;
+    
+    // Calculer le point de contrôle déformé (même logique que dans _drawBranch)
+    final originalControl = branch.controlPoint;
+    final midPoint = Offset(
+      (deformedStart.dx + deformedEnd.dx) / 2,
+      (deformedStart.dy + deformedEnd.dy) / 2,
+    );
+    final deformedControl = Offset(
+      originalControl.dx + (midPoint.dx - (branch.start.dx + branch.end.dx) / 2) * 0.7,
+      originalControl.dy + (midPoint.dy - (branch.start.dy + branch.end.dy) / 2) * 0.7,
+    );
+    
+    // Calculer la position de la fleur sur la branche déformée
+    final branchPos = _bezierPoint(deformedStart, deformedControl, deformedEnd, flower.tOnBranch);
+    
+    // Utiliser la branche déformée pour calculer la tangente
+    final tangent = _bezierTangent(
+      deformedStart,
+      deformedControl,
+      deformedEnd,
+      flower.tOnBranch,
+    );
+    
+    // Calculer l'angle de la tangente (direction de la branche)
+    final branchAngle = math.atan2(tangent.dy, tangent.dx);
+    
+    // Calculer l'angle perpendiculaire à la branche (90°)
+    final perpAngle = branchAngle + math.pi / 2;
+    
+    // Calculer l'épaisseur de la branche à ce point
+    final thicknessAtPoint = branch.thickness * (1.0 - flower.tOnBranch * 0.3);
+    final branchRadius = thicknessAtPoint / 2;
+    
+    // Position de la fleur sur la branche déformée
+    final flowerPos = Offset(
+      branchPos.dx + math.cos(perpAngle) * branchRadius * flower.side,
+      branchPos.dy + math.sin(perpAngle) * branchRadius * flower.side,
+    );
+    
+    // Effet de vent (plus léger que pour les feuilles)
+    final heightFactor = (treeSize - flowerPos.dy) / treeSize;
+    final depthFactor = branch.depth / parameters.maxDepth;
+    final windIntensity = 0.2 * heightFactor * (0.5 + depthFactor * 0.5);
+    
+    final flowerPhase = windPhase + flowerPos.dx * 0.01 + flowerPos.dy * 0.01;
+    final windOffsetX = math.sin(flowerPhase) * windIntensity * treeSize * 0.02;
+    final windOffsetY = math.cos(flowerPhase * 0.7) * windIntensity * treeSize * 0.01;
+    final windRotation = math.sin(flowerPhase * 1.3) * windIntensity * 0.2;
+    
+    // Angle de la fleur : perpendiculaire à la branche avec un léger offset
+    final angleOffset = flower.side == 1 ? math.pi / 7.2 : -math.pi / 7.2;
+    final rotation = perpAngle + angleOffset + windRotation;
+    
+    canvas.save();
+    canvas.translate(flowerPos.dx + windOffsetX, flowerPos.dy + windOffsetY);
+    canvas.rotate(rotation);
+    
+    if (flower.side == -1) {
+      canvas.scale(-1.0, 1.0);
+    }
+    
+    // Dessiner l'image de la fleur selon son type
+    ui.Image? imageToDraw;
+    if (flower.flowerType == 0) {
+      imageToDraw = flowerImage;
+    } else {
+      imageToDraw = jasminImage;
+    }
+    
+    if (imageToDraw != null) {
+      _drawFlowerImage(canvas, flower.sizeFactor, imageToDraw);
+    }
+    
+    canvas.restore();
+  }
+
+  /// Dessine l'image de la fleur
+  void _drawFlowerImage(Canvas canvas, double sizeFactor, ui.Image image) {
+    // Vérifier que l'image n'a pas été disposée
+    try {
+      final imageWidth = image.width.toDouble();
+      final imageHeight = image.height.toDouble();
+      
+      // Taille de base de la fleur
+      final baseSize = treeSize * 0.08;
+      
+      // Taille finale : baseSize * sizeFactor (dépend de la profondeur)
+      final flowerSize = baseSize * sizeFactor;
+      
+      // Calculer les dimensions pour garder les proportions
+      final aspectRatio = imageWidth / imageHeight;
+      final drawWidth = flowerSize;
+      final drawHeight = drawWidth / aspectRatio;
+      
+      // Le point d'ancrage est au centre de la fleur
+      final dstRect = Rect.fromLTWH(
+        -drawWidth / 2, // Centrer horizontalement
+        -drawHeight / 2, // Centrer verticalement
+        drawWidth,
+        drawHeight,
+      );
+      
+      // Rectangle source (toute l'image)
+      final srcRect = Rect.fromLTWH(0, 0, imageWidth, imageHeight);
+      
+      // Dessiner l'image
+      canvas.drawImageRect(
+        image,
+        srcRect,
+        dstRect,
+        Paint()..filterQuality = FilterQuality.high,
+      );
+    } catch (e) {
+      // L'image a été disposée, ne rien dessiner
+      return;
+    }
+  }
+
 
 
   @override
@@ -1297,6 +1652,8 @@ class TreePainter extends CustomPainter {
     return oldDelegate.tree != tree ||
         oldDelegate.treeSize != treeSize ||
         oldDelegate.leafImage != leafImage ||
+        oldDelegate.flowerImage != flowerImage ||
+        oldDelegate.jasminImage != jasminImage ||
         oldDelegate.groundImage != groundImage ||
         oldDelegate.windPhase != windPhase ||
         oldDelegate.parameters.seed != parameters.seed;

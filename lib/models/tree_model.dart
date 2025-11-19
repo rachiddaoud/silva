@@ -150,11 +150,96 @@ class Leaf {
   }
 }
 
+/// Classe représentant une fleur attachée à une branche
+class Flower {
+  final String id;
+  final double tOnBranch; // Position sur la branche (0.0 à 1.0)
+  final int side; // Côté de la branche (-1 ou 1)
+  final double sizeFactor; // Facteur de taille basé sur la profondeur de la branche
+  final int flowerType; // Type de fleur (0 = flower.png, 1 = jasmin.png)
+  Offset position; // Position calculée (mutable)
+  Offset branchPosition; // Position sur la branche (mutable)
+
+  Flower({
+    required this.id,
+    required this.tOnBranch,
+    required this.side,
+    required this.sizeFactor,
+    required this.flowerType,
+    required this.position,
+    required this.branchPosition,
+  });
+
+  /// Calcule la taille de la fleur basée sur la profondeur de la branche
+  /// Plus la branche est proche du tronc (depth petit), plus la fleur est grande
+  static double calculateSizeFactor(Branch branch) {
+    // Facteur basé sur la profondeur : depth 1 = 1.0, depth 6 = 0.3
+    final depthFactor = 1.0 - (branch.depth - 1) * 0.12; // Décroît de 0.12 par niveau
+    return depthFactor.clamp(0.3, 1.0);
+  }
+
+  /// Met à jour la position de la fleur pour suivre sa branche
+  void updatePosition(Branch branch, double treeSize) {
+    // Calculer la position exacte sur la branche au paramètre tOnBranch
+    final branchPos = _bezierPoint(
+      branch.start,
+      branch.controlPoint,
+      branch.end,
+      tOnBranch,
+    );
+
+    // Calculer la tangente à la branche à ce point
+    final tangent = _bezierTangent(
+      branch.start,
+      branch.controlPoint,
+      branch.end,
+      tOnBranch,
+    );
+
+    // Calculer l'angle perpendiculaire à la branche
+    final branchAngle = math.atan2(tangent.dy, tangent.dx);
+    final perpAngle = branchAngle + math.pi / 2;
+
+    // Calculer l'épaisseur de la branche à ce point
+    final thicknessAtPoint = branch.thickness * (1.0 - tOnBranch * 0.3);
+    final branchRadius = thicknessAtPoint / 2;
+
+    // Position finale: depuis le centre de la branche, aller vers l'extérieur
+    position = Offset(
+      branchPos.dx + math.cos(perpAngle) * branchRadius * side,
+      branchPos.dy + math.sin(perpAngle) * branchRadius * side,
+    );
+    branchPosition = branchPos;
+  }
+
+  /// Calcule un point sur une courbe de Bézier quadratique
+  static Offset _bezierPoint(Offset p0, Offset p1, Offset p2, double t) {
+    final u = 1 - t;
+    final tt = t * t;
+    final uu = u * u;
+
+    return Offset(
+      uu * p0.dx + 2 * u * t * p1.dx + tt * p2.dx,
+      uu * p0.dy + 2 * u * t * p1.dy + tt * p2.dy,
+    );
+  }
+
+  /// Calcule la tangente à une courbe de Bézier quadratique
+  static Offset _bezierTangent(Offset p0, Offset p1, Offset p2, double t) {
+    final u = 1 - t;
+    return Offset(
+      2 * u * (p1.dx - p0.dx) + 2 * t * (p2.dx - p1.dx),
+      2 * u * (p1.dy - p0.dy) + 2 * t * (p2.dy - p1.dy),
+    );
+  }
+}
+
 /// Classe représentant une branche de l'arbre
 class Branch {
   final String id;
   final List<Branch> children = []; // Branches enfants
   final List<Leaf> leaves = []; // Feuilles attachées à cette branche
+  final List<Flower> flowers = []; // Fleurs attachées à cette branche
   int age; // Âge en jours (commence à 0 quand la branche apparaît)
 
   // Géométrie
@@ -191,6 +276,16 @@ class Branch {
   /// Supprime une feuille par son ID
   void removeLeaf(String leafId) {
     leaves.removeWhere((leaf) => leaf.id == leafId);
+  }
+
+  /// Ajoute une fleur
+  void addFlower(Flower flower) {
+    flowers.add(flower);
+  }
+
+  /// Supprime une fleur par son ID
+  void removeFlower(String flowerId) {
+    flowers.removeWhere((flower) => flower.id == flowerId);
   }
 
   /// Fait grandir la branche d'un jour
@@ -258,6 +353,15 @@ class Branch {
     }
     return allLeaves;
   }
+
+  /// Retourne toutes les fleurs (de cette branche + tous les enfants récursivement)
+  List<Flower> getAllFlowers() {
+    final allFlowers = <Flower>[...flowers];
+    for (final child in children) {
+      allFlowers.addAll(child.getAllFlowers());
+    }
+    return allFlowers;
+  }
 }
 
 /// Classe représentant l'arbre complet
@@ -290,6 +394,11 @@ class Tree {
   /// Retourne toutes les feuilles de l'arbre (parcours récursif depuis le tronc)
   List<Leaf> getAllLeaves() {
     return trunk.getAllLeaves();
+  }
+
+  /// Retourne toutes les fleurs de l'arbre (parcours récursif depuis le tronc)
+  List<Flower> getAllFlowers() {
+    return trunk.getAllFlowers();
   }
 
   /// Retourne le niveau de croissance actuel (0.0 à 1.0) basé sur l'âge

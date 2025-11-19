@@ -79,6 +79,45 @@ class _PathViewState extends State<PathView> {
     });
   }
 
+  Widget _buildEmojiButton({
+    required String emoji,
+    required VoidCallback onPressed,
+    required ThemeData theme,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: theme.colorScheme.outline.withOpacity(0.2),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Text(
+              emoji,
+              style: const TextStyle(fontSize: 28),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -186,71 +225,60 @@ class _PathViewState extends State<PathView> {
             ),
           ),
 
-          // Bouton de test pour tuer des feuilles
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-              onPressed: () {
-                if (_treeKey.currentState != null) {
-                  _treeKey.currentState!.advanceLeafDeath();
-                }
-              },
-                icon: const Icon(Icons.eco_outlined),
-                label: const Text('Tuer des feuilles (TEST)'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange.shade300,
-                  foregroundColor: Colors.black87,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24.0,
-                    vertical: 12.0,
+          // Barre de boutons en bas avec emojis
+          SafeArea(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor.withOpacity(0.9),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, -2),
                   ),
-                ),
+                ],
               ),
-            ),
-          ),
-
-          // Bouton pour ajouter des feuilles
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  if (_treeKey.currentState != null) {
-                    _treeKey.currentState!.addRandomLeaves();
-                  }
-                },
-                icon: const Icon(Icons.add_circle_outline),
-                label: const Text('Ajouter des feuilles'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade300,
-                  foregroundColor: Colors.black87,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24.0,
-                    vertical: 12.0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Bouton feuilles (ajouter des feuilles)
+                  _buildEmojiButton(
+                    emoji: '🍃',
+                    onPressed: () {
+                      if (_treeKey.currentState != null) {
+                        _treeKey.currentState!.addRandomLeaves();
+                      }
+                    },
+                    theme: theme,
                   ),
-                ),
-              ),
-            ),
-          ),
-
-          // Bouton pour faire grandir l'arbre
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _growTree,
-                icon: const Icon(Icons.arrow_upward),
-                label: Text('Faire grandir l\'arbre (${_treeKey.currentState?.tree?.age ?? 0} jours)'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24.0,
-                    vertical: 12.0,
+                  // Bouton jour (faire grandir l'arbre)
+                  _buildEmojiButton(
+                    emoji: '☀️',
+                    onPressed: _growTree,
+                    theme: theme,
                   ),
-                ),
+                  // Bouton feuilles jaune (tuer des feuilles)
+                  _buildEmojiButton(
+                    emoji: '🍂',
+                    onPressed: () {
+                      if (_treeKey.currentState != null) {
+                        _treeKey.currentState!.advanceLeafDeath();
+                      }
+                    },
+                    theme: theme,
+                  ),
+                  // Bouton fleur (ajouter une fleur)
+                  _buildEmojiButton(
+                    emoji: '🌸',
+                    onPressed: () {
+                      if (_treeKey.currentState != null) {
+                        _treeKey.currentState!.addRandomFlower();
+                      }
+                    },
+                    theme: theme,
+                  ),
+                ],
               ),
             ),
           ),

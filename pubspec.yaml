@@ -76,6 +76,8 @@ flutter:
     - assets/tree/leaf_dead_1.png
     - assets/tree/leaf_dead_2.png
     - assets/tree/leaf_dead_3.png
+    - assets/tree/flower.png
+    - assets/tree/jasmin.png
     - assets/tree/terre.png
 
   # An image asset can refer to one or more resolution-specific "variants", see

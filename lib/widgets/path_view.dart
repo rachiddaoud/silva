@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'procedural_tree_widget.dart';
 
@@ -13,7 +12,7 @@ class PathView extends StatefulWidget {
 
 class _PathViewState extends State<PathView> {
   late TreeParameters _treeParameters;
-  double _growthLevel = 0.05; // Commence petit comme une graine (5%)
+  double _growthLevel = 0.30; // Commence avec quelques branches (30%) pour permettre l'ajout de feuilles
   final TextEditingController _seedController = TextEditingController();
   final GlobalKey<ProceduralTreeWidgetState> _treeKey = GlobalKey<ProceduralTreeWidgetState>();
 
@@ -23,6 +22,20 @@ class _PathViewState extends State<PathView> {
     _treeParameters = const TreeParameters();
     _seedController.text = _treeParameters.seed.toString();
     _seedController.addListener(_onSeedChanged);
+    
+    // Créer 2 feuilles initiales après le premier build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_treeKey.currentState != null && mounted) {
+        // Appeler addRandomLeaves() deux fois pour créer 2 feuilles
+        _treeKey.currentState!.addRandomLeaves();
+        // Attendre un peu avant d'ajouter la deuxième feuille pour éviter les conflits
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted && _treeKey.currentState != null) {
+            _treeKey.currentState!.addRandomLeaves();
+          }
+        });
+      }
+    });
   }
 
   @override
@@ -53,74 +66,15 @@ class _PathViewState extends State<PathView> {
 
   void _growTree() {
     setState(() {
-      // Obtenir les états actuels du widget si disponible
-      final treeState = _treeKey.currentState;
-      final leafStates = treeState?.leafStates ?? <String, LeafState>{};
-      final removedDead3Leaves = treeState?.removedDead3Leaves ?? <String>{};
+      // Faire grandir les feuilles (fait grandir l'arbre d'un jour)
+      _treeKey.currentState?.growLeaves();
       
-      final treeSize = math.min(
-        MediaQuery.of(context).size.width * 0.8,
-        MediaQuery.of(context).size.height * 0.5,
-      );
-      
-      // Compter les feuilles avant la croissance
-      final tempPainterBefore = TreePainter(
-        growthLevel: _growthLevel,
-        treeSize: treeSize,
-        parameters: _treeParameters,
-        leafImage: null,
-        leafDead1Image: null,
-        leafDead2Image: null,
-        leafDead3Image: null,
-        groundImage: null,
-        windPhase: 0.0,
-        leafStates: leafStates,
-        removedDead3Leaves: removedDead3Leaves,
-      );
-      final visibleBefore = tempPainterBefore.leaves.where((l) => l.currentGrowth > 0.0).length;
-      final nonVisibleBefore = tempPainterBefore.leaves.length - visibleBefore;
-      
-      // Augmenter le niveau de croissance progressivement (moins qu'un niveau complet)
-      // Incrément très petit pour voir la croissance visuellement à chaque clic
-      // Avec maxDepth=10, chaque niveau = 10%, donc 0.02 = 2% = fraction visible d'un niveau
-      // Permettre de continuer au-delà de 100% pour le cycle de vie des feuilles
+      // Augmenter le growthLevel pour la génération procédurale
       _growthLevel = _growthLevel + 0.02; // 2% par clic, peut dépasser 100%
       
-      // Compter les feuilles après la croissance
-      final tempPainterAfter = TreePainter(
-        growthLevel: _growthLevel,
-        treeSize: treeSize,
-        parameters: _treeParameters,
-        leafImage: null,
-        leafDead1Image: null,
-        leafDead2Image: null,
-        leafDead3Image: null,
-        groundImage: null,
-        windPhase: 0.0,
-        leafStates: leafStates,
-        removedDead3Leaves: removedDead3Leaves,
-      );
-      final visibleAfter = tempPainterAfter.leaves.where((l) => l.currentGrowth > 0.0).length;
-      final nonVisibleAfter = tempPainterAfter.leaves.length - visibleAfter;
-      
-      // Debug: Analyser la distribution des appearanceTime après croissance
-      final extendedGrowthLevelAfter = _growthLevel > 1.0 
-          ? 1.0 + (_growthLevel - 1.0) * 2.0
-          : _growthLevel;
-      final leavesWithAppearanceTimeAfter = tempPainterAfter.leaves.map((l) => l.appearanceTime).toList()..sort();
-      final leavesBeforeGrowthAfter = leavesWithAppearanceTimeAfter.where((at) => at <= extendedGrowthLevelAfter).length;
-      final leavesAfterGrowthAfter = leavesWithAppearanceTimeAfter.where((at) => at > extendedGrowthLevelAfter).length;
-      
-      debugPrint('=== FAIRE GRANDIR ===');
-      debugPrint('Avant: ${tempPainterBefore.leaves.length} feuilles totales (visibles: $visibleBefore, non visibles: $nonVisibleBefore)');
-      debugPrint('Après: ${tempPainterAfter.leaves.length} feuilles totales (visibles: $visibleAfter, non visibles: $nonVisibleAfter)');
-      debugPrint('GrowthLevel après: ${_growthLevel.toStringAsFixed(3)} (extended: ${extendedGrowthLevelAfter.toStringAsFixed(3)})');
-      debugPrint('Feuilles avec appearanceTime <= growthLevel: $leavesBeforeGrowthAfter');
-      debugPrint('Feuilles avec appearanceTime > growthLevel: $leavesAfterGrowthAfter');
-      if (leavesWithAppearanceTimeAfter.isNotEmpty) {
-        debugPrint('appearanceTime min: ${leavesWithAppearanceTimeAfter.first.toStringAsFixed(3)}');
-        debugPrint('appearanceTime max: ${leavesWithAppearanceTimeAfter.last.toStringAsFixed(3)}');
-        debugPrint('appearanceTime médian: ${leavesWithAppearanceTimeAfter[leavesWithAppearanceTimeAfter.length ~/ 2].toStringAsFixed(3)}');
+      // Le growthLevel ne doit jamais être négatif
+      if (_growthLevel < 0) {
+        _growthLevel = 0;
       }
     });
   }
@@ -257,21 +211,45 @@ class _PathViewState extends State<PathView> {
             ),
           ),
 
+          // Bouton pour ajouter des feuilles
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  if (_treeKey.currentState != null) {
+                    _treeKey.currentState!.addRandomLeaves();
+                  }
+                },
+                icon: const Icon(Icons.add_circle_outline),
+                label: const Text('Ajouter des feuilles'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade300,
+                  foregroundColor: Colors.black87,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 12.0,
+                  ),
+                ),
+              ),
+            ),
+          ),
+
           // Bouton pour faire grandir l'arbre
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-            child: ElevatedButton.icon(
-              onPressed: _growTree,
-              icon: const Icon(Icons.arrow_upward),
-              label: Text(
-                _growthLevel >= 1.0
-                    ? 'Ajouter des feuilles (${((_growthLevel - 1.0) * 100).toStringAsFixed(0)}%)'
-                    : 'Faire grandir (${(_growthLevel * 100).toStringAsFixed(0)}%)',
-              ),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24.0,
-                  vertical: 12.0,
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _growTree,
+                icon: const Icon(Icons.arrow_upward),
+                label: Text('Faire grandir l\'arbre (${_treeKey.currentState?.tree?.age ?? 0} jours)'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 12.0,
+                  ),
                 ),
               ),
             ),

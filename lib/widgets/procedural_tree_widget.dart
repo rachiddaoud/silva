@@ -3,126 +3,10 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ma_bulle/models/tree_model.dart' as tree_model;
 
-/// État d'une feuille dans le processus de mort
-enum LeafState {
-  alive,
-  dead1,
-  dead2,
-  dead3,
-}
-
-/// Information sur une feuille avec sa position et celle de sa branche
-class LeafInfo {
-  Offset position; // Mutable pour permettre la mise à jour
-  Offset branchPosition; // Position sur la branche pour calculer l'orientation
-  final TreeBranch branch; // Référence à la branche d'origine pour suivre son évolution
-  final double tOnBranch; // Position sur la branche (0.0 à 1.0) pour suivre la branche
-  final int side; // Côté de la branche (-1 ou 1) pour maintenir la position
-  final double appearanceTime; // Niveau de growthLevel où la feuille apparaît
-  final double maxSize; // Taille maximale (variation aléatoire)
-  double currentGrowth; // Niveau de croissance actuel (0.0 à 1.0)
-  LeafState state; // État de la feuille (vivante ou en cours de mort)
-
-  LeafInfo({
-    required this.position,
-    required this.branchPosition,
-    required this.branch,
-    required this.tOnBranch,
-    required this.side,
-    required this.appearanceTime,
-    required this.maxSize,
-    this.currentGrowth = 0.0,
-    this.state = LeafState.alive,
-  });
-  
-  /// Génère un identifiant unique pour cette feuille
-  String getUniqueId() {
-    return '${branch.depth}_${branch.start.dx.toStringAsFixed(2)}_${branch.start.dy.toStringAsFixed(2)}_${tOnBranch.toStringAsFixed(3)}_$side';
-  }
-  
-  /// Met à jour la position de la feuille pour suivre sa branche d'origine
-  void updatePosition(double treeSize) {
-    // 1. Calculer la position exacte sur la branche au paramètre tOnBranch
-    // Le tOnBranch reste constant, donc la position relative sur la branche reste la même
-    final branchPos = _bezierPoint(
-      branch.start,
-      branch.controlPoint,
-      branch.end,
-      tOnBranch,
-    );
-    
-    // 2. Calculer la tangente à la branche à ce point (direction de la branche)
-    final tangent = _bezierTangent(
-      branch.start,
-      branch.controlPoint,
-      branch.end,
-      tOnBranch,
-    );
-    
-    // 3. Calculer l'angle perpendiculaire à la branche (90°)
-    final branchAngle = math.atan2(tangent.dy, tangent.dx);
-    final perpAngle = branchAngle + math.pi / 2; // Angle perpendiculaire
-    
-    // 4. Calculer l'épaisseur de la branche à ce point (interpolation entre start et end)
-    // L'épaisseur diminue progressivement le long de la branche
-    final thicknessAtPoint = branch.thickness * (1.0 - tOnBranch * 0.3); // Réduction de 30% à la fin
-    final branchRadius = thicknessAtPoint / 2; // Rayon de la branche à ce point (épaisseur / 2)
-    
-    // 5. Position finale : depuis le centre de la branche, aller vers l'extérieur
-    // La feuille doit s'éloigner du centre de la branche d'une distance égale à l'épaisseur de la branche / 2
-    // Le point d'ancrage (base de la feuille) touche le bord de la branche
-    final totalOffset = branchRadius; // Distance du centre = épaisseur / 2
-    
-    // 7. Mettre à jour la position (vers l'extérieur selon le côté)
-    // La position reste collée à la même position relative sur la branche grâce à tOnBranch constant
-    position = Offset(
-      branchPos.dx + math.cos(perpAngle) * totalOffset * side,
-      branchPos.dy + math.sin(perpAngle) * totalOffset * side,
-    );
-    branchPosition = branchPos;
-  }
-  
-  /// Fonctions helper pour calculer les points Bézier
-  static Offset _bezierPoint(Offset p0, Offset p1, Offset p2, double t) {
-    final u = 1 - t;
-    final tt = t * t;
-    final uu = u * u;
-    return Offset(
-      uu * p0.dx + 2 * u * t * p1.dx + tt * p2.dx,
-      uu * p0.dy + 2 * u * t * p1.dy + tt * p2.dy,
-    );
-  }
-  
-  static Offset _bezierTangent(Offset p0, Offset p1, Offset p2, double t) {
-    final u = 1 - t;
-    return Offset(
-      2 * u * (p1.dx - p0.dx) + 2 * t * (p2.dx - p1.dx),
-      2 * u * (p1.dy - p0.dy) + 2 * t * (p2.dy - p1.dy),
-    );
-  }
-}
-
-/// Classe représentant une branche d'arbre
-class TreeBranch {
-  final Offset start;
-  final Offset end;
-  final Offset controlPoint; // Point de contrôle pour la courbe
-  final double angle;
-  final double length;
-  final double thickness;
-  final int depth;
-
-  TreeBranch({
-    required this.start,
-    required this.end,
-    required this.controlPoint,
-    required this.angle,
-    required this.length,
-    required this.thickness,
-    required this.depth,
-  });
-}
+// Réexporter LeafState pour compatibilité
+typedef LeafState = tree_model.LeafState;
 
 /// Paramètres de génération de l'arbre
 class TreeParameters {
@@ -207,17 +91,13 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
   ui.Image? _groundImage;
   late AnimationController _windController;
   late Animation<double> _windAnimation;
-  // Map pour stocker l'état de chaque feuille (identifiant -> état)
-  final Map<String, LeafState> _leafStates = {};
-  // Set pour stocker les IDs des feuilles dead3 qui ont été supprimées
-  // (pour éviter qu'elles redeviennent vertes quand le TreePainter est recréé)
-  final Set<String> _removedDead3Leaves = {};
-  // ValueNotifier pour forcer le rebuild quand les états changent
-  final ValueNotifier<int> _leafStatesNotifier = ValueNotifier<int>(0);
+  // ValueNotifier pour forcer le rebuild quand l'arbre change
+  final ValueNotifier<int> _treeNotifier = ValueNotifier<int>(0);
+  // L'arbre avec toutes ses branches et feuilles
+  tree_model.Tree? _tree;
   
-  // Getters pour accéder aux états depuis l'extérieur
-  Map<String, LeafState> get leafStates => _leafStates;
-  Set<String> get removedDead3Leaves => _removedDead3Leaves;
+  // Getter pour accéder à l'arbre depuis l'extérieur
+  tree_model.Tree? get tree => _tree;
 
   @override
   void initState() {
@@ -240,6 +120,14 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
         parent: _windController,
         curve: Curves.linear,
       ),
+    );
+    
+    // Initialiser l'arbre
+    _tree = TreePainter.generateTreeStructure(
+      growthLevel: widget.growthLevel,
+      treeSize: widget.size,
+      parameters: widget.parameters,
+      treeAge: 0,
     );
   }
 
@@ -341,130 +229,309 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
     _leafDead3Image?.dispose();
     _groundImage?.dispose();
     _windController.dispose();
-    _leafStatesNotifier.dispose();
+    _treeNotifier.dispose();
     super.dispose();
+  }
+
+  /// Ajoute 1-2 feuilles aléatoirement sur des branches disponibles
+  void addRandomLeaves() {
+    if (_tree == null) {
+      debugPrint('=== AJOUTER FEUILLES ===');
+      debugPrint('Arbre non initialisé');
+      return;
+    }
+    
+    setState(() {
+      final random = math.Random();
+      final baseThickness = widget.size * 0.06;
+      
+      // Récupérer toutes les branches (exclure le tronc)
+      final branches = _tree!.getAllBranches();
+      debugPrint('=== DEBUG BRANCHES ===');
+      debugPrint('Total branches: ${branches.length}');
+      debugPrint('Branches par profondeur:');
+      for (int i = 0; i <= 6; i++) {
+        final count = branches.where((b) => b.depth == i).length;
+        if (count > 0) debugPrint('  Depth $i: $count branches');
+      }
+      
+      final availableBranches = branches.where((branch) => branch.depth > 0).toList();
+      
+      if (availableBranches.isEmpty) {
+        debugPrint('=== AJOUTER FEUILLES ===');
+        debugPrint('Aucune branche disponible (tronc exclu)');
+        debugPrint('L\'arbre est trop jeune, faites-le grandir d\'abord !');
+        return;
+      }
+      
+      // Filtrer les branches qui ont de l'espace
+      final branchesWithSpace = availableBranches.where((branch) => branch.canAddLeaf()).toList();
+      
+      if (branchesWithSpace.isEmpty) {
+        debugPrint('=== AJOUTER FEUILLES ===');
+        debugPrint('Aucune branche disponible (toutes pleines)');
+        return;
+      }
+      
+      // Sélectionner 1-2 branches aléatoires
+      final numToAdd = branchesWithSpace.length > 1 ? (1 + random.nextInt(2)) : 1;
+      final selectedBranches = <tree_model.Branch>[];
+      final availableCopy = List<tree_model.Branch>.from(branchesWithSpace);
+      
+      for (int i = 0; i < numToAdd && availableCopy.isNotEmpty; i++) {
+        final index = random.nextInt(availableCopy.length);
+        selectedBranches.add(availableCopy[index]);
+        availableCopy.removeAt(index);
+      }
+      
+      // Ajouter une feuille sur chaque branche sélectionnée
+      int addedCount = 0;
+      for (final branch in selectedBranches) {
+        // VÉRIFICATION DE SÉCURITÉ : Ne jamais ajouter de feuille sur le tronc
+        if (branch.depth == 0) {
+          debugPrint('⚠️ ATTENTION: Tentative d\'ajouter une feuille sur le tronc (depth=0) - REFUSÉ');
+          continue;
+        }
+        
+        final t = 0.2 + random.nextDouble() * 0.8;
+        final branchPos = _bezierPoint(branch.start, branch.controlPoint, branch.end, t);
+        final tangent = _bezierTangent(branch.start, branch.controlPoint, branch.end, t);
+        final branchAngle = math.atan2(tangent.dy, tangent.dx);
+        final perpAngle = branchAngle + math.pi / 2;
+        final thicknessAtPoint = branch.thickness * (1.0 - t * 0.3);
+        final branchRadius = thicknessAtPoint / 2;
+        final side = random.nextBool() ? 1 : -1;
+        final leafPos = Offset(
+          branchPos.dx + math.cos(perpAngle) * branchRadius * side,
+          branchPos.dy + math.sin(perpAngle) * branchRadius * side,
+        );
+        
+        final thicknessRatio = (branch.thickness / baseThickness).clamp(0.3, 1.0);
+        final maxAge = 0.6 * thicknessRatio;
+        final baseMaxSize = 0.625 + random.nextDouble() * 1.0;
+        final maxSize = baseMaxSize * thicknessRatio.clamp(0.5, 1.0);
+        
+        // Vérifier distance avec les feuilles existantes
+        bool tooClose = false;
+        for (final existingLeaf in branch.leaves) {
+          if ((leafPos - existingLeaf.position).distance < 10.0) {
+            tooClose = true;
+            break;
+          }
+        }
+        
+        if (!tooClose) {
+          final leafId = '${branch.id}_${t.toStringAsFixed(3)}_$side';
+          final initialElapsed = 0.0345;
+          final initialAge = initialElapsed * maxAge;
+          
+          final newLeaf = tree_model.Leaf(
+            id: leafId,
+            tOnBranch: t,
+            side: side,
+            age: initialAge,
+            maxAge: maxAge,
+            maxSize: maxSize,
+            currentGrowth: 0.1,
+            state: tree_model.LeafState.alive,
+            position: leafPos,
+            branchPosition: branchPos,
+          );
+          
+          branch.addLeaf(newLeaf);
+          debugPrint('  Feuille ajoutée sur branche depth=${branch.depth}, id=${branch.id}');
+          addedCount++;
+        }
+      }
+      
+      debugPrint('=== AJOUTER FEUILLES ===');
+      debugPrint('Feuilles ajoutées: $addedCount');
+      debugPrint('Total feuilles: ${_tree!.getAllLeaves().length}');
+      
+      // Forcer le rebuild
+      _treeNotifier.value++;
+    });
+  }
+  
+  /// Fonctions helper pour calculer les points Bézier
+  static Offset _bezierPoint(Offset p0, Offset p1, Offset p2, double t) {
+    final u = 1 - t;
+    final tt = t * t;
+    final uu = u * u;
+    return Offset(
+      uu * p0.dx + 2 * u * t * p1.dx + tt * p2.dx,
+      uu * p0.dy + 2 * u * t * p1.dy + tt * p2.dy,
+    );
+  }
+  
+  static Offset _bezierTangent(Offset p0, Offset p1, Offset p2, double t) {
+    final u = 1 - t;
+    return Offset(
+      2 * u * (p1.dx - p0.dx) + 2 * t * (p2.dx - p1.dx),
+      2 * u * (p1.dy - p0.dy) + 2 * t * (p2.dy - p1.dy),
+    );
+  }
+
+  /// Incrémente l'âge de toutes les feuilles vivantes (fait grandir l'arbre d'un jour)
+  void growLeaves() {
+    if (_tree == null) return;
+    
+    setState(() {
+      _tree!.growOneDay();
+      
+      debugPrint('=== FAIRE GRANDIR ===');
+      debugPrint('Âge de l\'arbre: ${_tree!.age} jours');
+      debugPrint('Total feuilles: ${_tree!.getAllLeaves().length}');
+      
+      // Forcer le rebuild
+      _treeNotifier.value++;
+    });
   }
 
   /// Avance le processus de mort des feuilles
   void advanceLeafDeath() {
+    if (_tree == null) return;
+    
     setState(() {
-      // 1. Recréer temporairement le TreePainter pour obtenir la liste des feuilles
-      final tempPainter = TreePainter(
-        growthLevel: widget.growthLevel,
-        treeSize: widget.size,
-        parameters: widget.parameters,
-        leafImage: _leafImage,
-        leafDead1Image: _leafDead1Image,
-        leafDead2Image: _leafDead2Image,
-        leafDead3Image: _leafDead3Image,
-        groundImage: _groundImage,
-        windPhase: _windAnimation.value,
-        leafStates: _leafStates,
-        removedDead3Leaves: _removedDead3Leaves,
-      );
+      final allLeaves = _tree!.getAllLeaves();
       
-      // Compter les feuilles visibles et non visibles
-      final visibleLeaves = tempPainter.leaves.where((l) => l.currentGrowth > 0.0).length;
-      final nonVisibleLeaves = tempPainter.leaves.length - visibleLeaves;
-      
-      // Debug: Analyser la distribution des appearanceTime
-      final extendedGrowthLevel = widget.growthLevel > 1.0 
-          ? 1.0 + (widget.growthLevel - 1.0) * 2.0
-          : widget.growthLevel;
-      final leavesWithAppearanceTime = tempPainter.leaves.map((l) => l.appearanceTime).toList()..sort();
-      final leavesBeforeGrowth = leavesWithAppearanceTime.where((at) => at <= extendedGrowthLevel).length;
-      final leavesAfterGrowth = leavesWithAppearanceTime.where((at) => at > extendedGrowthLevel).length;
-      debugPrint('=== ANALYSE FEUILLES NON VISIBLES ===');
-      debugPrint('GrowthLevel: ${widget.growthLevel.toStringAsFixed(3)} (extended: ${extendedGrowthLevel.toStringAsFixed(3)})');
-      debugPrint('Feuilles avec appearanceTime <= growthLevel: $leavesBeforeGrowth');
-      debugPrint('Feuilles avec appearanceTime > growthLevel: $leavesAfterGrowth');
-      if (leavesWithAppearanceTime.isNotEmpty) {
-        debugPrint('appearanceTime min: ${leavesWithAppearanceTime.first.toStringAsFixed(3)}');
-        debugPrint('appearanceTime max: ${leavesWithAppearanceTime.last.toStringAsFixed(3)}');
-        debugPrint('appearanceTime médian: ${leavesWithAppearanceTime[leavesWithAppearanceTime.length ~/ 2].toStringAsFixed(3)}');
-      }
-      
-      // 1. D'abord, supprimer toutes les feuilles en état dead3 qui existaient déjà
-      // (celles qui ont été affichées au clic précédent)
-      final dead3Keys = _leafStates.entries
-          .where((e) => e.value == LeafState.dead3)
-          .map((e) => e.key)
-          .toList();
-      for (final key in dead3Keys) {
-        _leafStates.remove(key);
-        _removedDead3Leaves.add(key); // Marquer comme supprimée définitivement
-      }
-      
-      // 2. Ensuite, avancer toutes les feuilles en cours de mort
-      // (dead1 -> dead2, dead2 -> dead3)
-      // Les nouvelles dead3 seront affichées au prochain render
-      final keysToUpdate = <String, LeafState>{};
-      for (final entry in _leafStates.entries) {
-        if (entry.value == LeafState.dead1) {
-          keysToUpdate[entry.key] = LeafState.dead2;
-        } else if (entry.value == LeafState.dead2) {
-          keysToUpdate[entry.key] = LeafState.dead3;
+      // 1. Supprimer les feuilles en état dead3
+      for (final branch in _tree!.getAllBranches()) {
+        final toRemove = branch.leaves.where((leaf) => leaf.state == tree_model.LeafState.dead3).toList();
+        for (final leaf in toRemove) {
+          branch.removeLeaf(leaf.id);
         }
       }
-      _leafStates.addAll(keysToUpdate);
+      
+      // 2. Avancer toutes les feuilles en cours de mort
+      for (final leaf in allLeaves) {
+        if (leaf.state == tree_model.LeafState.dead1 || 
+            leaf.state == tree_model.LeafState.dead2) {
+          leaf.advanceDeathState();
+        }
+      }
       
       // 3. Sélectionner 1-2 feuilles vivantes aléatoires pour commencer à mourir
-      // Permettre de tuer des feuilles qui sont visibles (currentGrowth > 0.0), pas seulement complètement développées
-      final aliveLeaves = tempPainter.leaves
-          .where((l) => l.currentGrowth > 0.0 && 
-                       (_leafStates[l.getUniqueId()] ?? LeafState.alive) == LeafState.alive)
+      final aliveLeaves = allLeaves
+          .where((l) => l.currentGrowth > 0.0 && l.state == tree_model.LeafState.alive)
           .toList();
       
       if (aliveLeaves.isNotEmpty) {
         final random = math.Random();
-        final numToKill = aliveLeaves.length > 1 ? (1 + random.nextInt(2)) : 1; // 1 ou 2
+        final numToKill = aliveLeaves.length > 1 ? (1 + random.nextInt(2)) : 1;
         
         for (int i = 0; i < numToKill && aliveLeaves.isNotEmpty; i++) {
           final index = random.nextInt(aliveLeaves.length);
           final leaf = aliveLeaves[index];
-          _leafStates[leaf.getUniqueId()] = LeafState.dead1;
+          leaf.advanceDeathState();
           aliveLeaves.removeAt(index);
         }
       }
       
-      // Recréer le TreePainter pour obtenir les nouveaux comptes après les modifications
-      final updatedPainter = TreePainter(
+      debugPrint('=== TUER FEUILLE ===');
+      debugPrint('Total feuilles: ${_tree!.getAllLeaves().length}');
+      debugPrint('Feuilles visibles: ${allLeaves.where((l) => l.currentGrowth > 0.0).length}');
+      
+      // Forcer le rebuild
+      _treeNotifier.value++;
+    });
+  }
+
+  @override
+  void didUpdateWidget(ProceduralTreeWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // Régénérer l'arbre seulement si le growthLevel ou les paramètres changent
+    if (oldWidget.growthLevel != widget.growthLevel ||
+        oldWidget.size != widget.size ||
+        oldWidget.parameters.seed != widget.parameters.seed) {
+      
+      // Sauvegarder les feuilles existantes
+      final existingLeaves = _tree?.getAllLeaves() ?? [];
+      
+      // Régénérer l'arbre avec la nouvelle structure
+      _tree = TreePainter.generateTreeStructure(
         growthLevel: widget.growthLevel,
         treeSize: widget.size,
         parameters: widget.parameters,
-        leafImage: _leafImage,
-        leafDead1Image: _leafDead1Image,
-        leafDead2Image: _leafDead2Image,
-        leafDead3Image: _leafDead3Image,
-        groundImage: _groundImage,
-        windPhase: _windAnimation.value,
-        leafStates: _leafStates,
-        removedDead3Leaves: _removedDead3Leaves,
+        treeAge: _tree?.age ?? 0,
       );
-      final updatedVisibleLeaves = updatedPainter.leaves.where((l) => l.currentGrowth > 0.0).length;
-      final updatedNonVisibleLeaves = updatedPainter.leaves.length - updatedVisibleLeaves;
       
-      debugPrint('=== TUER FEUILLES ===');
-      debugPrint('Avant: ${tempPainter.leaves.length} feuilles totales (visibles: $visibleLeaves, non visibles: $nonVisibleLeaves)');
-      debugPrint('Après: ${updatedPainter.leaves.length} feuilles totales (visibles: $updatedVisibleLeaves, non visibles: $updatedNonVisibleLeaves)');
-      debugPrint('Feuilles supprimées définitivement: ${_removedDead3Leaves.length}');
+      // Réappliquer les feuilles existantes sur les nouvelles branches
+      if (existingLeaves.isNotEmpty) {
+        _reapplyLeaves(existingLeaves);
+      }
+    }
+  }
+  
+  /// Réapplique les feuilles existantes sur les nouvelles branches de l'arbre
+  void _reapplyLeaves(List<tree_model.Leaf> oldLeaves) {
+    final newBranches = _tree!.getAllBranches();
+    int skippedTrunk = 0;
+    
+    for (final oldLeaf in oldLeaves) {
+      // L'ID de la feuille est formaté comme: '${branch.id}_${t}_$side'
+      // Par exemple: '0_1_2_0.523_1' où '0_1_2' est l'ID de la branche
+      // Il faut extraire l'ID de la branche (tout sauf les 2 derniers segments)
+      final parts = oldLeaf.id.split('_');
+      if (parts.length < 3) continue; // ID invalide
       
-      // Forcer le rebuild en incrémentant le notifier
-      _leafStatesNotifier.value++;
-    });
+      // L'ID de la branche est tout sauf les 2 derniers segments (t et side)
+      final branchId = parts.sublist(0, parts.length - 2).join('_');
+      
+      tree_model.Branch? matchingBranch;
+      try {
+        matchingBranch = newBranches.firstWhere((b) => b.id == branchId);
+      } catch (e) {
+        continue; // Branche non trouvée, skip cette feuille
+      }
+      
+      // VÉRIFICATION DE SÉCURITÉ : Ne jamais réappliquer une feuille sur le tronc
+      if (matchingBranch.depth == 0) {
+        skippedTrunk++;
+        debugPrint('⚠️ Feuille ignorée : était sur le tronc (depth=0)');
+        continue;
+      }
+      
+      // Créer une nouvelle feuille avec les mêmes propriétés
+      final newLeaf = tree_model.Leaf(
+        id: oldLeaf.id,
+        tOnBranch: oldLeaf.tOnBranch,
+        side: oldLeaf.side,
+        age: oldLeaf.age,
+        maxAge: oldLeaf.maxAge,
+        maxSize: oldLeaf.maxSize,
+        currentGrowth: oldLeaf.currentGrowth,
+        state: oldLeaf.state,
+        position: oldLeaf.position,
+        branchPosition: oldLeaf.branchPosition,
+      );
+      
+      // Mettre à jour la position pour suivre la nouvelle branche
+      newLeaf.updatePosition(matchingBranch, widget.size);
+      
+      // Ajouter la feuille à la nouvelle branche
+      matchingBranch.addLeaf(newLeaf);
+    }
+    
+    debugPrint('=== RÉAPPLICATION FEUILLES ===');
+    debugPrint('Feuilles réappliquées: ${_tree!.getAllLeaves().length}');
+    if (skippedTrunk > 0) {
+      debugPrint('⚠️ Feuilles ignorées (sur le tronc): $skippedTrunk');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge([_windAnimation, _leafStatesNotifier]),
+      animation: Listenable.merge([_windAnimation, _treeNotifier]),
       builder: (context, child) {
         return SizedBox(
           width: widget.size,
           height: widget.size,
           child: CustomPaint(
             painter: TreePainter(
-              growthLevel: widget.growthLevel,
+              tree: _tree!,
               treeSize: widget.size,
               parameters: widget.parameters,
               leafImage: _leafImage,
@@ -473,8 +540,6 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
               leafDead3Image: _leafDead3Image,
               groundImage: _groundImage,
               windPhase: _windAnimation.value,
-              leafStates: _leafStates,
-              removedDead3Leaves: _removedDead3Leaves,
             ),
           ),
         );
@@ -485,7 +550,7 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
 
 /// Painter pour dessiner l'arbre procédural
 class TreePainter extends CustomPainter {
-  final double growthLevel;
+  final tree_model.Tree tree;
   final double treeSize;
   final TreeParameters parameters;
   final ui.Image? leafImage;
@@ -494,19 +559,11 @@ class TreePainter extends CustomPainter {
   final ui.Image? leafDead3Image;
   final ui.Image? groundImage;
   final double windPhase; // Phase du vent (0 à 2π) pour l'animation
-  final Map<String, LeafState> leafStates; // États des feuilles stockés dans le State
-  final Set<String> removedDead3Leaves; // IDs des feuilles dead3 supprimées définitivement
-  late final List<TreeBranch> _branches;
-  List<LeafInfo> _leaves = []; // Mutable car réassigné dans _optimizeLeafDistribution
-  late final double _fractionalDepth; // Profondeur fractionnaire pour croissance progressive
-  final Map<TreeBranch, Offset> _deformedEnds = {}; // Cache des extrémités déformées
-  final Map<TreeBranch, Offset> _deformedStarts = {}; // Cache des points de départ déformés
-  
-  /// Getter pour accéder à la liste des feuilles depuis l'extérieur
-  List<LeafInfo> get leaves => _leaves;
+  final Map<tree_model.Branch, Offset> _deformedEnds = {}; // Cache des extrémités déformées
+  final Map<tree_model.Branch, Offset> _deformedStarts = {}; // Cache des points de départ déformés
 
   TreePainter({
-    required this.growthLevel,
+    required this.tree,
     required this.treeSize,
     required this.parameters,
     this.leafImage,
@@ -515,497 +572,135 @@ class TreePainter extends CustomPainter {
     this.leafDead3Image,
     this.groundImage,
     this.windPhase = 0.0,
-    required this.leafStates,
-    required this.removedDead3Leaves,
   }) {
-    // Calculer la profondeur fractionnaire pour croissance progressive
-    _fractionalDepth = parameters.maxDepth * growthLevel.clamp(0.0, 1.0);
-    _branches = [];
-    _leaves = [];
-    // Générer l'arbre d'abord
-    _generateTree();
-    // Générer les feuilles de base de façon séparée et semi-aléatoire
-    _generateLeaves();
-    // Si l'arbre est à 100%, ajouter progressivement de nouvelles feuilles jusqu'à saturation
-    if (growthLevel >= 1.0) {
-      _addNewLeavesAfterMaturity();
-    }
-    
-    // Mettre à jour la croissance des feuilles
-    _updateLeaves();
-    // Mettre à jour les positions des feuilles pour suivre leurs branches
-    _updateLeafPositions();
-    // Appliquer les états stockés aux feuilles
-    _applyLeafStates();
-    // Supprimer complètement les feuilles dead3 qui ont été marquées comme supprimées
-    _removeDead3Leaves();
-  }
-  
-  /// Supprime complètement les feuilles dead3 de l'array _leaves
-  void _removeDead3Leaves() {
-    _leaves.removeWhere((leaf) {
-      final leafId = leaf.getUniqueId();
-      return removedDead3Leaves.contains(leafId);
-    });
-  }
-  
-  /// Applique les états stockés aux feuilles générées
-  void _applyLeafStates() {
-    for (final leaf in _leaves) {
-      final leafId = leaf.getUniqueId();
-      
-      // Si cette feuille a été supprimée (dead3), ne pas la réinitialiser à alive
-      if (removedDead3Leaves.contains(leafId)) {
-        // Garder l'état dead3 pour qu'elle ne soit pas dessinée
-        leaf.state = LeafState.dead3;
-        continue;
-      }
-      
-      if (leafStates.containsKey(leafId)) {
-        // La feuille est dans la map, appliquer son état
-        leaf.state = leafStates[leafId]!;
-      } else {
-        // La feuille n'est plus dans la map
-        // Si elle était dead3, on ne la réinitialise PAS à alive
-        // (elle sera simplement ignorée lors du dessin)
-        // On réinitialise seulement les autres états de mort (dead1, dead2) qui ne devraient pas être là
-        if (leaf.state == LeafState.dead1 || leaf.state == LeafState.dead2) {
-          // Ces états ne devraient pas être là sans être dans la map
-          // Les réinitialiser à alive
-          leaf.state = LeafState.alive;
-        }
-        // Les dead3 qui ne sont plus dans la map restent en dead3
-        // mais ne seront pas dessinées (filtrées dans paint())
-      }
+    // Mettre à jour les positions de toutes les feuilles
+    for (final leaf in tree.getAllLeaves()) {
+      leaf.updatePosition(tree.getAllBranches().firstWhere((b) => _isLeafOnBranch(leaf, b)), treeSize);
     }
   }
   
-  /// Met à jour les positions des feuilles pour suivre leurs branches d'origine
-  void _updateLeafPositions() {
-    for (final leaf in _leaves) {
-      leaf.updatePosition(treeSize);
-    }
-  }
-
-  /// Met à jour la croissance de toutes les feuilles selon le niveau de croissance actuel
-  void _updateLeaves() {
-    // Utiliser un growthLevel étendu pour continuer le cycle de vie après 100%
-    // Après 100%, on continue à partir de 1.0 avec un temps virtuel qui augmente
-    final extendedGrowthLevel = growthLevel > 1.0 
-        ? 1.0 + (growthLevel - 1.0) * 2.0  // Accélérer le temps après 100% (x2)
-        : growthLevel;
+  /// Vérifie si une feuille appartient à une branche (en comparant les IDs)
+  bool _isLeafOnBranch(tree_model.Leaf leaf, tree_model.Branch branch) {
+    // L'ID de la feuille est formaté comme: '${branch.id}_${t}_$side'
+    // Il faut extraire l'ID de la branche et le comparer exactement
+    final parts = leaf.id.split('_');
+    if (parts.length < 3) return false;
     
-    for (final leaf in _leaves) {
-      // S'assurer que la feuille commence toujours à 0.0
-      if (extendedGrowthLevel <= leaf.appearanceTime) {
-        // La feuille n'est pas encore apparue
-        leaf.currentGrowth = 0.0;
-      } else {
-        // Temps écoulé depuis l'apparition (normalisé entre 0.0 et 1.0)
-        // On suppose qu'une feuille met environ 0.6 unités de growthLevel pour grandir complètement
-        // (augmenté de 0.3 à 0.6 pour ralentir la croissance)
-        final growthDuration = 0.6;
-        final elapsed = (extendedGrowthLevel - leaf.appearanceTime) / growthDuration;
-        
-        // Courbe ease-out cubique : croissance rapide au début, ralentit à la fin
-        // Formule : 1 - (1 - t)³
-        final clampedElapsed = elapsed.clamp(0.0, 1.0);
-        final growth = 1 - math.pow(1 - clampedElapsed, 3).toDouble();
-        leaf.currentGrowth = growth.clamp(0.0, 1.0);
-      }
-    }
+    // L'ID de la branche est tout sauf les 2 derniers segments (t et side)
+    final leafBranchId = parts.sublist(0, parts.length - 2).join('_');
+    
+    // Comparaison exacte (pas startsWith pour éviter les faux positifs avec le tronc '0')
+    return leafBranchId == branch.id;
   }
   
-  /// Ajoute progressivement de nouvelles feuilles après que l'arbre soit mature (100%)
-  /// jusqu'à atteindre la saturation
-  void _addNewLeavesAfterMaturity() {
-    if (_branches.isEmpty) return;
-    
-    final baseLeafSize = treeSize * 0.064; // Réduit de 20% (0.08 * 0.8 = 0.064)
-    
-    // Limite de saturation : nombre maximum de feuilles par branche
-    // Réduire drastiquement la limite pour les extrémités
-    int getMaxLeavesForBranch(TreeBranch branch) {
-      if (branch.depth >= parameters.maxDepth) {
-        return 2; // Très peu de feuilles pour les branches finales
-      } else if (branch.depth >= parameters.maxDepth - 1) {
-        return 5; // Limite réduite pour les branches proches des extrémités
-      } else if (branch.depth >= parameters.maxDepth - 2) {
-        return 10; // Limite modérée pour les branches moyennes
-      }
-      return 15; // Limite normale pour les autres branches
-    }
-    
-    // Calculer combien de nouvelles feuilles on peut ajouter
-    // Basé sur le temps écoulé depuis 100% (growthLevel - 1.0)
-    final timeSinceMaturity = growthLevel - 1.0;
-    final newLeavesInterval = 0.1; // Ajouter des feuilles toutes les 0.1 unités de growthLevel
-    final numNewLeavesBatches = (timeSinceMaturity / newLeavesInterval).floor();
-    
-    // Utiliser un Set pour tracker les feuilles déjà générées (basé sur seed + position)
-    final existingLeafIds = <String>{};
-    for (final leaf in _leaves) {
-      // Créer un ID unique basé sur la branche et tOnBranch
-      final leafId = '${leaf.branch.depth}_${leaf.branch.start.dx.toStringAsFixed(2)}_${leaf.tOnBranch.toStringAsFixed(3)}_${leaf.side}';
-      existingLeafIds.add(leafId);
-    }
-    
-    // Parcourir toutes les branches (sauf le tronc)
-    int branchCounter = 0;
-    for (final branch in _branches) {
-      if (branch.depth == 0) {
-        branchCounter++;
-        continue; // Ignorer le tronc
-      }
-      
-      // Compter les feuilles existantes sur cette branche
-      final existingLeavesOnBranch = _leaves.where((leaf) => 
-        leaf.branch == branch
-      ).length;
-      
-      // Obtenir la limite de saturation pour cette branche
-      final maxLeavesForBranch = getMaxLeavesForBranch(branch);
-      
-      // Si on a atteint la saturation pour cette branche, passer à la suivante
-      if (existingLeavesOnBranch >= maxLeavesForBranch) {
-        branchCounter++;
-        continue;
-      }
-      
-      // Calculer combien de nouvelles feuilles ajouter pour cette branche
-      // Une feuille par batch, mais pas plus que la limite de saturation
-      final maxNewLeaves = maxLeavesForBranch - existingLeavesOnBranch;
-      final leavesToAdd = math.min(maxNewLeaves, numNewLeavesBatches);
-      
-      if (leavesToAdd <= 0) {
-        branchCounter++;
-        continue;
-      }
-      
-      // Seed pour générer de nouvelles feuilles de façon déterministe
-      final branchSeed = parameters.seed + branch.depth * 1000 + branchCounter + 10000; // Offset pour distinguer des feuilles initiales
-      final branchRandom = math.Random(branchSeed);
-      
-      int addedCount = 0;
-      int attempts = 0;
-      const maxAttempts = 50; // Limite pour éviter les boucles infinies
-      
-      while (addedCount < leavesToAdd && attempts < maxAttempts) {
-        attempts++;
-        
-        // Position aléatoire le long de la branche
-        final t = 0.2 + branchRandom.nextDouble() * 0.8; // Entre 20% et 100%
-        
-        // Calculer la position sur la courbe de Bézier
-        final branchPos = _bezierPoint(branch.start, branch.controlPoint, branch.end, t);
-        
-        // Calculer la tangente pour l'orientation
-        final tangent = _bezierTangent(branch.start, branch.controlPoint, branch.end, t);
-        final branchAngle = math.atan2(tangent.dy, tangent.dx);
-        final perpAngle = branchAngle + math.pi / 2;
-        
-        // Épaisseur de la branche à ce point
-        final thicknessAtPoint = branch.thickness * (1.0 - t * 0.3);
-        final branchRadius = thicknessAtPoint / 2; // Rayon de la branche (épaisseur / 2)
-        
-        // Taille de la feuille
-        final leafSeed = branchSeed + addedCount * 100 + existingLeavesOnBranch;
-        final leafRandom = math.Random(leafSeed);
-        // Augmenter le minimum pour compenser la réduction de baseSize (0.5 -> 0.625)
-        var maxSize = 0.625 + leafRandom.nextDouble() * 1.0;
-        
-        // Réduire la taille des feuilles sur les branches d'extrémité
-        final sizeReduction = branch.depth >= parameters.maxDepth 
-            ? 0.5  // Réduction de 50% pour les branches finales (extrémités)
-            : (branch.depth >= parameters.maxDepth - 1 
-                ? 0.7  // Réduction de 30% pour les branches proches des extrémités
-                : (branch.depth >= parameters.maxDepth - 2
-                    ? 0.85  // Réduction de 15% pour les branches moyennes
-                    : 1.0)); // Pas de réduction pour les autres branches
-        maxSize *= sizeReduction;
-        
-        // Position finale : la feuille s'éloigne du centre de la branche d'une distance égale à l'épaisseur / 2
-        final side = leafRandom.nextBool() ? 1 : -1;
-        final totalOffset = branchRadius; // Distance du centre = épaisseur / 2
-        final leafPos = Offset(
-          branchPos.dx + math.cos(perpAngle) * totalOffset * side,
-          branchPos.dy + math.sin(perpAngle) * totalOffset * side,
-        );
-        
-        // Créer l'ID unique avec le vrai side (même logique que getUniqueId())
-        final leafId = '${branch.depth}_${branch.start.dx.toStringAsFixed(2)}_${branch.start.dy.toStringAsFixed(2)}_${t.toStringAsFixed(3)}_$side';
-        
-        // Vérifier si cette feuille existe déjà
-        if (existingLeafIds.contains(leafId)) {
-          continue; // Cette feuille existe déjà, essayer une autre position
-        }
-        
-        // AppearanceTime : après 100%, les nouvelles feuilles apparaissent progressivement
-        // IMPORTANT: S'assurer que appearanceTime >= growthLevel actuel pour que les nouvelles feuilles
-        // commencent toujours petites (currentGrowth = 0.0) et grandissent progressivement
-        // Utiliser le growthLevel actuel comme base minimum
-        final extendedGrowthLevel = growthLevel > 1.0 
-            ? 1.0 + (growthLevel - 1.0) * 2.0
-            : growthLevel;
-        // Calculer un appearanceTime qui est au moins égal au growthLevel actuel
-        // Ajouter un petit délai aléatoire pour que les feuilles n'apparaissent pas toutes en même temps
-        final baseAppearanceTime = math.max(extendedGrowthLevel, 1.0 + (addedCount * newLeavesInterval));
-        final appearanceTime = baseAppearanceTime + (leafRandom.nextDouble() * 0.05);
-        
-        // Vérifier la distance avec les feuilles existantes
-        bool tooClose = false;
-        final minDistance = baseLeafSize * 0.5;
-        for (final existingLeaf in _leaves) {
-          final distance = (leafPos - existingLeaf.position).distance;
-          if (distance < minDistance) {
-            tooClose = true;
-            break;
-          }
-        }
-        
-        // Vérifier si cette feuille a été supprimée
-        if (removedDead3Leaves.contains(leafId)) {
-          continue; // Cette feuille a été supprimée, ne pas la régénérer
-        }
-        
-        // Ajouter la feuille si elle n'est pas trop proche
-        if (!tooClose) {
-          existingLeafIds.add(leafId);
-          _leaves.add(LeafInfo(
-            position: leafPos,
-            branchPosition: branchPos,
-            branch: branch,
-            tOnBranch: t,
-            side: side,
-            appearanceTime: appearanceTime,
-            maxSize: maxSize,
-            currentGrowth: 0.0,
-          ));
-          addedCount++;
-        }
-      }
-      
-      branchCounter++;
-    }
-  }
-
-  /// Génère les feuilles de façon semi-aléatoire le long des branches
-  void _generateLeaves() {
-    if (_branches.isEmpty) return;
-    
-    final baseLeafSize = treeSize * 0.064; // Réduit de 20% (0.08 * 0.8 = 0.064) // Taille de base d'une feuille
-    
-    // Créer un identifiant unique pour chaque branche basé sur sa position dans l'arbre
-    // Cela permet de générer les mêmes feuilles pour les mêmes branches
-    final branchIds = <TreeBranch, String>{};
-    int branchCounter = 0;
-    for (final branch in _branches) {
-      branchIds[branch] = 'branch_${branch.depth}_$branchCounter';
-      branchCounter++;
-    }
-    
-    // Parcourir toutes les branches (sauf le tronc)
-    branchCounter = 0;
-    for (final branch in _branches) {
-      if (branch.depth == 0) {
-        branchCounter++;
-        continue; // Ignorer le tronc
-      }
-      
-      // Générer de nouvelles feuilles pour cette branche
-      // Nombre de feuilles basé sur la longueur de la branche et la profondeur
-      // Réduire drastiquement le nombre de feuilles sur les extrémités (profondeurs élevées)
-      final normalizedLength = branch.length / treeSize;
-      final depthFactor = (branch.depth - 1) / parameters.maxDepth;
-      // Réduction progressive pour les extrémités : beaucoup moins de feuilles sur les branches finales
-      final depthReduction = branch.depth >= parameters.maxDepth 
-          ? 0.15  // Réduction de 85% pour les branches finales (extrémités)
-          : (branch.depth >= parameters.maxDepth - 1 
-              ? 0.3  // Réduction de 70% pour les branches proches des extrémités
-              : (branch.depth >= parameters.maxDepth - 2
-                  ? 0.6  // Réduction de 40% pour les branches moyennes
-                  : 1.0)); // Pas de réduction pour les autres branches
-      final baseLeafCount = (normalizedLength * 50 * (1 + depthFactor) * depthReduction).round();
-      
-      // Utiliser un seed déterministe basé sur la branche pour garantir la reproductibilité
-      // Le seed est basé sur le seed principal + la profondeur + l'index de la branche
-      // Cela garantit que chaque branche génère toujours les mêmes feuilles
-      final branchSeed = parameters.seed + branch.depth * 1000 + branchCounter;
-      final branchRandom = math.Random(branchSeed);
-      // Réduire drastiquement le minimum pour les extrémités
-      final minLeaves = branch.depth >= parameters.maxDepth ? 0 : (branch.depth >= parameters.maxDepth - 1 ? 1 : 3);
-      final numLeaves = math.max(minLeaves, baseLeafCount + branchRandom.nextInt(5) - 2);
-      
-      // Espacement le long de la branche
-      // La dernière feuille doit être à l'extrémité (t = 1.0)
-      final leafSpacing = numLeaves > 1 ? (1.0 - 0.3) / (numLeaves - 1) : 0.0;
-      
-      for (int j = 0; j < numLeaves; j++) {
-        // Position le long de la branche avec espacement régulier
-        // La dernière feuille (j == numLeaves - 1) est à t = 1.0 (extrémité)
-        final t = j == numLeaves - 1 ? 1.0 : 0.3 + j * leafSpacing;
-        
-        // Calculer la position sur la courbe de Bézier
-        final branchPos = _bezierPoint(branch.start, branch.controlPoint, branch.end, t);
-        
-        // 1. Calculer la position exacte sur la branche
-        // 2. Calculer la tangente pour l'orientation (direction de la branche)
-        final tangent = _bezierTangent(branch.start, branch.controlPoint, branch.end, t);
-        final branchAngle = math.atan2(tangent.dy, tangent.dx);
-        final perpAngle = branchAngle + math.pi / 2; // Angle perpendiculaire (90°)
-        
-        // 3. Calculer l'épaisseur de la branche à ce point
-        final thicknessAtPoint = branch.thickness * (1.0 - t * 0.3); // Réduction de 30% à la fin
-        final branchRadius = thicknessAtPoint / 2; // Rayon de la branche à ce point (épaisseur / 2)
-        
-        // 4. Taille maximale aléatoire de la feuille (déterministe basé sur la position)
-        final leafSeed = branchSeed + j * 100;
-        final leafRandom = math.Random(leafSeed);
-        // Augmenter le minimum pour compenser la réduction de baseSize (0.5 -> 0.625)
-        var maxSize = 0.625 + leafRandom.nextDouble() * 1.0;
-        
-        // Réduire la taille des feuilles sur les branches d'extrémité
-        final sizeReduction = branch.depth >= parameters.maxDepth 
-            ? 0.5  // Réduction de 50% pour les branches finales (extrémités)
-            : (branch.depth >= parameters.maxDepth - 1 
-                ? 0.7  // Réduction de 30% pour les branches proches des extrémités
-                : (branch.depth >= parameters.maxDepth - 2
-                    ? 0.85  // Réduction de 15% pour les branches moyennes
-                    : 1.0)); // Pas de réduction pour les autres branches
-        maxSize *= sizeReduction;
-        
-        // 5. Position finale : depuis le centre de la branche, aller vers l'extérieur
-        // La dernière feuille (t = 1.0) est positionnée exactement à l'extrémité de la branche
-        // Les autres feuilles sont décalées sur le côté
-        final isLastLeaf = (j == numLeaves - 1);
-        final totalOffset = isLastLeaf ? 0.0 : branchRadius; // Pas de décalage pour la dernière feuille
-        final side = isLastLeaf ? 0 : ((j % 2 == 0) ? 1 : -1); // Pas de côté pour la dernière feuille
-        
-        // Position de la feuille (centre de la feuille)
-        final leafPos = Offset(
-          branchPos.dx + (isLastLeaf ? 0.0 : math.cos(perpAngle) * totalOffset * side),
-          branchPos.dy + (isLastLeaf ? 0.0 : math.sin(perpAngle) * totalOffset * side),
-        );
-        
-        // Calculer le niveau de croissance de base pour cette branche
-        // S'assurer que la feuille n'apparaît qu'après que la branche soit visible
-        // La branche apparaît quand growthLevel atteint (branch.depth / maxDepth)
-        final branchAppearanceLevel = branch.depth / parameters.maxDepth;
-        final indexDelay = (j / numLeaves) * 0.3; // Délai basé sur l'index de la feuille
-        final randomDelay = leafRandom.nextDouble() * 0.2; // Délai aléatoire
-        // L'apparition doit être après que la branche soit visible + délais
-        final appearanceTime = (branchAppearanceLevel + indexDelay + randomDelay).clamp(0.0, 1.0);
-        
-        // Vérifier la distance avec les feuilles existantes
-        // On utilise une distance minimale basée sur la taille de base des feuilles
-        bool tooClose = false;
-        final minDistance = baseLeafSize * 0.5; // Distance minimale entre les centres des points
-        for (final existingLeaf in _leaves) {
-          final distance = (leafPos - existingLeaf.position).distance;
-          if (distance < minDistance) {
-            tooClose = true;
-            break;
-          }
-        }
-        
-        // Créer un ID unique pour cette feuille (même logique que getUniqueId())
-        final leafId = '${branch.depth}_${branch.start.dx.toStringAsFixed(2)}_${branch.start.dy.toStringAsFixed(2)}_${t.toStringAsFixed(3)}_$side';
-        
-        // Vérifier si cette feuille a été supprimée
-        if (removedDead3Leaves.contains(leafId)) {
-          continue; // Cette feuille a été supprimée, ne pas la régénérer
-        }
-        
-        // Ajouter la feuille si elle n'est pas trop proche
-        if (!tooClose) {
-          _leaves.add(LeafInfo(
-            position: leafPos,
-            branchPosition: branchPos,
-            branch: branch,
-            tOnBranch: t,
-            side: side,
-            appearanceTime: appearanceTime,
-            maxSize: maxSize,
-            currentGrowth: 0.0,
-          ));
-        }
-      }
-      
-      // Ne plus ajouter automatiquement une feuille à l'extrémité pour les branches finales
-      // car elles doivent avoir beaucoup moins de feuilles
-      // (supprimé pour réduire le nombre de feuilles sur les extrémités)
-      
-      branchCounter++;
-    }
-  }
-
-  void _generateTree() {
+  /// Génère la structure Tree avec toutes ses branches de manière procédurale
+  static tree_model.Tree generateTreeStructure({
+    required double growthLevel,
+    required double treeSize,
+    required TreeParameters parameters,
+    int treeAge = 0,
+  }) {
     final random = math.Random(parameters.seed);
-    final effectiveDepth = _fractionalDepth.floor();
-    final depthFraction = _fractionalDepth - effectiveDepth; // Fraction du dernier niveau (0.0 à 1.0)
+    final fractionalDepth = parameters.maxDepth * growthLevel.clamp(0.0, 1.0);
+    final effectiveDepth = fractionalDepth.floor();
+    final depthFraction = fractionalDepth - effectiveDepth;
     
-    if (effectiveDepth == 0 && depthFraction < 0.01) return;
-
-    // Position de départ : centre vertical de la terre (où l'arbre sort de la terre)
-    final treeBase = _getTreeBasePosition();
+    if (effectiveDepth == 0 && depthFraction < 0.01) {
+      // Arbre trop jeune, juste créer un tronc vide
+      final treeBase = _getTreeBasePositionStatic(treeSize);
+      final trunk = tree_model.Branch(
+        id: '0',
+        start: treeBase,
+        end: treeBase,
+        controlPoint: treeBase,
+        thickness: 0.01,
+        length: 0.01,
+        angle: -math.pi / 2,
+        depth: 0,
+        age: treeAge,
+      );
+      return tree_model.Tree(
+        age: treeAge,
+        trunk: trunk,
+        treeSize: treeSize,
+        parameters: parameters,
+      );
+    }
+    
+    // Position de départ
+    final treeBase = _getTreeBasePositionStatic(treeSize);
     final startX = treeBase.dx;
     final startY = treeBase.dy;
     
-    // Le tronc grandit progressivement avec le niveau de croissance
-    // Commence très petit (comme une graine) et s'élargit au fur et à mesure
-    final growthFactor = growthLevel.clamp(0.0, 1.0); // Facteur de croissance (0.0 à 1.0)
+    // Facteur de croissance
+    final growthFactor = growthLevel.clamp(0.0, 1.0);
     
-    // Longueur du tronc : commence à 5% et grandit jusqu'à 25% de la taille de l'arbre
+    // Longueur et épaisseur du tronc
     final trunkLength = treeSize * (0.05 + 0.20 * growthFactor);
-    
-    // Épaisseur du tronc : commence très fine (1%) et s'élargit jusqu'à 6% de la taille de l'arbre
-    // Utiliser une courbe pour que l'élargissement soit plus visible au début
-    final thicknessGrowth = growthFactor * growthFactor; // Courbe quadratique pour un élargissement progressif
+    final thicknessGrowth = growthFactor * growthFactor;
     final trunkThickness = treeSize * (0.01 + 0.05 * thicknessGrowth);
-
+    
     // Calcul de l'extrémité du tronc
     final trunkAngle = -math.pi / 2; // Vers le haut
     final trunkEnd = Offset(
       startX + math.cos(trunkAngle) * trunkLength,
       startY + math.sin(trunkAngle) * trunkLength,
     );
-
+    
     // Point de contrôle pour courber légèrement le tronc
     final trunkControl = Offset(
       startX + math.cos(trunkAngle) * trunkLength * 0.5 + (random.nextDouble() - 0.5) * treeSize * 0.05,
       startY + math.sin(trunkAngle) * trunkLength * 0.5,
     );
-
-    // Création du tronc principal
-    final trunk = TreeBranch(
+    
+    // Création du tronc
+    final trunk = tree_model.Branch(
+      id: '0',
       start: Offset(startX, startY),
       end: trunkEnd,
       controlPoint: trunkControl,
-      angle: trunkAngle,
-      length: trunkLength,
       thickness: trunkThickness,
+      length: trunkLength,
+      angle: trunkAngle,
       depth: 0,
+      age: treeAge,
     );
-
-    // Génération récursive des branches
-    _branches.add(trunk);
-    // Passer effectiveDepth pour savoir quelles profondeurs sont complètement générées
-    _generateBranches(trunk, effectiveDepth, depthFraction, random);
+    
+    // Génération récursive des branches enfants
+    _generateBranchChildren(
+      trunk,
+      effectiveDepth,
+      depthFraction,
+      random,
+      parameters,
+      treeSize,
+      treeAge,
+    );
+    
+    return tree_model.Tree(
+      age: treeAge,
+      trunk: trunk,
+      treeSize: treeSize,
+      parameters: parameters,
+    );
   }
-
-  void _generateBranches(
-    TreeBranch parent,
+  
+  /// Génère récursivement les branches enfants
+  static void _generateBranchChildren(
+    tree_model.Branch parent,
     int effectiveDepth,
     double depthFraction,
     math.Random random,
+    TreeParameters parameters,
+    double treeSize,
+    int treeAge,
   ) {
     // Nombre de branches (2 ou 3)
     final numBranches = random.nextBool() ? 2 : 3;
-
+    
     final newDepth = parent.depth + 1;
     
     // Déterminer la profondeur maximale à générer
-    // Si depthFraction > 0, on génère aussi le niveau effectiveDepth + 1 (en cours de croissance)
     final maxDepth = depthFraction > 0.0 ? effectiveDepth + 1 : effectiveDepth;
     
     // Ne pas générer de branches au-delà de la profondeur maximale
@@ -1017,32 +712,29 @@ class TreePainter extends CustomPainter {
       final branchAngle = parent.angle +
           parameters.baseBranchAngle * (i % 2 == 0 ? 1 : -1) +
           angleVariationFactor;
-
+      
       // Longueur avec variation
       final lengthVariation = 0.85 + random.nextDouble() * 0.3; // 0.85 à 1.15
       var branchLength = parent.length * parameters.lengthRatio * lengthVariation;
       
       // Scaler la longueur seulement si cette branche est au niveau en cours de croissance
-      // (c'est-à-dire newDepth == effectiveDepth + 1, qui correspond à maxDepth quand depthFraction > 0)
-      // Les branches aux profondeurs <= effectiveDepth sont complètement générées (longueur = 1.0)
       if (newDepth == maxDepth && depthFraction > 0.0 && depthFraction < 1.0) {
-        branchLength *= depthFraction; // Réduire la longueur selon la fraction
+        branchLength *= depthFraction;
       }
-
+      
       // Épaisseur décroissante
       final branchThickness = parent.thickness * parameters.thicknessRatio;
-
+      
       // Position de départ (extrémité de la branche parent)
       final branchStart = parent.end;
-
+      
       // Calcul de l'extrémité
       final branchEnd = Offset(
         branchStart.dx + math.cos(branchAngle) * branchLength,
         branchStart.dy + math.sin(branchAngle) * branchLength,
       );
-
+      
       // Point de contrôle pour créer une courbe arrondie
-      // Le point de contrôle est décalé perpendiculairement pour créer une courbe naturelle
       final curveOffset = (random.nextDouble() - 0.5) * parameters.curveIntensity;
       final midPoint = Offset(
         (branchStart.dx + branchEnd.dx) / 2,
@@ -1053,28 +745,56 @@ class TreePainter extends CustomPainter {
         midPoint.dx + math.cos(perpAngle) * branchLength * curveOffset,
         midPoint.dy + math.sin(perpAngle) * branchLength * curveOffset,
       );
-
-      // Création de la branche (sans feuilles, elles seront générées séparément)
-      final branch = TreeBranch(
+      
+      // Création de la branche avec ID unique
+      final branchId = '${parent.id}_$i';
+      final branch = tree_model.Branch(
+        id: branchId,
         start: branchStart,
         end: branchEnd,
         controlPoint: branchControl,
-        angle: branchAngle,
-        length: branchLength,
         thickness: branchThickness,
+        length: branchLength,
+        angle: branchAngle,
         depth: newDepth,
+        age: treeAge,
       );
-
-      _branches.add(branch);
-
+      
+      // Ajouter la branche comme enfant du parent
+      parent.addChild(branch);
+      
       // Récursion pour les branches enfants
-      // Continuer la récursion si on n'a pas atteint la profondeur maximale
       if (newDepth < maxDepth) {
-        _generateBranches(branch, effectiveDepth, depthFraction, random);
+        _generateBranchChildren(
+          branch,
+          effectiveDepth,
+          depthFraction,
+          random,
+          parameters,
+          treeSize,
+          treeAge,
+        );
       }
     }
   }
-
+  
+  /// Calcule la position de base de l'arbre (version statique)
+  static Offset _getTreeBasePositionStatic(double treeSize) {
+    // Position de la terre (similaire à _drawGround)
+    final groundWidth = treeSize * 0.4;
+    final aspectRatio = 1.0; // Ratio par défaut
+    final groundHeight = groundWidth / aspectRatio;
+    
+    final groundX = (treeSize - groundWidth) / 2;
+    final treeBaseY = treeSize * 0.75;
+    final groundY = treeBaseY - groundHeight / 2;
+    
+    final groundCenterX = groundX + groundWidth / 2;
+    final groundCenterY = groundY + groundHeight / 2;
+    
+    return Offset(groundCenterX, groundCenterY);
+  }
+  
   /// Calcule un point sur une courbe de Bézier quadratique
   Offset _bezierPoint(Offset p0, Offset p1, Offset p2, double t) {
     final u = 1 - t;
@@ -1093,7 +813,8 @@ class TreePainter extends CustomPainter {
     _calculateDeformedPositions();
     
     // Dessiner les branches (du plus profond au moins profond pour le z-ordering)
-    final sortedBranches = List<TreeBranch>.from(_branches)
+    final allBranches = tree.getAllBranches();
+    final sortedBranches = List<tree_model.Branch>.from(allBranches)
       ..sort((a, b) => b.depth.compareTo(a.depth));
     
     for (final branch in sortedBranches) {
@@ -1101,18 +822,10 @@ class TreePainter extends CustomPainter {
     }
 
     // Dessiner les feuilles (filtrer celles qui ont commencé à grandir)
-    // Ne pas dessiner les feuilles dead3 qui ne sont plus dans la map (elles ont été supprimées)
-    for (final leafInfo in _leaves) {
-      if (leafInfo.currentGrowth > 0.0) {
-        // Vérifier si la feuille est dead3 et si elle est toujours dans la map
-        if (leafInfo.state == LeafState.dead3) {
-          final leafId = leafInfo.getUniqueId();
-          if (!leafStates.containsKey(leafId)) {
-            // Cette feuille dead3 a été supprimée, ne pas la dessiner
-            continue;
-          }
-        }
-        _drawLeaf(canvas, leafInfo);
+    final allLeaves = tree.getAllLeaves();
+    for (final leaf in allLeaves) {
+      if (leaf.currentGrowth > 0.0) {
+        _drawLeaf(canvas, leaf);
       }
     }
     
@@ -1172,7 +885,8 @@ class TreePainter extends CustomPainter {
     _deformedStarts.clear();
     
     // Trier les branches par profondeur (du moins profond au plus profond)
-    final sortedBranches = List<TreeBranch>.from(_branches)
+    final allBranches = tree.getAllBranches();
+    final sortedBranches = List<tree_model.Branch>.from(allBranches)
       ..sort((a, b) => a.depth.compareTo(b.depth));
     
     for (final branch in sortedBranches) {
@@ -1185,13 +899,17 @@ class TreePainter extends CustomPainter {
       } else {
         // Trouver la branche parent (celle dont l'extrémité correspond au début de cette branche)
         final tolerance = treeSize * 0.01;
-        final parent = _branches.firstWhere(
-          (b) => b.depth == branch.depth - 1 && 
-                 (b.end - branch.start).distance < tolerance,
-          orElse: () => branch, // Fallback si pas de parent trouvé
-        );
+        tree_model.Branch? parent;
+        try {
+          parent = allBranches.firstWhere(
+            (b) => b.depth == branch.depth - 1 && 
+                   (b.end - branch.start).distance < tolerance,
+          );
+        } catch (e) {
+          parent = null;
+        }
         // Utiliser l'extrémité déformée du parent comme point de départ
-        deformedStart = _deformedEnds[parent] ?? branch.start;
+        deformedStart = parent != null ? (_deformedEnds[parent] ?? branch.start) : branch.start;
       }
       
       _deformedStarts[branch] = deformedStart;
@@ -1203,7 +921,7 @@ class TreePainter extends CustomPainter {
   }
   
   /// Calcule l'extrémité déformée d'une branche en fonction du vent
-  Offset _calculateDeformedEnd(TreeBranch branch, Offset deformedStart) {
+  Offset _calculateDeformedEnd(tree_model.Branch branch, Offset deformedStart) {
     // Calculer les paramètres du vent pour cette branche
     final depthRatio = branch.depth / parameters.maxDepth;
     final heightFactor = (treeSize - branch.start.dy) / treeSize;
@@ -1233,34 +951,7 @@ class TreePainter extends CustomPainter {
   }
 
   /// Calcule la position de départ du tronc (centre vertical de la terre)
-  Offset _getTreeBasePosition() {
-    if (groundImage == null) {
-      // Fallback si pas d'image de terre
-      return Offset(treeSize / 2, treeSize * 0.75);
-    }
-    
-    // Dimensions de l'image de terre
-    final imageWidth = groundImage!.width.toDouble();
-    final imageHeight = groundImage!.height.toDouble();
-    final aspectRatio = imageWidth / imageHeight;
-    
-    // Largeur de la terre
-    final groundWidth = treeSize * 0.8;
-    final groundHeight = groundWidth / aspectRatio;
-    
-    // Position de la terre
-    final groundX = (treeSize - groundWidth) / 2;
-    final treeBaseY = treeSize * 0.75;
-    final groundY = treeBaseY - groundHeight / 2;
-    
-    // Le centre vertical de la terre (où l'arbre doit commencer)
-    final groundCenterX = groundX + groundWidth / 2;
-    final groundCenterY = groundY + groundHeight / 2;
-    
-    return Offset(groundCenterX, groundCenterY);
-  }
-
-  void _drawBranch(Canvas canvas, TreeBranch branch) {
+  void _drawBranch(Canvas canvas, tree_model.Branch branch) {
     // Calcul de la couleur selon la profondeur
     // Du brun foncé (tronc) au vert/brun clair (extrémités)
     final depthRatio = branch.depth / parameters.maxDepth;
@@ -1283,7 +974,8 @@ class TreePainter extends CustomPainter {
 
     // Vérifier si la branche a des enfants (branches qui commencent à son extrémité)
     final tolerance = treeSize * 0.01; // Tolérance relative à la taille de l'arbre
-    final hasChildren = _branches.any((b) => 
+    final allBranches = tree.getAllBranches();
+    final hasChildren = allBranches.any((b) => 
       b.depth == branch.depth + 1 && 
       (b.start - branch.end).distance < tolerance // Tolérance pour les erreurs d'arrondi
     );
@@ -1393,43 +1085,57 @@ class TreePainter extends CustomPainter {
     );
   }
 
-  void _drawLeaf(Canvas canvas, LeafInfo leafInfo) {
+  void _drawLeaf(Canvas canvas, tree_model.Leaf leaf) {
     // Ne dessiner que si la feuille a commencé à grandir
-    if (leafInfo.currentGrowth <= 0.0) return;
+    if (leaf.currentGrowth <= 0.0) return;
     
     // Taille de base de la feuille
-    final baseSize = treeSize * 0.064; // Réduit de 20% (0.08 * 0.8 = 0.064)
+    final baseSize = treeSize * 0.064;
     
     // Taille actuelle : baseSize * maxSize * currentGrowth
-    final leafSize = baseSize * leafInfo.maxSize * leafInfo.currentGrowth;
+    final leafSize = baseSize * leaf.maxSize * leaf.currentGrowth;
     
     // Si la taille est trop petite, ne pas dessiner
     if (leafSize < 0.01) return;
     
+    // Trouver la branche de cette feuille
+    tree_model.Branch? branch;
+    try {
+      branch = tree.getAllBranches().firstWhere((b) => _isLeafOnBranch(leaf, b));
+    } catch (e) {
+      return; // Branche non trouvée
+    }
+    
+    // VÉRIFICATION DE SÉCURITÉ : Ne jamais dessiner une feuille sur le tronc
+    if (branch.depth == 0) {
+      debugPrint('⚠️ Feuille sur le tronc détectée au dessin - NON DESSINÉE (id: ${leaf.id})');
+      return;
+    }
+    
     // Récupérer les positions déformées de la branche
-    final deformedStart = _deformedStarts[leafInfo.branch] ?? leafInfo.branch.start;
-    final deformedEnd = _deformedEnds[leafInfo.branch] ?? leafInfo.branch.end;
+    final deformedStart = _deformedStarts[branch] ?? branch.start;
+    final deformedEnd = _deformedEnds[branch] ?? branch.end;
     
     // Calculer le point de contrôle déformé (même logique que dans _drawBranch)
-    final originalControl = leafInfo.branch.controlPoint;
+    final originalControl = branch.controlPoint;
     final midPoint = Offset(
       (deformedStart.dx + deformedEnd.dx) / 2,
       (deformedStart.dy + deformedEnd.dy) / 2,
     );
     final deformedControl = Offset(
-      originalControl.dx + (midPoint.dx - (leafInfo.branch.start.dx + leafInfo.branch.end.dx) / 2) * 0.7,
-      originalControl.dy + (midPoint.dy - (leafInfo.branch.start.dy + leafInfo.branch.end.dy) / 2) * 0.7,
+      originalControl.dx + (midPoint.dx - (branch.start.dx + branch.end.dx) / 2) * 0.7,
+      originalControl.dy + (midPoint.dy - (branch.start.dy + branch.end.dy) / 2) * 0.7,
     );
     
     // Calculer la position de la feuille sur la branche déformée
-    final branchPos = _bezierPoint(deformedStart, deformedControl, deformedEnd, leafInfo.tOnBranch);
+    final branchPos = _bezierPoint(deformedStart, deformedControl, deformedEnd, leaf.tOnBranch);
     
     // Utiliser la branche déformée pour calculer la tangente
     final tangent = _bezierTangent(
       deformedStart,
       deformedControl,
       deformedEnd,
-      leafInfo.tOnBranch,
+      leaf.tOnBranch,
     );
     
     // Calculer l'angle de la tangente (direction de la branche)
@@ -1440,87 +1146,62 @@ class TreePainter extends CustomPainter {
     
     // Plus la feuille est proche de l'extrémité (tOnBranch proche de 1.0),
     // plus elle doit suivre la tangente de la branche
-    // Pour tOnBranch = 1.0, l'angle doit être exactement branchAngle (parallèle à la branche)
-    // Pour tOnBranch < 1.0, interpoler entre perpAngle + offset et branchAngle
-    final t = leafInfo.tOnBranch;
-    // Normaliser t pour que l'alignement commence vraiment à se faire sentir près de l'extrémité
-    // Les feuilles commencent à t = 0.3, donc on normalise entre 0.3 et 1.0
+    final t = leaf.tOnBranch;
     final normalizedT = ((t - 0.3) / 0.7).clamp(0.0, 1.0);
-    // Utiliser une courbe pour une transition plus douce, mais qui s'accélère près de 1.0
-    // Utiliser une courbe exponentielle pour que l'alignement soit plus prononcé près de l'extrémité
-    final alignmentFactor = math.pow(normalizedT, 2.5).toDouble(); // Plus prononcé près de 1.0
+    final alignmentFactor = math.pow(normalizedT, 2.5).toDouble();
     
     // Angle de base : interpolation entre perpendiculaire (avec offset) et tangente
-    final angleOffset = leafInfo.side == 1 ? math.pi / 7.2 : -math.pi / 7.2; // +25° ou -25°
+    final angleOffset = leaf.side == 1 ? math.pi / 7.2 : -math.pi / 7.2;
     final basePerpAngle = perpAngle + angleOffset;
-    // Interpoler entre l'angle perpendiculaire (avec offset) et la tangente
     final baseAngle = basePerpAngle * (1.0 - alignmentFactor) + branchAngle * alignmentFactor;
     
-    // Calculer l'épaisseur de la branche à ce point pour positionner la feuille
-    final thicknessAtPoint = leafInfo.branch.thickness * (1.0 - leafInfo.tOnBranch * 0.3);
+    // Calculer l'épaisseur de la branche à ce point
+    final thicknessAtPoint = branch.thickness * (1.0 - leaf.tOnBranch * 0.3);
     final branchRadius = thicknessAtPoint / 2;
     
     // Position de la feuille sur la branche déformée
-    // La dernière feuille (t = 1.0) est à l'extrémité, les autres sont décalées sur le côté
-    final isLastLeaf = (leafInfo.tOnBranch >= 0.99);
+    final isLastLeaf = (leaf.tOnBranch >= 0.99);
     final totalOffset = isLastLeaf ? 0.0 : branchRadius;
-    final side = isLastLeaf ? 0 : leafInfo.side;
+    final side = isLastLeaf ? 0 : leaf.side;
     
     final leafPos = Offset(
       branchPos.dx + (isLastLeaf ? 0.0 : math.cos(perpAngle) * totalOffset * side),
       branchPos.dy + (isLastLeaf ? 0.0 : math.sin(perpAngle) * totalOffset * side),
     );
     
-    // Effet de vent : calculer un déplacement et une rotation basés sur la position de la feuille
-    // Les feuilles plus hautes bougent plus que les feuilles basses
-    final heightFactor = (treeSize - leafPos.dy) / treeSize; // 0 (bas) à 1 (haut)
-    final depthFactor = leafInfo.branch.depth / parameters.maxDepth; // Plus flexible si branche fine
-    final windIntensity = 0.3 * heightFactor * (0.5 + depthFactor * 0.5); // Intensité du vent (plus fort en haut et sur branches fines)
+    // Effet de vent
+    final heightFactor = (treeSize - leafPos.dy) / treeSize;
+    final depthFactor = branch.depth / parameters.maxDepth;
+    final windIntensity = 0.3 * heightFactor * (0.5 + depthFactor * 0.5);
     
-    // Phase du vent avec variation par feuille pour un effet naturel
-    // Utiliser la position de la feuille comme seed pour créer une variation
     final leafPhase = windPhase + leafPos.dx * 0.01 + leafPos.dy * 0.01;
-    
-    // Déplacement horizontal du vent (oscillation sinusoïdale)
-    // Réduire l'effet du vent pour les feuilles à l'extrémité
     final windOffsetX = math.sin(leafPhase) * windIntensity * treeSize * 0.03 * (1.0 - alignmentFactor * 0.5);
     final windOffsetY = math.cos(leafPhase * 0.7) * windIntensity * treeSize * 0.015 * (1.0 - alignmentFactor * 0.5);
-    
-    // Rotation due au vent (les feuilles pivotent légèrement)
-    // Réduire la rotation du vent pour les feuilles à l'extrémité
     final windRotation = math.sin(leafPhase * 1.3) * windIntensity * 0.4 * (1.0 - alignmentFactor * 0.7);
     
     final rotation = baseAngle + windRotation;
     
-    // Sauvegarder l'état du canvas
     canvas.save();
-    
-    // Appliquer la translation avec l'effet de vent (utiliser la position sur la branche déformée)
-    canvas.translate(
-      leafPos.dx + windOffsetX,
-      leafPos.dy + windOffsetY,
-    );
+    canvas.translate(leafPos.dx + windOffsetX, leafPos.dy + windOffsetY);
     canvas.rotate(rotation);
     
-    // Si la feuille est du côté gauche, appliquer un miroir horizontal
-    // (mais pas pour les feuilles à l'extrémité où side = 0)
-    if (leafInfo.side == -1 && !isLastLeaf) {
-      canvas.scale(-1.0, 1.0); // Miroir horizontal
+    if (leaf.side == -1 && !isLastLeaf) {
+      canvas.scale(-1.0, 1.0);
     }
     
     // Dessiner l'image de la feuille selon son état
     ui.Image? imageToDraw;
-    switch (leafInfo.state) {
-      case LeafState.alive:
+    switch (leaf.state) {
+      case tree_model.LeafState.alive:
         imageToDraw = leafImage;
         break;
-      case LeafState.dead1:
+      case tree_model.LeafState.dead1:
         imageToDraw = leafDead1Image;
         break;
-      case LeafState.dead2:
+      case tree_model.LeafState.dead2:
         imageToDraw = leafDead2Image;
         break;
-      case LeafState.dead3:
+      case tree_model.LeafState.dead3:
         imageToDraw = leafDead3Image;
         break;
     }
@@ -1528,15 +1209,12 @@ class TreePainter extends CustomPainter {
     if (imageToDraw != null) {
       _drawLeafImage(canvas, leafSize, imageToDraw);
     } else {
-      // Fallback : dessin vectoriel simple (seulement pour alive si l'image n'est pas chargée)
-      if (leafInfo.state == LeafState.alive) {
+      // Fallback : dessin vectoriel simple (seulement pour alive)
+      if (leaf.state == tree_model.LeafState.alive) {
         _drawVectorLeafFallback(canvas, leafSize);
-      } else {
-        // Pour les états dead, si l'image n'est pas chargée, ne rien dessiner
       }
     }
     
-    // Restaurer l'état du canvas
     canvas.restore();
   }
 
@@ -1611,28 +1289,12 @@ class TreePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(TreePainter oldDelegate) {
-    // Comparer les leafStates pour détecter les changements
-    if (oldDelegate.leafStates.length != leafStates.length) {
-      return true;
-    }
-    for (final entry in leafStates.entries) {
-      if (oldDelegate.leafStates[entry.key] != entry.value) {
-        return true;
-      }
-    }
-    
-    return oldDelegate.growthLevel != growthLevel ||
+    return oldDelegate.tree != tree ||
         oldDelegate.treeSize != treeSize ||
         oldDelegate.leafImage != leafImage ||
         oldDelegate.groundImage != groundImage ||
         oldDelegate.windPhase != windPhase ||
-        oldDelegate.parameters.seed != parameters.seed ||
-        oldDelegate.parameters.maxDepth != parameters.maxDepth ||
-        oldDelegate.parameters.baseBranchAngle != parameters.baseBranchAngle ||
-        oldDelegate.parameters.lengthRatio != parameters.lengthRatio ||
-        oldDelegate.parameters.thicknessRatio != parameters.thicknessRatio ||
-        oldDelegate.parameters.angleVariation != parameters.angleVariation ||
-        oldDelegate.parameters.curveIntensity != parameters.curveIntensity;
+        oldDelegate.parameters.seed != parameters.seed;
   }
 }
 

@@ -4,6 +4,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+/// État d'une feuille dans le processus de mort
+enum LeafState {
+  alive,
+  dead1,
+  dead2,
+  dead3,
+}
+
 /// Information sur une feuille avec sa position et celle de sa branche
 class LeafInfo {
   Offset position; // Mutable pour permettre la mise à jour
@@ -14,6 +22,7 @@ class LeafInfo {
   final double appearanceTime; // Niveau de growthLevel où la feuille apparaît
   final double maxSize; // Taille maximale (variation aléatoire)
   double currentGrowth; // Niveau de croissance actuel (0.0 à 1.0)
+  LeafState state; // État de la feuille (vivante ou en cours de mort)
 
   LeafInfo({
     required this.position,
@@ -24,7 +33,13 @@ class LeafInfo {
     required this.appearanceTime,
     required this.maxSize,
     this.currentGrowth = 0.0,
+    this.state = LeafState.alive,
   });
+  
+  /// Génère un identifiant unique pour cette feuille
+  String getUniqueId() {
+    return '${branch.depth}_${branch.start.dx.toStringAsFixed(2)}_${branch.start.dy.toStringAsFixed(2)}_${tOnBranch.toStringAsFixed(3)}_$side';
+  }
   
   /// Met à jour la position de la feuille pour suivre sa branche d'origine
   void updatePosition(double treeSize) {
@@ -177,20 +192,40 @@ class ProceduralTreeWidget extends StatefulWidget {
   });
 
   @override
-  State<ProceduralTreeWidget> createState() => _ProceduralTreeWidgetState();
+  State<ProceduralTreeWidget> createState() => ProceduralTreeWidgetState();
 }
 
-class _ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
+/// GlobalKey pour accéder à l'état du widget depuis l'extérieur
+typedef ProceduralTreeWidgetStateKey = GlobalKey<ProceduralTreeWidgetState>;
+
+class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
     with SingleTickerProviderStateMixin {
   ui.Image? _leafImage;
+  ui.Image? _leafDead1Image;
+  ui.Image? _leafDead2Image;
+  ui.Image? _leafDead3Image;
   ui.Image? _groundImage;
   late AnimationController _windController;
   late Animation<double> _windAnimation;
+  // Map pour stocker l'état de chaque feuille (identifiant -> état)
+  final Map<String, LeafState> _leafStates = {};
+  // Set pour stocker les IDs des feuilles dead3 qui ont été supprimées
+  // (pour éviter qu'elles redeviennent vertes quand le TreePainter est recréé)
+  final Set<String> _removedDead3Leaves = {};
+  // ValueNotifier pour forcer le rebuild quand les états changent
+  final ValueNotifier<int> _leafStatesNotifier = ValueNotifier<int>(0);
+  
+  // Getters pour accéder aux états depuis l'extérieur
+  Map<String, LeafState> get leafStates => _leafStates;
+  Set<String> get removedDead3Leaves => _removedDead3Leaves;
 
   @override
   void initState() {
     super.initState();
     _loadLeafImage();
+    _loadLeafDead1Image();
+    _loadLeafDead2Image();
+    _loadLeafDead3Image();
     _loadGroundImage();
     
     // Animation pour l'effet de vent (oscillation continue)
@@ -225,6 +260,57 @@ class _ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
     }
   }
 
+  Future<void> _loadLeafDead1Image() async {
+    try {
+      final ByteData data = await rootBundle.load('assets/tree/leaf_dead_1.png');
+      final Uint8List bytes = data.buffer.asUint8List();
+      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+      final ui.FrameInfo frameInfo = await codec.getNextFrame();
+      if (mounted) {
+        setState(() {
+          _leafDead1Image = frameInfo.image;
+        });
+      }
+    } catch (e) {
+      // Si l'image ne peut pas être chargée, on utilisera le dessin vectoriel
+      _leafDead1Image = null;
+    }
+  }
+
+  Future<void> _loadLeafDead2Image() async {
+    try {
+      final ByteData data = await rootBundle.load('assets/tree/leaf_dead_2.png');
+      final Uint8List bytes = data.buffer.asUint8List();
+      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+      final ui.FrameInfo frameInfo = await codec.getNextFrame();
+      if (mounted) {
+        setState(() {
+          _leafDead2Image = frameInfo.image;
+        });
+      }
+    } catch (e) {
+      // Si l'image ne peut pas être chargée, on utilisera le dessin vectoriel
+      _leafDead2Image = null;
+    }
+  }
+
+  Future<void> _loadLeafDead3Image() async {
+    try {
+      final ByteData data = await rootBundle.load('assets/tree/leaf_dead_3.png');
+      final Uint8List bytes = data.buffer.asUint8List();
+      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+      final ui.FrameInfo frameInfo = await codec.getNextFrame();
+      if (mounted) {
+        setState(() {
+          _leafDead3Image = frameInfo.image;
+        });
+      }
+    } catch (e) {
+      // Si l'image ne peut pas être chargée, on utilisera le dessin vectoriel
+      _leafDead3Image = null;
+    }
+  }
+
   Future<void> _loadGroundImage() async {
     try {
       final ByteData data = await rootBundle.load('assets/tree/terre.png');
@@ -250,15 +336,128 @@ class _ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
   void dispose() {
     // Libérer les images pour éviter les fuites mémoire
     _leafImage?.dispose();
+    _leafDead1Image?.dispose();
+    _leafDead2Image?.dispose();
+    _leafDead3Image?.dispose();
     _groundImage?.dispose();
     _windController.dispose();
+    _leafStatesNotifier.dispose();
     super.dispose();
+  }
+
+  /// Avance le processus de mort des feuilles
+  void advanceLeafDeath() {
+    setState(() {
+      // 1. Recréer temporairement le TreePainter pour obtenir la liste des feuilles
+      final tempPainter = TreePainter(
+        growthLevel: widget.growthLevel,
+        treeSize: widget.size,
+        parameters: widget.parameters,
+        leafImage: _leafImage,
+        leafDead1Image: _leafDead1Image,
+        leafDead2Image: _leafDead2Image,
+        leafDead3Image: _leafDead3Image,
+        groundImage: _groundImage,
+        windPhase: _windAnimation.value,
+        leafStates: _leafStates,
+        removedDead3Leaves: _removedDead3Leaves,
+      );
+      
+      // Compter les feuilles visibles et non visibles
+      final visibleLeaves = tempPainter.leaves.where((l) => l.currentGrowth > 0.0).length;
+      final nonVisibleLeaves = tempPainter.leaves.length - visibleLeaves;
+      
+      // Debug: Analyser la distribution des appearanceTime
+      final extendedGrowthLevel = widget.growthLevel > 1.0 
+          ? 1.0 + (widget.growthLevel - 1.0) * 2.0
+          : widget.growthLevel;
+      final leavesWithAppearanceTime = tempPainter.leaves.map((l) => l.appearanceTime).toList()..sort();
+      final leavesBeforeGrowth = leavesWithAppearanceTime.where((at) => at <= extendedGrowthLevel).length;
+      final leavesAfterGrowth = leavesWithAppearanceTime.where((at) => at > extendedGrowthLevel).length;
+      debugPrint('=== ANALYSE FEUILLES NON VISIBLES ===');
+      debugPrint('GrowthLevel: ${widget.growthLevel.toStringAsFixed(3)} (extended: ${extendedGrowthLevel.toStringAsFixed(3)})');
+      debugPrint('Feuilles avec appearanceTime <= growthLevel: $leavesBeforeGrowth');
+      debugPrint('Feuilles avec appearanceTime > growthLevel: $leavesAfterGrowth');
+      if (leavesWithAppearanceTime.isNotEmpty) {
+        debugPrint('appearanceTime min: ${leavesWithAppearanceTime.first.toStringAsFixed(3)}');
+        debugPrint('appearanceTime max: ${leavesWithAppearanceTime.last.toStringAsFixed(3)}');
+        debugPrint('appearanceTime médian: ${leavesWithAppearanceTime[leavesWithAppearanceTime.length ~/ 2].toStringAsFixed(3)}');
+      }
+      
+      // 1. D'abord, supprimer toutes les feuilles en état dead3 qui existaient déjà
+      // (celles qui ont été affichées au clic précédent)
+      final dead3Keys = _leafStates.entries
+          .where((e) => e.value == LeafState.dead3)
+          .map((e) => e.key)
+          .toList();
+      for (final key in dead3Keys) {
+        _leafStates.remove(key);
+        _removedDead3Leaves.add(key); // Marquer comme supprimée définitivement
+      }
+      
+      // 2. Ensuite, avancer toutes les feuilles en cours de mort
+      // (dead1 -> dead2, dead2 -> dead3)
+      // Les nouvelles dead3 seront affichées au prochain render
+      final keysToUpdate = <String, LeafState>{};
+      for (final entry in _leafStates.entries) {
+        if (entry.value == LeafState.dead1) {
+          keysToUpdate[entry.key] = LeafState.dead2;
+        } else if (entry.value == LeafState.dead2) {
+          keysToUpdate[entry.key] = LeafState.dead3;
+        }
+      }
+      _leafStates.addAll(keysToUpdate);
+      
+      // 3. Sélectionner 1-2 feuilles vivantes aléatoires pour commencer à mourir
+      // Permettre de tuer des feuilles qui sont visibles (currentGrowth > 0.0), pas seulement complètement développées
+      final aliveLeaves = tempPainter.leaves
+          .where((l) => l.currentGrowth > 0.0 && 
+                       (_leafStates[l.getUniqueId()] ?? LeafState.alive) == LeafState.alive)
+          .toList();
+      
+      if (aliveLeaves.isNotEmpty) {
+        final random = math.Random();
+        final numToKill = aliveLeaves.length > 1 ? (1 + random.nextInt(2)) : 1; // 1 ou 2
+        
+        for (int i = 0; i < numToKill && aliveLeaves.isNotEmpty; i++) {
+          final index = random.nextInt(aliveLeaves.length);
+          final leaf = aliveLeaves[index];
+          _leafStates[leaf.getUniqueId()] = LeafState.dead1;
+          aliveLeaves.removeAt(index);
+        }
+      }
+      
+      // Recréer le TreePainter pour obtenir les nouveaux comptes après les modifications
+      final updatedPainter = TreePainter(
+        growthLevel: widget.growthLevel,
+        treeSize: widget.size,
+        parameters: widget.parameters,
+        leafImage: _leafImage,
+        leafDead1Image: _leafDead1Image,
+        leafDead2Image: _leafDead2Image,
+        leafDead3Image: _leafDead3Image,
+        groundImage: _groundImage,
+        windPhase: _windAnimation.value,
+        leafStates: _leafStates,
+        removedDead3Leaves: _removedDead3Leaves,
+      );
+      final updatedVisibleLeaves = updatedPainter.leaves.where((l) => l.currentGrowth > 0.0).length;
+      final updatedNonVisibleLeaves = updatedPainter.leaves.length - updatedVisibleLeaves;
+      
+      debugPrint('=== TUER FEUILLES ===');
+      debugPrint('Avant: ${tempPainter.leaves.length} feuilles totales (visibles: $visibleLeaves, non visibles: $nonVisibleLeaves)');
+      debugPrint('Après: ${updatedPainter.leaves.length} feuilles totales (visibles: $updatedVisibleLeaves, non visibles: $updatedNonVisibleLeaves)');
+      debugPrint('Feuilles supprimées définitivement: ${_removedDead3Leaves.length}');
+      
+      // Forcer le rebuild en incrémentant le notifier
+      _leafStatesNotifier.value++;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _windAnimation,
+      animation: Listenable.merge([_windAnimation, _leafStatesNotifier]),
       builder: (context, child) {
         return SizedBox(
           width: widget.size,
@@ -269,8 +468,13 @@ class _ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
               treeSize: widget.size,
               parameters: widget.parameters,
               leafImage: _leafImage,
+              leafDead1Image: _leafDead1Image,
+              leafDead2Image: _leafDead2Image,
+              leafDead3Image: _leafDead3Image,
               groundImage: _groundImage,
               windPhase: _windAnimation.value,
+              leafStates: _leafStates,
+              removedDead3Leaves: _removedDead3Leaves,
             ),
           ),
         );
@@ -285,21 +489,34 @@ class TreePainter extends CustomPainter {
   final double treeSize;
   final TreeParameters parameters;
   final ui.Image? leafImage;
+  final ui.Image? leafDead1Image;
+  final ui.Image? leafDead2Image;
+  final ui.Image? leafDead3Image;
   final ui.Image? groundImage;
   final double windPhase; // Phase du vent (0 à 2π) pour l'animation
+  final Map<String, LeafState> leafStates; // États des feuilles stockés dans le State
+  final Set<String> removedDead3Leaves; // IDs des feuilles dead3 supprimées définitivement
   late final List<TreeBranch> _branches;
   List<LeafInfo> _leaves = []; // Mutable car réassigné dans _optimizeLeafDistribution
   late final double _fractionalDepth; // Profondeur fractionnaire pour croissance progressive
   final Map<TreeBranch, Offset> _deformedEnds = {}; // Cache des extrémités déformées
   final Map<TreeBranch, Offset> _deformedStarts = {}; // Cache des points de départ déformés
+  
+  /// Getter pour accéder à la liste des feuilles depuis l'extérieur
+  List<LeafInfo> get leaves => _leaves;
 
   TreePainter({
     required this.growthLevel,
     required this.treeSize,
     required this.parameters,
     this.leafImage,
+    this.leafDead1Image,
+    this.leafDead2Image,
+    this.leafDead3Image,
     this.groundImage,
     this.windPhase = 0.0,
+    required this.leafStates,
+    required this.removedDead3Leaves,
   }) {
     // Calculer la profondeur fractionnaire pour croissance progressive
     _fractionalDepth = parameters.maxDepth * growthLevel.clamp(0.0, 1.0);
@@ -313,82 +530,54 @@ class TreePainter extends CustomPainter {
     if (growthLevel >= 1.0) {
       _addNewLeavesAfterMaturity();
     }
+    
     // Mettre à jour la croissance des feuilles
     _updateLeaves();
     // Mettre à jour les positions des feuilles pour suivre leurs branches
     _updateLeafPositions();
-    // Logger l'état de l'arbre et des feuilles
-    _logTreeAndLeavesState();
+    // Appliquer les états stockés aux feuilles
+    _applyLeafStates();
+    // Supprimer complètement les feuilles dead3 qui ont été marquées comme supprimées
+    _removeDead3Leaves();
   }
   
-  /// Log l'état de l'arbre et des feuilles
-  void _logTreeAndLeavesState() {
-    debugPrint('=== TREE STATE ===');
-    debugPrint('Growth Level: ${growthLevel.toStringAsFixed(3)}');
-    debugPrint('Tree Size: $treeSize');
-    debugPrint('Fractional Depth: ${_fractionalDepth.toStringAsFixed(3)}');
-    debugPrint('Parameters:');
-    debugPrint('  - maxDepth: ${parameters.maxDepth}');
-    debugPrint('  - baseBranchAngle: ${(parameters.baseBranchAngle * 180 / math.pi).toStringAsFixed(2)}°');
-    debugPrint('  - lengthRatio: ${parameters.lengthRatio.toStringAsFixed(3)}');
-    debugPrint('  - thicknessRatio: ${parameters.thicknessRatio.toStringAsFixed(3)}');
-    debugPrint('  - angleVariation: ${parameters.angleVariation.toStringAsFixed(3)}');
-    debugPrint('  - curveIntensity: ${parameters.curveIntensity.toStringAsFixed(3)}');
-    debugPrint('  - seed: ${parameters.seed}');
-    debugPrint('');
-    debugPrint('Branches: ${_branches.length}');
-    // Grouper les branches par profondeur
-    final branchesByDepth = <int, List<TreeBranch>>{};
-    for (final branch in _branches) {
-      branchesByDepth.putIfAbsent(branch.depth, () => []).add(branch);
-    }
-    for (final depth in branchesByDepth.keys.toList()..sort()) {
-      final branches = branchesByDepth[depth]!;
-      debugPrint('  Depth $depth: ${branches.length} branches');
-      for (int i = 0; i < branches.length && i < 3; i++) {
-        final branch = branches[i];
-        debugPrint('    Branch $i: length=${branch.length.toStringAsFixed(2)}, thickness=${branch.thickness.toStringAsFixed(2)}, angle=${(branch.angle * 180 / math.pi).toStringAsFixed(2)}°');
-      }
-      if (branches.length > 3) {
-        debugPrint('    ... and ${branches.length - 3} more branches');
-      }
-    }
-    debugPrint('');
-    debugPrint('Leaves: ${_leaves.length}');
-    // Compter les feuilles par état de croissance
-    final visibleLeaves = _leaves.where((leaf) => leaf.currentGrowth > 0.0).length;
-    final fullyGrownLeaves = _leaves.where((leaf) => leaf.currentGrowth >= 1.0).length;
-    final growingLeaves = _leaves.where((leaf) => leaf.currentGrowth > 0.0 && leaf.currentGrowth < 1.0).length;
-    debugPrint('  Visible: $visibleLeaves');
-    debugPrint('  Fully grown: $fullyGrownLeaves');
-    debugPrint('  Growing: $growingLeaves');
-    debugPrint('  Not yet appeared: ${_leaves.length - visibleLeaves}');
-    // Grouper les feuilles par profondeur de branche
-    final leavesByBranchDepth = <int, List<LeafInfo>>{};
+  /// Supprime complètement les feuilles dead3 de l'array _leaves
+  void _removeDead3Leaves() {
+    _leaves.removeWhere((leaf) {
+      final leafId = leaf.getUniqueId();
+      return removedDead3Leaves.contains(leafId);
+    });
+  }
+  
+  /// Applique les états stockés aux feuilles générées
+  void _applyLeafStates() {
     for (final leaf in _leaves) {
-      leavesByBranchDepth.putIfAbsent(leaf.branch.depth, () => []).add(leaf);
+      final leafId = leaf.getUniqueId();
+      
+      // Si cette feuille a été supprimée (dead3), ne pas la réinitialiser à alive
+      if (removedDead3Leaves.contains(leafId)) {
+        // Garder l'état dead3 pour qu'elle ne soit pas dessinée
+        leaf.state = LeafState.dead3;
+        continue;
+      }
+      
+      if (leafStates.containsKey(leafId)) {
+        // La feuille est dans la map, appliquer son état
+        leaf.state = leafStates[leafId]!;
+      } else {
+        // La feuille n'est plus dans la map
+        // Si elle était dead3, on ne la réinitialise PAS à alive
+        // (elle sera simplement ignorée lors du dessin)
+        // On réinitialise seulement les autres états de mort (dead1, dead2) qui ne devraient pas être là
+        if (leaf.state == LeafState.dead1 || leaf.state == LeafState.dead2) {
+          // Ces états ne devraient pas être là sans être dans la map
+          // Les réinitialiser à alive
+          leaf.state = LeafState.alive;
+        }
+        // Les dead3 qui ne sont plus dans la map restent en dead3
+        // mais ne seront pas dessinées (filtrées dans paint())
+      }
     }
-    for (final depth in leavesByBranchDepth.keys.toList()..sort()) {
-      final leaves = leavesByBranchDepth[depth]!;
-      debugPrint('  On depth $depth branches: ${leaves.length} leaves');
-    }
-    // Afficher quelques détails sur les premières feuilles
-    debugPrint('  Sample leaves (first 5):');
-    for (int i = 0; i < _leaves.length && i < 5; i++) {
-      final leaf = _leaves[i];
-      debugPrint('    Leaf $i:');
-      debugPrint('      Position: (${leaf.position.dx.toStringAsFixed(2)}, ${leaf.position.dy.toStringAsFixed(2)})');
-      debugPrint('      Branch depth: ${leaf.branch.depth}');
-      debugPrint('      tOnBranch: ${leaf.tOnBranch.toStringAsFixed(3)}');
-      debugPrint('      Side: ${leaf.side == 1 ? "right" : "left"}');
-      debugPrint('      Appearance time: ${leaf.appearanceTime.toStringAsFixed(3)}');
-      debugPrint('      Current growth: ${leaf.currentGrowth.toStringAsFixed(3)}');
-      debugPrint('      Max size: ${leaf.maxSize.toStringAsFixed(3)}');
-    }
-    if (_leaves.length > 5) {
-      debugPrint('    ... and ${_leaves.length - 5} more leaves');
-    }
-    debugPrint('=== END TREE STATE ===');
   }
   
   /// Met à jour les positions des feuilles pour suivre leurs branches d'origine
@@ -507,14 +696,6 @@ class TreePainter extends CustomPainter {
         // Position aléatoire le long de la branche
         final t = 0.2 + branchRandom.nextDouble() * 0.8; // Entre 20% et 100%
         
-        // Créer un ID unique pour cette feuille
-        final leafId = '${branch.depth}_${branch.start.dx.toStringAsFixed(2)}_${t.toStringAsFixed(3)}_${addedCount}';
-        
-        // Vérifier si cette feuille existe déjà
-        if (existingLeafIds.contains(leafId)) {
-          continue; // Cette feuille existe déjà, essayer une autre position
-        }
-        
         // Calculer la position sur la courbe de Bézier
         final branchPos = _bezierPoint(branch.start, branch.controlPoint, branch.end, t);
         
@@ -551,9 +732,25 @@ class TreePainter extends CustomPainter {
           branchPos.dy + math.sin(perpAngle) * totalOffset * side,
         );
         
+        // Créer l'ID unique avec le vrai side (même logique que getUniqueId())
+        final leafId = '${branch.depth}_${branch.start.dx.toStringAsFixed(2)}_${branch.start.dy.toStringAsFixed(2)}_${t.toStringAsFixed(3)}_$side';
+        
+        // Vérifier si cette feuille existe déjà
+        if (existingLeafIds.contains(leafId)) {
+          continue; // Cette feuille existe déjà, essayer une autre position
+        }
+        
         // AppearanceTime : après 100%, les nouvelles feuilles apparaissent progressivement
-        // Basé sur le temps depuis la maturité
-        final appearanceTime = 1.0 + (addedCount * newLeavesInterval) + (leafRandom.nextDouble() * 0.05);
+        // IMPORTANT: S'assurer que appearanceTime >= growthLevel actuel pour que les nouvelles feuilles
+        // commencent toujours petites (currentGrowth = 0.0) et grandissent progressivement
+        // Utiliser le growthLevel actuel comme base minimum
+        final extendedGrowthLevel = growthLevel > 1.0 
+            ? 1.0 + (growthLevel - 1.0) * 2.0
+            : growthLevel;
+        // Calculer un appearanceTime qui est au moins égal au growthLevel actuel
+        // Ajouter un petit délai aléatoire pour que les feuilles n'apparaissent pas toutes en même temps
+        final baseAppearanceTime = math.max(extendedGrowthLevel, 1.0 + (addedCount * newLeavesInterval));
+        final appearanceTime = baseAppearanceTime + (leafRandom.nextDouble() * 0.05);
         
         // Vérifier la distance avec les feuilles existantes
         bool tooClose = false;
@@ -564,6 +761,11 @@ class TreePainter extends CustomPainter {
             tooClose = true;
             break;
           }
+        }
+        
+        // Vérifier si cette feuille a été supprimée
+        if (removedDead3Leaves.contains(leafId)) {
+          continue; // Cette feuille a été supprimée, ne pas la régénérer
         }
         
         // Ajouter la feuille si elle n'est pas trop proche
@@ -704,6 +906,14 @@ class TreePainter extends CustomPainter {
             tooClose = true;
             break;
           }
+        }
+        
+        // Créer un ID unique pour cette feuille (même logique que getUniqueId())
+        final leafId = '${branch.depth}_${branch.start.dx.toStringAsFixed(2)}_${branch.start.dy.toStringAsFixed(2)}_${t.toStringAsFixed(3)}_$side';
+        
+        // Vérifier si cette feuille a été supprimée
+        if (removedDead3Leaves.contains(leafId)) {
+          continue; // Cette feuille a été supprimée, ne pas la régénérer
         }
         
         // Ajouter la feuille si elle n'est pas trop proche
@@ -891,8 +1101,17 @@ class TreePainter extends CustomPainter {
     }
 
     // Dessiner les feuilles (filtrer celles qui ont commencé à grandir)
+    // Ne pas dessiner les feuilles dead3 qui ne sont plus dans la map (elles ont été supprimées)
     for (final leafInfo in _leaves) {
       if (leafInfo.currentGrowth > 0.0) {
+        // Vérifier si la feuille est dead3 et si elle est toujours dans la map
+        if (leafInfo.state == LeafState.dead3) {
+          final leafId = leafInfo.getUniqueId();
+          if (!leafStates.containsKey(leafId)) {
+            // Cette feuille dead3 a été supprimée, ne pas la dessiner
+            continue;
+          }
+        }
         _drawLeaf(canvas, leafInfo);
       }
     }
@@ -1289,12 +1508,32 @@ class TreePainter extends CustomPainter {
       canvas.scale(-1.0, 1.0); // Miroir horizontal
     }
     
-    // Dessiner l'image de la feuille
-    if (leafImage != null) {
-      _drawLeafImage(canvas, leafSize, leafImage!);
+    // Dessiner l'image de la feuille selon son état
+    ui.Image? imageToDraw;
+    switch (leafInfo.state) {
+      case LeafState.alive:
+        imageToDraw = leafImage;
+        break;
+      case LeafState.dead1:
+        imageToDraw = leafDead1Image;
+        break;
+      case LeafState.dead2:
+        imageToDraw = leafDead2Image;
+        break;
+      case LeafState.dead3:
+        imageToDraw = leafDead3Image;
+        break;
+    }
+    
+    if (imageToDraw != null) {
+      _drawLeafImage(canvas, leafSize, imageToDraw);
     } else {
-      // Fallback : dessin vectoriel simple
-      _drawVectorLeafFallback(canvas, leafSize);
+      // Fallback : dessin vectoriel simple (seulement pour alive si l'image n'est pas chargée)
+      if (leafInfo.state == LeafState.alive) {
+        _drawVectorLeafFallback(canvas, leafSize);
+      } else {
+        // Pour les états dead, si l'image n'est pas chargée, ne rien dessiner
+      }
     }
     
     // Restaurer l'état du canvas
@@ -1372,6 +1611,16 @@ class TreePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(TreePainter oldDelegate) {
+    // Comparer les leafStates pour détecter les changements
+    if (oldDelegate.leafStates.length != leafStates.length) {
+      return true;
+    }
+    for (final entry in leafStates.entries) {
+      if (oldDelegate.leafStates[entry.key] != entry.value) {
+        return true;
+      }
+    }
+    
     return oldDelegate.growthLevel != growthLevel ||
         oldDelegate.treeSize != treeSize ||
         oldDelegate.leafImage != leafImage ||

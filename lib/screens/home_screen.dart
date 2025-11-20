@@ -9,7 +9,7 @@ import 'day_completion_screen.dart';
 import '../widgets/today_history_toggle.dart';
 import '../widgets/history_view.dart';
 import '../widgets/path_view.dart';
-import '../widgets/profile_menu.dart';
+import 'settings_screen.dart';
 import '../services/preferences_service.dart';
 import '../services/notification_service.dart';
 import '../app_navigator.dart';
@@ -158,14 +158,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
-  void _showProfileMenu() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => ProfileMenu(
-        currentTheme: widget.currentTheme,
-        onThemeChanged: widget.onThemeChanged,
+  void _navigateToSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SettingsScreen(
+          currentTheme: widget.currentTheme,
+          onThemeChanged: widget.onThemeChanged,
+        ),
       ),
     );
   }
@@ -426,7 +426,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             top: MediaQuery.of(context).padding.top + 8,
             right: 16,
             child: GestureDetector(
-              onTap: _showProfileMenu,
+              onTap: _navigateToSettings,
               child: Container(
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary.withValues(alpha: 0.9),

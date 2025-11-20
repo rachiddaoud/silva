@@ -68,16 +68,8 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
-    // Enregistrer les catégories d'actions iOS
-    await _setupIOSNotificationCategories();
-  }
-
-  static Future<void> _setupIOSNotificationCategories() async {
-    try {
-      await platform.invokeMethod('setupNotificationCategories');
-    } catch (e) {
-      print('Erreur lors de la configuration des catégories iOS: $e');
-    }
+    // Les catégories d'actions iOS sont configurées nativement dans AppDelegate.swift
+    // Pas besoin d'appel de méthode channel ici
   }
 
   static void _onNotificationTapped(NotificationResponse response) async {

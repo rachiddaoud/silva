@@ -70,7 +70,7 @@ class Leaf {
       // - Jour 1 (après 1er growOneDay) : reste dead_1
       // - Jour 2 (après 2ème growOneDay) : passe à dead_2
       // - Jour 3 (après 3ème growOneDay) : passe à dead_3
-      // - Jour 4+ : reste dead_3 (peut être supprimée)
+      // - Jour 4+ : reste dead_3 (affichée pendant au moins 1 jour, puis supprimée)
       if (deathAge == 2) {
         state = LeafState.dead2;
       } else if (deathAge >= 3) {
@@ -91,7 +91,7 @@ class Leaf {
   
   /// Vérifie si la feuille doit être supprimée (en état dead_3 depuis au moins 1 jour)
   bool shouldBeRemoved() {
-    return state == LeafState.dead3 && deathAge >= 3;
+    return state == LeafState.dead3 && deathAge >= 4;
   }
 
   /// Met à jour la position de la feuille pour suivre sa branche

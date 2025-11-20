@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -11,6 +12,7 @@ import '../models/emotion.dart';
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
+  static const platform = MethodChannel('com.ma_bulle/notifications');
   
   // Callback pour gérer la navigation depuis la notification
   static VoidCallback? onNotificationTappedCallback;
@@ -65,6 +67,17 @@ class NotificationService {
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
+
+    // Enregistrer les catégories d'actions iOS
+    await _setupIOSNotificationCategories();
+  }
+
+  static Future<void> _setupIOSNotificationCategories() async {
+    try {
+      await platform.invokeMethod('setupNotificationCategories');
+    } catch (e) {
+      print('Erreur lors de la configuration des catégories iOS: $e');
+    }
   }
 
   static void _onNotificationTapped(NotificationResponse response) async {

@@ -22,7 +22,6 @@ class NotificationService {
   
   // Constantes pour les actions de notification
   static const String _actionCompleteNow = 'action_complete_now';
-  static const String _actionRemindLater = 'action_remind_later';
   static const String _actionMarkDone = 'action_mark_done';
 
   // Citations du jour
@@ -70,7 +69,6 @@ class NotificationService {
 
   static void _onNotificationTapped(NotificationResponse response) async {
     final navigator = navigatorKey.currentState;
-    if (navigator == null) return;
     
     // Identifier le type de notification via le payload ou l'ID
     final notificationType = response.payload ?? '';
@@ -78,7 +76,13 @@ class NotificationService {
     final actionId = response.actionId;
     
     // Gérer les actions des notifications de rappel de la journée
-    if (notificationId == 2 || notificationId == 3 || notificationType.startsWith(_dayReminderNotificationType)) {
+    final isDayReminder = notificationId == 2 || 
+                         notificationId == 3 || 
+                         notificationId == 996 || 
+                         notificationId == 997 || 
+                         notificationType.startsWith(_dayReminderNotificationType);
+    
+    if (isDayReminder) {
       if (actionId == _actionMarkDone) {
         // Action "J'ai fait cette action" -> marquer la victoire comme accomplie
         final payload = response.payload ?? '';
@@ -88,14 +92,22 @@ class NotificationService {
           final victoryId = int.tryParse(parts[1]);
           if (victoryId != null) {
             await PreferencesService.markVictoryAsAccomplished(victoryId);
+            // Reprogrammer les rappels pour exclure cette victoire
+            await scheduleDayReminders();
             // Annuler la notification
             await _notifications.cancel(notificationId);
+            // Si l'app est ouverte, retourner à l'accueil pour rafraîchir l'interface
+            if (navigator != null) {
+              navigator.popUntil((route) => route.isFirst);
+            }
           }
         }
         return;
       } else {
         // Tap sur la notification -> ouvrir l'app
-        navigator.popUntil((route) => route.isFirst);
+        if (navigator != null) {
+          navigator.popUntil((route) => route.isFirst);
+        }
         return;
       }
     }
@@ -104,45 +116,45 @@ class NotificationService {
     if (notificationId == 0 || notificationId == 999 || notificationType == _eveningNotificationType) {
       if (actionId == _actionCompleteNow) {
         // Action "Terminer maintenant" -> ouvrir l'écran de complétion
-        if (onNotificationTappedCallback != null) {
-          onNotificationTappedCallback!();
-          return;
-        }
-        
-        final victories = await PreferencesService.getTodayVictories();
-        navigator.push(
-          MaterialPageRoute(
-            builder: (context) => DayCompletionScreen(
-              victories: victories,
-              onComplete: (Emotion emotion, String comment) {
-                navigator.pop();
-              },
+        if (navigator != null) {
+          if (onNotificationTappedCallback != null) {
+            onNotificationTappedCallback!();
+            return;
+          }
+          
+          final victories = await PreferencesService.getTodayVictories();
+          navigator.push(
+            MaterialPageRoute(
+              builder: (context) => DayCompletionScreen(
+                victories: victories,
+                onComplete: (Emotion emotion, String comment) {
+                  navigator.pop();
+                },
+              ),
             ),
-          ),
-        );
-        return;
-      } else if (actionId == _actionRemindLater) {
-        // Action "Rappeler plus tard" -> reprogrammer la notification dans 1 heure
-        _scheduleReminderLater();
+          );
+        }
         return;
       } else {
         // Tap sur la notification elle-même (sans action) -> ouvrir l'écran de complétion
-        if (onNotificationTappedCallback != null) {
-          onNotificationTappedCallback!();
-          return;
-        }
-        
-        final victories = await PreferencesService.getTodayVictories();
-        navigator.push(
-          MaterialPageRoute(
-            builder: (context) => DayCompletionScreen(
-              victories: victories,
-              onComplete: (Emotion emotion, String comment) {
-                navigator.pop();
-              },
+        if (navigator != null) {
+          if (onNotificationTappedCallback != null) {
+            onNotificationTappedCallback!();
+            return;
+          }
+          
+          final victories = await PreferencesService.getTodayVictories();
+          navigator.push(
+            MaterialPageRoute(
+              builder: (context) => DayCompletionScreen(
+                victories: victories,
+                onComplete: (Emotion emotion, String comment) {
+                  navigator.pop();
+                },
+              ),
             ),
-          ),
-        );
+          );
+        }
         return;
       }
     }
@@ -150,59 +162,13 @@ class NotificationService {
     // Notification du matin (ID 1 ou 998) -> naviguer vers l'accueil
     if (notificationId == 1 || notificationId == 998 || notificationType == _morningNotificationType) {
       // Pop toutes les routes jusqu'à la racine (accueil)
-      navigator.popUntil((route) => route.isFirst);
+      if (navigator != null) {
+        navigator.popUntil((route) => route.isFirst);
+      }
       return;
     }
   }
   
-  static Future<void> _scheduleReminderLater() async {
-    final userName = await PreferencesService.getUserName();
-    final name = userName ?? 'vous';
-    
-    final title = 'Terminer votre journée';
-    final body = '$name, n\'oubliez pas de terminer votre journée et de noter votre humeur !';
-    
-    // Programmer une nouvelle notification dans 1 heure
-    final reminderTime = tz.TZDateTime.now(tz.local).add(const Duration(hours: 1));
-    
-    await _notifications.zonedSchedule(
-      100, // ID différent pour ne pas interférer avec la notification principale
-      title,
-      body,
-      reminderTime,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          'daily_reminder',
-          'Rappel quotidien',
-          channelDescription: 'Rappel pour terminer la journée à 22h',
-          importance: Importance.high,
-          priority: Priority.high,
-          actions: [
-            const AndroidNotificationAction(
-              _actionCompleteNow,
-              'Terminer maintenant',
-              showsUserInterface: true,
-            ),
-            const AndroidNotificationAction(
-              _actionRemindLater,
-              'Rappeler plus tard',
-              showsUserInterface: false,
-            ),
-          ],
-        ),
-        iOS: DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-          categoryIdentifier: 'EVENING_REMINDER',
-        ),
-      ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      payload: _eveningNotificationType,
-    );
-  }
 
   static Future<bool> requestPermissions() async {
     final android = await _notifications
@@ -254,11 +220,6 @@ class NotificationService {
               _actionCompleteNow,
               'Terminer maintenant',
               showsUserInterface: true,
-            ),
-            const AndroidNotificationAction(
-              _actionRemindLater,
-              'Rappeler plus tard',
-              showsUserInterface: false,
             ),
           ],
         ),
@@ -406,7 +367,7 @@ class NotificationService {
             AndroidNotificationAction(
               _actionMarkDone,
               'J\'ai fait cette action',
-              showsUserInterface: false,
+              showsUserInterface: true,
             ),
           ],
         ),
@@ -449,7 +410,7 @@ class NotificationService {
             AndroidNotificationAction(
               _actionMarkDone,
               'J\'ai fait cette action',
-              showsUserInterface: false,
+              showsUserInterface: true,
             ),
           ],
         ),
@@ -577,7 +538,7 @@ class NotificationService {
             AndroidNotificationAction(
               _actionMarkDone,
               'J\'ai fait cette action',
-              showsUserInterface: false,
+              showsUserInterface: true,
             ),
           ],
         ),
@@ -610,7 +571,7 @@ class NotificationService {
             AndroidNotificationAction(
               _actionMarkDone,
               'J\'ai fait cette action',
-              showsUserInterface: false,
+              showsUserInterface: true,
             ),
           ],
         ),
@@ -644,11 +605,6 @@ class NotificationService {
               _actionCompleteNow,
               'Terminer maintenant',
               showsUserInterface: true,
-            ),
-            const AndroidNotificationAction(
-              _actionRemindLater,
-              'Rappeler plus tard',
-              showsUserInterface: false,
             ),
           ],
         ),

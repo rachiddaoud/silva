@@ -83,6 +83,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       _checkAndResetVictories();
       _refreshMorningNotification();
+      // Recharger les victoires pour refléter les changements depuis les notifications
+      _reloadVictories();
+    }
+  }
+  
+  Future<void> _reloadVictories() async {
+    final savedVictories = await PreferencesService.getTodayVictories();
+    if (mounted) {
+      setState(() {
+        _victories = savedVictories;
+      });
     }
   }
 

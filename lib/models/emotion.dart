@@ -55,7 +55,7 @@ class Emotion {
       emoji: "😰",
       description: "Anxieuse",
       moodScore: 1, // Rouge-orange
-      imagePath: "assets/doodles/sad.png",
+      imagePath: "assets/doodles/crying.png",
     ),
     Emotion(
       name: "Bof / Neutre",

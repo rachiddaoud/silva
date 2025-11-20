@@ -257,10 +257,20 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
   }
 
   Widget _buildEmotionSelector(ThemeData theme) {
+    // Sélectionner 5 émotions distinctes avec des doodles différents
+    // Épuisée, Triste, Bof/Neutre, OK/Calme, Fière/Joyeuse
+    final selectedEmotions = [
+      Emotion.emotions[0], // Épuisée
+      Emotion.emotions[1], // Triste / Débordée
+      Emotion.emotions[3], // Bof / Neutre
+      Emotion.emotions[4], // OK / Calme
+      Emotion.emotions[5], // Fière / Joyeuse
+    ];
+    
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        for (final emotion in Emotion.emotions.take(5))
+        for (final emotion in selectedEmotions)
           Expanded(
             child: Center(
               child: WireframeSmiley(

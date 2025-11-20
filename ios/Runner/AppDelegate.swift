@@ -35,15 +35,9 @@ import UserNotifications
         options: [.foreground]
       )
       
-      let remindLaterAction = UNNotificationAction(
-        identifier: "action_remind_later",
-        title: "Rappeler plus tard",
-        options: []
-      )
-      
       let eveningReminderCategory = UNNotificationCategory(
         identifier: "EVENING_REMINDER",
-        actions: [completeNowAction, remindLaterAction],
+        actions: [completeNowAction],
         intentIdentifiers: [],
         options: []
       )

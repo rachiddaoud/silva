@@ -8,7 +8,7 @@
 get_device_id() {
   case "$1" in
     "pixel" | "rachid")
-      echo "192.168.178.79:5555"
+      echo "3A240DLJH000X6"
       ;;
     "sim")
       echo "B49CA4C3-9C83-49E2-BAF8-36DBC11E12E6"

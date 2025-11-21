@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import '../models/theme_config.dart';
 import '../services/preferences_service.dart';
 import '../services/notification_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_service.dart';
+import '../app_navigator.dart';
+import 'login_screen.dart';
+import 'home_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final AppTheme currentTheme;
@@ -21,16 +26,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   String? _userName;
   DateTime? _dateOfBirth;
+  late AppTheme _currentTheme;
 
   @override
   void initState() {
     super.initState();
+    _currentTheme = widget.currentTheme;
     _loadData();
   }
 
   Future<void> _loadData() async {
     final enabled = await PreferencesService.areNotificationsEnabled();
-    final name = await PreferencesService.getUserName();
+    final user = FirebaseAuth.instance.currentUser;
+    final name = user?.displayName ?? await PreferencesService.getUserName();
     final dob = await PreferencesService.getDateOfBirth();
     setState(() {
       _notificationsEnabled = enabled;
@@ -162,12 +170,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   
   Widget _buildThemeButton(AppTheme appTheme) {
     final config = ThemeConfig.themes[appTheme]!;
-    final isSelected = widget.currentTheme == appTheme;
+    final isSelected = _currentTheme == appTheme;
     final theme = Theme.of(context);
     
     return GestureDetector(
       onTap: () {
         widget.onThemeChanged(appTheme);
+        setState(() {
+          _currentTheme = appTheme;
+        });
         Navigator.pop(context);
       },
       child: Column(
@@ -364,7 +375,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildSettingsTile(
                   icon: Icons.palette_outlined,
                   title: 'Thème',
-                  subtitle: ThemeConfig.themes[widget.currentTheme]!.name,
+                  subtitle: ThemeConfig.themes[_currentTheme]!.name,
                   onTap: _showThemeSelector,
                   color: theme.colorScheme.primary,
                 ),
@@ -421,6 +432,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                     );
+                  },
+                ),
+                const SizedBox(height: 32),
+                _buildSettingsTile(
+                  icon: Icons.logout_rounded,
+                  title: 'Se déconnecter',
+                  color: theme.colorScheme.error,
+                  onTap: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Déconnexion'),
+                        content: const Text('Voulez-vous vraiment vous déconnecter ?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Annuler'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            style: TextButton.styleFrom(
+                              foregroundColor: theme.colorScheme.error,
+                            ),
+                            child: const Text('Se déconnecter'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirm == true && mounted) {
+                      await AuthService().signOut();
+                      if (mounted) {
+                        // Navigate to login screen and remove all previous routes
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (context) => LoginScreen(
+                              onLoginSuccess: () {
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute(
+                                    builder: (context) => HomeScreen(
+                                      currentTheme: widget.currentTheme,
+                                      onThemeChanged: widget.onThemeChanged,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          (route) => false,
+                        );
+                      }
+                    }
                   },
                 ),
               ],

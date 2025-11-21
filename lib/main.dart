@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'screens/home_screen.dart';
-import 'screens/onboarding_screen.dart';
+import 'screens/login_screen.dart'; // Now contains LoginScreen
 import 'models/theme_config.dart';
 import 'services/preferences_service.dart';
 import 'services/notification_service.dart';
 import 'app_navigator.dart';
 
-void main() {
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'firebase_options.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
@@ -57,10 +64,17 @@ class _MyAppState extends State<MyApp> {
       debugPrint('Notifications initialized');
     });
     
+    // Check if user is logged in via Firebase
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final bool isLoggedIn = currentUser != null;
+
     if (mounted) {
       setState(() {
         _currentTheme = theme;
-        _isOnboardingComplete = onboardingComplete;
+        // Strictly check for login status. 
+        // We ignore the local 'onboardingComplete' preference to ensure 
+        // users must be authenticated via Firebase.
+        _isOnboardingComplete = isLoggedIn;
         _isLoading = false;
       });
     }
@@ -112,14 +126,14 @@ class _MyAppState extends State<MyApp> {
                 child: CircularProgressIndicator(),
               ),
             )
-          : _isOnboardingComplete
-              ? HomeScreen(
-                  onThemeChanged: _onThemeChanged,
-                  currentTheme: _currentTheme,
-                )
-              : OnboardingScreen(
-                  onComplete: _onOnboardingComplete,
-                ),
+              : _isOnboardingComplete
+                  ? HomeScreen(
+                      onThemeChanged: _onThemeChanged,
+                      currentTheme: _currentTheme,
+                    )
+                  : LoginScreen(
+                      onLoginSuccess: _onOnboardingComplete,
+                    ),
     );
   }
 }

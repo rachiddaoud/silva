@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/victory_card.dart';
 import '../models/emotion.dart';
 import '../models/theme_config.dart';
@@ -440,11 +441,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ],
                 ),
                 padding: const EdgeInsets.all(12),
-                child: Icon(
-                  Icons.person,
-                  color: theme.colorScheme.onPrimary,
-                  size: 24,
-                ),
+                child: _buildProfileImage(theme),
               ),
             ),
           ),
@@ -463,6 +460,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             )
           : null,
+    );
+  }
+
+  Widget _buildProfileImage(ThemeData theme) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user?.photoURL != null) {
+      return CircleAvatar(
+        radius: 12,
+        backgroundImage: NetworkImage(user!.photoURL!),
+        backgroundColor: Colors.transparent,
+      );
+    }
+    return Icon(
+      Icons.person,
+      color: theme.colorScheme.onPrimary,
+      size: 24,
     );
   }
 }

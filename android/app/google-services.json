@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "174370766580",
+    "project_id": "ma-bulle-auth-demo",
+    "storage_bucket": "ma-bulle-auth-demo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:174370766580:android:a7f87e2eb408645932a8a1",
+        "android_client_info": {
+          "package_name": "com.example.bulle"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "174370766580-l28uojnbtdu1qv3il7lqu2d3iig9bvrc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.bulle",
+            "certificate_hash": "50f38357768393181fceff5ad2decc4076fa8f47"
+          }
+        },
+        {
+          "client_id": "174370766580-h345ostpe267pl0ambdkte3jji6c8btn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyANJaths-_q8VgiODSuYqgB8yIy5SOErZc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "174370766580-h345ostpe267pl0ambdkte3jji6c8btn.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "174370766580-n69t3ojpaqah5i0634575lr2stt8n0s3.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.bulle"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

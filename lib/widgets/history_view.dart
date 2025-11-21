@@ -231,18 +231,6 @@ class _TimelineEntry extends StatelessWidget {
                         final e = emotion!; // Non-null dans ce bloc
                         return Row(
                           children: [
-                            Icon(
-                              e.moodColor == const Color(0xFFFF6B6B) || 
-                              e.moodColor == const Color(0xFFFF8E53) ||
-                              e.moodColor == const Color(0xFFFFB347)
-                                  ? Icons.mood_bad_rounded
-                                  : e.moodColor == const Color(0xFFFFD93D)
-                                      ? Icons.sentiment_neutral_rounded
-                                      : Icons.mood_rounded,
-                              size: 16,
-                              color: e.moodColor,
-                            ),
-                            const SizedBox(width: 6),
                             Text(
                               e.name,
                               style: TextStyle(

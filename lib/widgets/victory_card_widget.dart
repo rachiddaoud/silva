@@ -14,33 +14,36 @@ class VictoryCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           gradient: card.isAccomplished
-              ? const LinearGradient(
+              ? LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Color(0xFFB5E5CF),
-                    Color(0xFFA8D8C8),
+                    colorScheme.primary.withValues(alpha: 0.4),
+                    colorScheme.primary.withValues(alpha: 0.6),
                   ],
                 )
               : null,
-          color: card.isAccomplished ? null : Colors.white,
+          color: card.isAccomplished ? null : theme.cardTheme.color ?? Colors.white,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: card.isAccomplished
-                ? const Color(0xFF8FD4B0)
-                : const Color(0xFFD0E8F5),
+                ? colorScheme.primary
+                : colorScheme.onSurface.withValues(alpha: 0.2),
             width: card.isAccomplished ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
               color: card.isAccomplished
-                  ? const Color(0xFFB5E5CF).withValues(alpha: 0.2)
-                  : const Color(0xFF89CFF0).withValues(alpha: 0.08),
+                  ? colorScheme.primary.withValues(alpha: 0.3)
+                  : Colors.black.withValues(alpha: 0.05),
               blurRadius: card.isAccomplished ? 6 : 3,
               offset: const Offset(0, 1),
             ),
@@ -67,8 +70,8 @@ class VictoryCardWidget extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     color: card.isAccomplished
-                        ? const Color(0xFF4A6B5A)
-                        : const Color(0xFF5A7A8A),
+                        ? colorScheme.onSurface // Darker text for better contrast
+                        : colorScheme.onSurface.withValues(alpha: 0.8),
                     fontWeight: card.isAccomplished
                         ? FontWeight.w600
                         : FontWeight.w400,

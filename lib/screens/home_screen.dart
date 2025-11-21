@@ -10,6 +10,7 @@ import 'day_completion_screen.dart';
 import '../widgets/today_history_toggle.dart';
 import '../widgets/history_view.dart';
 import '../widgets/path_view.dart';
+import '../widgets/daily_quote_card.dart';
 import 'settings_screen.dart';
 import '../services/preferences_service.dart';
 import '../services/notification_service.dart';
@@ -300,65 +301,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           sliver: SliverList(
             delegate: SliverChildListDelegate([
               // Citation du jour
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                margin: const EdgeInsets.only(bottom: 24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      theme.colorScheme.primary.withValues(alpha: 0.08),
-                      theme.colorScheme.secondary.withValues(alpha: 0.05),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                      spreadRadius: 0,
-                    ),
-                  ],
-                ),
-                child: RichText(
-                  text: TextSpan(
-                    style: GoogleFonts.greatVibes(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w400,
-                      color: theme.colorScheme.onSurface,
-                      height: 0.9,
-                      letterSpacing: 0.5,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: '❝ ',
-                        style: GoogleFonts.greatVibes(
-                          fontSize: 50,
-                          fontWeight: FontWeight.w400,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                      TextSpan(
-                        text: _currentQuote,
-                      ),
-                      TextSpan(
-                        text: ' ❞',
-                        style: GoogleFonts.greatVibes(
-                          fontSize: 50,
-                          fontWeight: FontWeight.w400,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              // Citation du jour
+              DailyQuoteCard(quote: _currentQuote),
               // Titre Victoires
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),

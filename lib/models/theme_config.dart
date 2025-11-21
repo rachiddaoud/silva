@@ -44,99 +44,99 @@ class ThemeConfig {
   static const Map<AppTheme, ThemeConfig> themes = {
     AppTheme.babyBlue: ThemeConfig(
       name: 'Baby Blue',
-      primary: Color(0xFF89CFF0),
-      secondary: Color(0xFFFFD4A3),
-      tertiary: Color(0xFFB5E5CF),
+      primary: Color(0xFF5CA0C5), // Darker Blue
+      secondary: Color(0xFFDDA570), // Darker Orange
+      tertiary: Color(0xFF85B59F), // Darker Green
       surface: Color(0xFFF0F9FF),
       error: Color(0xFFFFB3BA),
       onPrimary: Colors.white,
-      onSecondary: Color(0xFF6B5B4F),
-      onTertiary: Color(0xFF4A6B5A),
-      onSurface: Color(0xFF5A7A8A),
+      onSecondary: Colors.white, // Changed to white for better contrast on darker secondary
+      onTertiary: Colors.white, // Changed to white
+      onSurface: Color(0xFF2A4A5A), // Darker text
       scaffoldBackground: Color(0xFFF0F9FF),
       backgroundPath: null,
     ),
     AppTheme.lavender: ThemeConfig(
       name: 'Lavande',
-      primary: Color(0xFFC8A2C8),
-      secondary: Color(0xFFE6D3FF),
-      tertiary: Color(0xFFD4B3FF),
+      primary: Color(0xFF987298), // Darker Purple
+      secondary: Color(0xFFB6A3DF), // Darker Secondary
+      tertiary: Color(0xFFA483CF), // Darker Tertiary
       surface: Color(0xFFF5F0FF),
       error: Color(0xFFFFB3BA),
       onPrimary: Colors.white,
-      onSecondary: Color(0xFF5A4A6B),
-      onTertiary: Color(0xFF6B5A7A),
-      onSurface: Color(0xFF6B5A8A),
+      onSecondary: Colors.white,
+      onTertiary: Colors.white,
+      onSurface: Color(0xFF3B2A5A), // Darker text
       scaffoldBackground: Color(0xFFF5F0FF),
       backgroundPath: null,
     ),
     AppTheme.rosePowder: ThemeConfig(
       name: 'Rose Poudré',
-      primary: Color(0xFFFFB6C1),
-      secondary: Color(0xFFFFD1DC),
-      tertiary: Color(0xFFFFC0CB),
+      primary: Color(0xFFCF8691), // Darker Pink
+      secondary: Color(0xFFCFA1AC), // Darker Secondary
+      tertiary: Color(0xFFCF909B), // Darker Tertiary
       surface: Color(0xFFFFF0F5),
       error: Color(0xFFFF6B6B),
       onPrimary: Colors.white,
-      onSecondary: Color(0xFF8B6B6D),
-      onTertiary: Color(0xFF9B7B7D),
-      onSurface: Color(0xFF7A6B7A),
+      onSecondary: Colors.white,
+      onTertiary: Colors.white,
+      onSurface: Color(0xFF4A3B4A), // Darker text
       scaffoldBackground: Color(0xFFFFF0F5),
       backgroundPath: null,
     ),
     AppTheme.mint: ThemeConfig(
       name: 'Menthe',
-      primary: Color(0xFFB5E5CF),
-      secondary: Color(0xFFD4F4E6),
-      tertiary: Color(0xFFA8D8C8),
+      primary: Color(0xFF6BA88F), // Darker Mint
+      secondary: Color(0xFFA4C4B6), // Darker Secondary
+      tertiary: Color(0xFF78A898), // Darker Tertiary
       surface: Color(0xFFF0FFF5),
       error: Color(0xFFFFB3BA),
       onPrimary: Colors.white,
-      onSecondary: Color(0xFF4A6B5A),
-      onTertiary: Color(0xFF5A7B6A),
-      onSurface: Color(0xFF5A7A6A),
+      onSecondary: Colors.white,
+      onTertiary: Colors.white,
+      onSurface: Color(0xFF2A4A3A), // Darker text
       scaffoldBackground: Color(0xFFF0FFF5),
       backgroundPath: null,
     ),
     AppTheme.peach: ThemeConfig(
       name: 'Pêche',
-      primary: Color(0xFFFFD4A3),
-      secondary: Color(0xFFFFE4C4),
-      tertiary: Color(0xFFFFCC99),
+      primary: Color(0xFFDDA570), // Darker Peach
+      secondary: Color(0xFFCFB494), // Darker Secondary
+      tertiary: Color(0xFFCF9C69), // Darker Tertiary
       surface: Color(0xFFFFF8F0),
       error: Color(0xFFFFB3BA),
       onPrimary: Colors.white,
-      onSecondary: Color(0xFF8B6B4F),
-      onTertiary: Color(0xFF9B7B5F),
-      onSurface: Color(0xFF7A6B5A),
+      onSecondary: Colors.white,
+      onTertiary: Colors.white,
+      onSurface: Color(0xFF4A3B2A), // Darker text
       scaffoldBackground: Color(0xFFFFF8F0),
       backgroundPath: null,
     ),
     AppTheme.spring: ThemeConfig(
       name: 'Printemps',
-      primary: Color(0xFF90EE90),
-      secondary: Color(0xFFFFB6D9),
-      tertiary: Color(0xFFC8E6C9),
+      primary: Color(0xFF60BE60), // Darker Green
+      secondary: Color(0xFFCF86A9), // Darker Pink
+      tertiary: Color(0xFF98B699), // Darker Tertiary
       surface: Color(0xFFF1F8F4),
       error: Color(0xFFFFB3BA),
       onPrimary: Colors.white,
-      onSecondary: Color(0xFF6B4A5A),
-      onTertiary: Color(0xFF4A6B4A),
-      onSurface: Color(0xFF4A6B4A),
+      onSecondary: Colors.white,
+      onTertiary: Colors.white,
+      onSurface: Color(0xFF1A3B1A), // Darker text
       scaffoldBackground: Color(0xFFF1F8F4),
       backgroundPath: 'assets/backgrounds/spring_bg.png',
     ),
     AppTheme.summer: ThemeConfig(
       name: 'Été',
-      primary: Color(0xFF87CEEB),
-      secondary: Color(0xFFFFD700),
-      tertiary: Color(0xFFB0E0E6),
+      primary: Color(0xFF579EBB), // Darker Sky Blue
+      secondary: Color(0xFFCFA700), // Darker Gold
+      tertiary: Color(0xFF80B0B6), // Darker Tertiary
       surface: Color(0xFFF0F8FF),
       error: Color(0xFFFFB3BA),
       onPrimary: Colors.white,
-      onSecondary: Color(0xFF6B5A2F),
-      onTertiary: Color(0xFF4A6B7A),
-      onSurface: Color(0xFF4A6B8A),
+      onSecondary: Colors.white,
+      onTertiary: Colors.white,
+      onSurface: Color(0xFF1A3B5A), // Darker text
       scaffoldBackground: Color(0xFFF0F8FF),
       backgroundPath: 'assets/backgrounds/summer_bg.png',
     ),
@@ -156,15 +156,15 @@ class ThemeConfig {
     ),
     AppTheme.winter: ThemeConfig(
       name: 'Hiver',
-      primary: Color(0xFFADD8E6),
-      secondary: Color(0xFFE0F7FA),
-      tertiary: Color(0xFFB0BEC5),
+      primary: Color(0xFF7DA8B6), // Darker Blue
+      secondary: Color(0xFFB0C7CA), // Darker Cyan
+      tertiary: Color(0xFF808E95), // Darker Blue Grey
       surface: Color(0xFFF8FBFF),
       error: Color(0xFFFFB3BA),
-      onPrimary: Color(0xFF1A4D6B),
-      onSecondary: Color(0xFF4A6B7A),
-      onTertiary: Color(0xFF5A6B7A),
-      onSurface: Color(0xFF4A5A6B),
+      onPrimary: Colors.white,
+      onSecondary: Colors.white,
+      onTertiary: Colors.white,
+      onSurface: Color(0xFF1A2A3B), // Darker text
       scaffoldBackground: Color(0xFFF8FBFF),
       backgroundPath: 'assets/backgrounds/winter_bg.png',
     ),
@@ -184,28 +184,28 @@ class ThemeConfig {
         onSurface: onSurface,
       ),
       scaffoldBackgroundColor: scaffoldBackground,
-      textTheme: const TextTheme(
+      textTheme: TextTheme(
         bodyLarge: TextStyle(
           fontSize: 18,
-          color: Color(0xFF5A7A8A),
+          color: onSurface,
           fontWeight: FontWeight.w400,
           height: 1.5,
         ),
         bodyMedium: TextStyle(
           fontSize: 16,
-          color: Color(0xFF5A7A8A),
+          color: onSurface,
           fontWeight: FontWeight.w400,
           height: 1.5,
         ),
         titleLarge: TextStyle(
           fontSize: 24,
-          color: Color(0xFF4A6B7A),
+          color: onSurface,
           fontWeight: FontWeight.w500,
           height: 1.4,
         ),
         titleMedium: TextStyle(
           fontSize: 20,
-          color: Color(0xFF4A6B7A),
+          color: onSurface,
           fontWeight: FontWeight.w500,
           height: 1.4,
         ),

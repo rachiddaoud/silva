@@ -7,15 +7,8 @@ import 'services/preferences_service.dart';
 import 'services/notification_service.dart';
 import 'app_navigator.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialiser les notifications
-  await NotificationService.initialize();
-  await NotificationService.requestPermissions();
-  await NotificationService.scheduleDailyNotification();
-  await NotificationService.scheduleMorningNotification();
-  
   runApp(const MyApp());
 }
 
@@ -38,15 +31,48 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _initializeApp() async {
-    // Load theme and onboarding status
-    final theme = await PreferencesService.getTheme();
-    final onboardingComplete = await PreferencesService.isOnboardingComplete();
+    // Start notification initialization in parallel
+    final notificationFuture = _initNotifications();
     
-    setState(() {
-      _currentTheme = theme;
-      _isOnboardingComplete = onboardingComplete;
-      _isLoading = false;
+    // Load theme and onboarding status
+    final themeFuture = PreferencesService.getTheme();
+    final onboardingFuture = PreferencesService.isOnboardingComplete();
+    
+    final results = await Future.wait([
+      themeFuture,
+      onboardingFuture,
+      // We don't strictly need to wait for notifications to show the UI,
+      // but we wait here to ensure everything is ready before potentially
+      // showing the home screen. If this takes too long, we could remove
+      // it from this wait and let it complete in background.
+    ]);
+    
+    final theme = results[0] as AppTheme;
+    final onboardingComplete = results[1] as bool;
+    
+    // Ensure notifications are initialized (if not already by the wait above, 
+    // though we didn't await notificationFuture in the list, let's just let it run)
+    // Actually, let's just let notifications init in background to not block UI
+    notificationFuture.then((_) {
+      debugPrint('Notifications initialized');
     });
+    
+    if (mounted) {
+      setState(() {
+        _currentTheme = theme;
+        _isOnboardingComplete = onboardingComplete;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _initNotifications() async {
+    await NotificationService.initialize();
+    // Request permissions might show a dialog, so maybe do this later or check if already granted
+    // For now, we keep the original flow but non-blocking for the main UI
+    await NotificationService.requestPermissions();
+    await NotificationService.scheduleDailyNotification();
+    await NotificationService.scheduleMorningNotification();
   }
 
   void _onThemeChanged(AppTheme theme) {

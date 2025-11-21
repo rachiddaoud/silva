@@ -9,7 +9,7 @@ import 'day_completion_screen.dart';
 import '../widgets/today_history_toggle.dart';
 import '../widgets/history_view.dart';
 import '../widgets/path_view.dart';
-import '../widgets/profile_menu.dart';
+import 'settings_screen.dart';
 import '../services/preferences_service.dart';
 import '../services/notification_service.dart';
 import '../app_navigator.dart';
@@ -83,6 +83,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       _checkAndResetVictories();
       _refreshMorningNotification();
+      // Recharger les victoires pour refléter les changements depuis les notifications
+      _reloadVictories();
+    }
+  }
+  
+  Future<void> _reloadVictories() async {
+    final savedVictories = await PreferencesService.getTodayVictories();
+    if (mounted) {
+      setState(() {
+        _victories = savedVictories;
+      });
     }
   }
 
@@ -92,6 +103,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (enabled) {
       await NotificationService.scheduleMorningNotification();
       await NotificationService.scheduleDailyNotification();
+      await NotificationService.scheduleDayReminders();
     }
   }
 
@@ -102,6 +114,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _victories = VictoryCard.getDefaultVictories();
       });
       await PreferencesService.setLastResetDate(DateTime.now());
+      await PreferencesService.saveTodayVictories(_victories);
+      // Reprogrammer les rappels de la journée
+      await NotificationService.scheduleDayReminders();
+    } else {
+      // Charger les victoires sauvegardées
+      final savedVictories = await PreferencesService.getTodayVictories();
+      if (mounted) {
+        setState(() {
+          _victories = savedVictories;
+        });
+      }
     }
   }
 
@@ -135,23 +158,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
-  void _showProfileMenu() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => ProfileMenu(
-        currentTheme: widget.currentTheme,
-        onThemeChanged: widget.onThemeChanged,
+  void _navigateToSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SettingsScreen(
+          currentTheme: widget.currentTheme,
+          onThemeChanged: widget.onThemeChanged,
+        ),
       ),
     );
   }
 
-  void _toggleVictory(int index) {
+  void _toggleVictory(int index) async {
     setState(() {
       _victories[index].isAccomplished =
           !_victories[index].isAccomplished;
     });
+    // Sauvegarder les victoires mises à jour
+    await PreferencesService.saveTodayVictories(_victories);
+    // Reprogrammer les rappels si nécessaire
+    await NotificationService.scheduleDayReminders();
   }
 
   void _showEmotionCheckin() {
@@ -223,114 +250,125 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget _buildTodayView() {
     final theme = Theme.of(context);
     
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        children: [
-          // Citation du jour
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-            margin: const EdgeInsets.only(bottom: 24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  theme.colorScheme.primary.withValues(alpha: 0.08),
-                  theme.colorScheme.secondary.withValues(alpha: 0.05),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                  spreadRadius: 0,
-                ),
-              ],
-            ),
-            child: RichText(
-              text: TextSpan(
-                style: GoogleFonts.greatVibes(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w400,
-                  color: theme.colorScheme.onSurface,
-                  height: 0.9,
-                  letterSpacing: 0.5,
-                ),
-                children: [
-                  TextSpan(
-                    text: '❝ ',
-                    style: GoogleFonts.greatVibes(
-                      fontSize: 50,
-                      fontWeight: FontWeight.w400,
-                      color: theme.colorScheme.primary,
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.all(20.0),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              // Citation du jour
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      theme.colorScheme.primary.withValues(alpha: 0.08),
+                      theme.colorScheme.secondary.withValues(alpha: 0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                      spreadRadius: 0,
                     ),
-                  ),
-                  TextSpan(
-                    text: _currentQuote,
-                  ),
-                  TextSpan(
-                    text: ' ❞',
+                  ],
+                ),
+                child: RichText(
+                  text: TextSpan(
                     style: GoogleFonts.greatVibes(
-                      fontSize: 50,
+                      fontSize: 32,
                       fontWeight: FontWeight.w400,
-                      color: theme.colorScheme.primary,
+                      color: theme.colorScheme.onSurface,
+                      height: 0.9,
+                      letterSpacing: 0.5,
                     ),
+                    children: [
+                      TextSpan(
+                        text: '❝ ',
+                        style: GoogleFonts.greatVibes(
+                          fontSize: 50,
+                          fontWeight: FontWeight.w400,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      TextSpan(
+                        text: _currentQuote,
+                      ),
+                      TextSpan(
+                        text: ' ❞',
+                        style: GoogleFonts.greatVibes(
+                          fontSize: 50,
+                          fontWeight: FontWeight.w400,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-          // Titre Victoires
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.star_rounded,
-                  color: theme.colorScheme.secondary,
-                  size: 24,
+              // Titre Victoires
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.star_rounded,
+                      color: theme.colorScheme.secondary,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Victoires',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  'Victoires',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurface,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ]),
           ),
-          // Grille 3x3 des victoires (taille réduite)
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
+        ),
+        // Grille 3x3 des victoires
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          sliver: SliverGrid(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
               childAspectRatio: 1.1,
             ),
-            itemCount: _victories.length,
-            itemBuilder: (context, index) {
-              return VictoryCardWidget(
-                card: _victories[index],
-                onTap: () => _toggleVictory(index),
-              );
-            },
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                return VictoryCardWidget(
+                  key: ValueKey(_victories[index].id),
+                  card: _victories[index],
+                  onTap: () => _toggleVictory(index),
+                );
+              },
+              childCount: _victories.length,
+            ),
           ),
-          const SizedBox(height: 100), // Espace pour le FAB
-        ],
-      ),
+        ),
+        const SliverToBoxAdapter(
+          child: SizedBox(height: 100), // Espace pour le FAB
+        ),
+      ],
     );
   }
 
@@ -349,6 +387,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: Image.asset(
                 backgroundPath,
                 fit: BoxFit.cover,
+                cacheWidth: 1080, // Optimization: Limit memory usage
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
                     color: theme.scaffoldBackgroundColor,
@@ -375,7 +414,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     children: [
                       _buildTodayView(),
                       const HistoryView(),
-                      const PathView(growthLevel: 0.5), // 50% par défaut
+                      const PathView(),
                     ],
                   ),
                 ),
@@ -387,7 +426,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             top: MediaQuery.of(context).padding.top + 8,
             right: 16,
             child: GestureDetector(
-              onTap: _showProfileMenu,
+              onTap: _navigateToSettings,
               child: Container(
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary.withValues(alpha: 0.9),

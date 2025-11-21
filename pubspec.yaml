@@ -42,7 +42,6 @@ dependencies:
   share_plus: ^10.0.2
   google_fonts: ^6.2.1
   intl: ^0.20.2
-  lottie: ^3.1.2
 
 dev_dependencies:
   flutter_test:
@@ -73,6 +72,13 @@ flutter:
     - assets/animations/
     - assets/backgrounds/
     - assets/doodles/
+    - assets/tree/leaf.png
+    - assets/tree/leaf_dead_1.png
+    - assets/tree/leaf_dead_2.png
+    - assets/tree/leaf_dead_3.png
+    - assets/tree/flower.png
+    - assets/tree/jasmin.png
+    - assets/tree/terre.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

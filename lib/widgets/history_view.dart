@@ -3,6 +3,7 @@ import '../models/emotion.dart';
 import '../models/victory_card.dart';
 import '../models/day_entry.dart';
 import '../services/preferences_service.dart';
+import '../utils/sprite_utils.dart';
 
 class HistoryView extends StatefulWidget {
   const HistoryView({super.key});
@@ -186,7 +187,7 @@ class _TimelineEntry extends StatelessWidget {
             color: emotion != null 
                 ? emotion!.moodColor 
                 : theme.colorScheme.onSurface.withValues(alpha: 0.2),
-            emoji: emotion?.emoji ?? '○',
+            emotion: emotion,
             isLast: isLast,
             isEmpty: emotion == null,
           ),
@@ -299,8 +300,7 @@ class _TimelineEntry extends StatelessWidget {
                           runSpacing: 8,
                           children: victoryCards.map((victory) {
                             return _VictoryTag(
-                              emoji: victory.emoji,
-                              text: victory.text,
+                              victory: victory,
                               color: e.moodColor,
                             );
                           }).toList(),
@@ -321,13 +321,13 @@ class _TimelineEntry extends StatelessWidget {
 // Widget pour le nœud de timeline
 class _TimelineNode extends StatelessWidget {
   final Color color;
-  final String emoji;
+  final Emotion? emotion;
   final bool isLast;
   final bool isEmpty;
 
   const _TimelineNode({
     required this.color,
-    required this.emoji,
+    this.emotion,
     required this.isLast,
     this.isEmpty = false,
   });
@@ -338,7 +338,7 @@ class _TimelineNode extends StatelessWidget {
       width: 40,
       child: Column(
         children: [
-          // Cercle avec emoji
+          // Cercle avec doodle
           Container(
             width: 40,
             height: 40,
@@ -354,13 +354,22 @@ class _TimelineNode extends StatelessWidget {
               ),
             ),
             child: Center(
-              child: Text(
-                emoji,
-                style: TextStyle(
-                  fontSize: isEmpty ? 16 : 20,
-                  color: isEmpty ? color : null,
-                ),
-              ),
+              child: isEmpty
+                  ? Text(
+                      '○',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: color,
+                      ),
+                    )
+                  : emotion != null
+                      ? Image.asset(
+                          emotion!.imagePath,
+                          width: 24,
+                          height: 24,
+                          fit: BoxFit.contain,
+                        )
+                      : const SizedBox.shrink(),
             ),
           ),
           // Ligne verticale
@@ -389,13 +398,11 @@ class _TimelineNode extends StatelessWidget {
 
 // Widget pour un tag de victoire
 class _VictoryTag extends StatelessWidget {
-  final String emoji;
-  final String text;
+  final VictoryCard victory;
   final Color color;
 
   const _VictoryTag({
-    required this.emoji,
-    required this.text,
+    required this.victory,
     required this.color,
   });
 
@@ -416,13 +423,14 @@ class _VictoryTag extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            emoji,
-            style: const TextStyle(fontSize: 14),
+          SpriteDisplay(
+            victoryId: victory.spriteId,
+            size: 20,
+            showBorder: false,
           ),
           const SizedBox(width: 4),
           Text(
-            text,
+            victory.text,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,

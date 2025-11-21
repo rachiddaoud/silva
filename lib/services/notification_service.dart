@@ -1,16 +1,18 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'preferences_service.dart';
 import '../app_navigator.dart';
 import '../screens/day_completion_screen.dart';
-import '../models/victory_card.dart';
 import '../models/emotion.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
+  static const platform = MethodChannel('com.ma_bulle/notifications');
   
   // Callback pour gérer la navigation depuis la notification
   static VoidCallback? onNotificationTappedCallback;
@@ -18,6 +20,11 @@ class NotificationService {
   // Constantes pour identifier le type de notification
   static const String _morningNotificationType = 'morning_quote';
   static const String _eveningNotificationType = 'evening_reminder';
+  static const String _dayReminderNotificationType = 'day_reminder';
+  
+  // Constantes pour les actions de notification
+  static const String _actionCompleteNow = 'action_complete_now';
+  static const String _actionMarkDone = 'action_mark_done';
 
   // Citations du jour
   static const List<String> _dailyQuotes = [
@@ -60,45 +67,113 @@ class NotificationService {
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
+
+    // Les catégories d'actions iOS sont configurées nativement dans AppDelegate.swift
+    // Pas besoin d'appel de méthode channel ici
   }
 
-  static void _onNotificationTapped(NotificationResponse response) {
+  static void _onNotificationTapped(NotificationResponse response) async {
     final navigator = navigatorKey.currentState;
-    if (navigator == null) return;
     
     // Identifier le type de notification via le payload ou l'ID
     final notificationType = response.payload ?? '';
-    final notificationId = response.id;
+    final notificationId = response.id ?? -1;
+    final actionId = response.actionId;
+    
+    // Gérer les actions des notifications de rappel de la journée
+    final isDayReminder = notificationId == 2 || 
+                         notificationId == 3 || 
+                         notificationId == 996 || 
+                         notificationId == 997 || 
+                         notificationType.startsWith(_dayReminderNotificationType);
+    
+    if (isDayReminder) {
+      if (actionId == _actionMarkDone) {
+        // Action "J'ai fait cette action" -> marquer la victoire comme accomplie
+        final payload = response.payload ?? '';
+        // Le payload contient "day_reminder|victoryId"
+        final parts = payload.split('|');
+        if (parts.length >= 2) {
+          final victoryId = int.tryParse(parts[1]);
+          if (victoryId != null) {
+            await PreferencesService.markVictoryAsAccomplished(victoryId);
+            // Reprogrammer les rappels pour exclure cette victoire
+            await scheduleDayReminders();
+            // Annuler la notification
+            await _notifications.cancel(notificationId);
+            // Si l'app est ouverte, retourner à l'accueil pour rafraîchir l'interface
+            if (navigator != null) {
+              navigator.popUntil((route) => route.isFirst);
+            }
+          }
+        }
+        return;
+      } else {
+        // Tap sur la notification -> ouvrir l'app
+        if (navigator != null) {
+          navigator.popUntil((route) => route.isFirst);
+        }
+        return;
+      }
+    }
+    
+    // Gérer les actions des notifications du soir
+    if (notificationId == 0 || notificationId == 999 || notificationType == _eveningNotificationType) {
+      if (actionId == _actionCompleteNow) {
+        // Action "Terminer maintenant" -> ouvrir l'écran de complétion
+        if (navigator != null) {
+          if (onNotificationTappedCallback != null) {
+            onNotificationTappedCallback!();
+            return;
+          }
+          
+          final victories = await PreferencesService.getTodayVictories();
+          navigator.push(
+            MaterialPageRoute(
+              builder: (context) => DayCompletionScreen(
+                victories: victories,
+                onComplete: (Emotion emotion, String comment) {
+                  navigator.pop();
+                },
+              ),
+            ),
+          );
+        }
+        return;
+      } else {
+        // Tap sur la notification elle-même (sans action) -> ouvrir l'écran de complétion
+        if (navigator != null) {
+          if (onNotificationTappedCallback != null) {
+            onNotificationTappedCallback!();
+            return;
+          }
+          
+          final victories = await PreferencesService.getTodayVictories();
+          navigator.push(
+            MaterialPageRoute(
+              builder: (context) => DayCompletionScreen(
+                victories: victories,
+                onComplete: (Emotion emotion, String comment) {
+                  navigator.pop();
+                },
+              ),
+            ),
+          );
+        }
+        return;
+      }
+    }
     
     // Notification du matin (ID 1 ou 998) -> naviguer vers l'accueil
     if (notificationId == 1 || notificationId == 998 || notificationType == _morningNotificationType) {
       // Pop toutes les routes jusqu'à la racine (accueil)
-      navigator.popUntil((route) => route.isFirst);
+      if (navigator != null) {
+        navigator.popUntil((route) => route.isFirst);
+      }
       return;
     }
-    
-    // Notification du soir (ID 0 ou 999) -> naviguer vers l'écran de complétion
-    if (notificationId == 0 || notificationId == 999 || notificationType == _eveningNotificationType) {
-      // Appeler le callback personnalisé si défini (défini par HomeScreen)
-      if (onNotificationTappedCallback != null) {
-        onNotificationTappedCallback!();
-        return;
-      }
-      
-      // Fallback : naviguer avec des victoires par défaut
-      final victories = VictoryCard.getDefaultVictories();
-      navigator.push(
-        MaterialPageRoute(
-          builder: (context) => DayCompletionScreen(
-            victories: victories,
-            onComplete: (Emotion emotion, String comment) {
-              navigator.pop();
-            },
-          ),
-        ),
-      );
-    }
   }
+  
 
   static Future<bool> requestPermissions() async {
     final android = await _notifications
@@ -121,6 +196,7 @@ class NotificationService {
     if (!enabled) {
       await cancelDailyNotification();
       await cancelMorningNotification();
+      await cancelDayReminders();
       return;
     }
 
@@ -144,11 +220,19 @@ class NotificationService {
           channelDescription: 'Rappel pour terminer la journée à 22h',
           importance: Importance.high,
           priority: Priority.high,
+          actions: [
+            const AndroidNotificationAction(
+              _actionCompleteNow,
+              'Terminer maintenant',
+              showsUserInterface: true,
+            ),
+          ],
         ),
         iOS: DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
+          categoryIdentifier: 'EVENING_REMINDER',
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -249,6 +333,148 @@ class NotificationService {
     await _notifications.cancel(1);
   }
 
+  static Future<void> scheduleDayReminders() async {
+    final enabled = await PreferencesService.areNotificationsEnabled();
+    if (!enabled) {
+      await cancelDayReminders();
+      return;
+    }
+
+    // Récupérer les victoires du jour
+    final victories = await PreferencesService.getTodayVictories();
+    final unaccomplishedVictories = victories.where((v) => !v.isAccomplished).toList();
+    
+    // Si toutes les victoires sont accomplies, ne pas programmer de rappel
+    if (unaccomplishedVictories.isEmpty) {
+      await cancelDayReminders();
+      return;
+    }
+
+    final random = Random();
+    final userName = await PreferencesService.getUserName();
+    final name = userName ?? 'vous';
+
+    // Première notification à 12h
+    final selectedVictory1 = unaccomplishedVictories[random.nextInt(unaccomplishedVictories.length)];
+    await _notifications.zonedSchedule(
+      2,
+      'Petit rappel 💚',
+      '$name, n\'oubliez pas : ${selectedVictory1.text}',
+      _nextInstanceOf12PM(),
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'day_reminder',
+          'Rappel de la journée',
+          channelDescription: 'Rappels pour les actions de la journée',
+          importance: Importance.high,
+          priority: Priority.high,
+          actions: [
+            AndroidNotificationAction(
+              _actionMarkDone,
+              'J\'ai fait cette action',
+              showsUserInterface: true,
+            ),
+          ],
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          categoryIdentifier: 'DAY_REMINDER',
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+      payload: '$_dayReminderNotificationType|${selectedVictory1.id}',
+    );
+
+    // Deuxième notification à 17h
+    // Filtrer à nouveau pour exclure la victoire déjà sélectionnée si possible
+    final remainingVictories = unaccomplishedVictories
+        .where((v) => v.id != selectedVictory1.id)
+        .toList();
+    final selectedVictory2 = remainingVictories.isNotEmpty
+        ? remainingVictories[random.nextInt(remainingVictories.length)]
+        : unaccomplishedVictories[random.nextInt(unaccomplishedVictories.length)];
+
+    await _notifications.zonedSchedule(
+      3,
+      'Petit rappel 💚',
+      '$name, n\'oubliez pas : ${selectedVictory2.text}',
+      _nextInstanceOf5PM(),
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'day_reminder',
+          'Rappel de la journée',
+          channelDescription: 'Rappels pour les actions de la journée',
+          importance: Importance.high,
+          priority: Priority.high,
+          actions: [
+            AndroidNotificationAction(
+              _actionMarkDone,
+              'J\'ai fait cette action',
+              showsUserInterface: true,
+            ),
+          ],
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          categoryIdentifier: 'DAY_REMINDER',
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+      payload: '$_dayReminderNotificationType|${selectedVictory2.id}',
+    );
+  }
+
+  static tz.TZDateTime _nextInstanceOf12PM() {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      12,
+      0,
+    );
+
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    return scheduledDate;
+  }
+
+  static tz.TZDateTime _nextInstanceOf5PM() {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      17,
+      0,
+    );
+
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    return scheduledDate;
+  }
+
+  static Future<void> cancelDayReminders() async {
+    await _notifications.cancel(2);
+    await _notifications.cancel(3);
+  }
+
   static Future<void> showTestNotification() async {
     // Récupérer le nom de l'utilisateur
     final userName = await PreferencesService.getUserName();
@@ -257,7 +483,26 @@ class NotificationService {
     // Récupérer la citation du jour
     final quote = _getCurrentQuote();
     
-    // Notification du matin (citation du jour)
+    // Récupérer les victoires du jour pour les rappels
+    final victories = await PreferencesService.getTodayVictories();
+    final unaccomplishedVictories = victories.where((v) => !v.isAccomplished).toList();
+    final random = Random();
+    
+    // Si toutes les victoires sont accomplies, utiliser toutes les victoires
+    final availableVictories = unaccomplishedVictories.isNotEmpty 
+        ? unaccomplishedVictories 
+        : victories;
+    
+    // Sélectionner deux victoires différentes pour les rappels
+    final selectedVictory1 = availableVictories[random.nextInt(availableVictories.length)];
+    final remainingVictories = availableVictories
+        .where((v) => v.id != selectedVictory1.id)
+        .toList();
+    final selectedVictory2 = remainingVictories.isNotEmpty
+        ? remainingVictories[random.nextInt(remainingVictories.length)]
+        : selectedVictory1;
+    
+    // 1. Notification du matin (citation du jour)
     await _notifications.show(
       998, // ID différent pour ne pas interférer avec les notifications programmées
       'Bonjour $name !',
@@ -279,10 +524,76 @@ class NotificationService {
       payload: _morningNotificationType,
     );
     
-    // Attendre un peu avant d'afficher la deuxième notification
+    // Attendre un peu avant d'afficher la notification suivante
     await Future.delayed(const Duration(milliseconds: 500));
     
-    // Notification du soir (rappel quotidien)
+    // 2. Notification de rappel à 12h
+    await _notifications.show(
+      997, // ID différent pour ne pas interférer avec les notifications programmées
+      'Petit rappel 💚',
+      '$name, n\'oubliez pas : ${selectedVictory1.text}',
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'day_reminder',
+          'Rappel de la journée',
+          channelDescription: 'Rappels pour les actions de la journée',
+          importance: Importance.high,
+          priority: Priority.high,
+          actions: [
+            AndroidNotificationAction(
+              _actionMarkDone,
+              'J\'ai fait cette action',
+              showsUserInterface: true,
+            ),
+          ],
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          categoryIdentifier: 'DAY_REMINDER',
+        ),
+      ),
+      payload: '$_dayReminderNotificationType|${selectedVictory1.id}',
+    );
+    
+    // Attendre un peu avant d'afficher la notification suivante
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    // 3. Notification de rappel à 17h
+    await _notifications.show(
+      996, // ID différent pour ne pas interférer avec les notifications programmées
+      'Petit rappel 💚',
+      '$name, n\'oubliez pas : ${selectedVictory2.text}',
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'day_reminder',
+          'Rappel de la journée',
+          channelDescription: 'Rappels pour les actions de la journée',
+          importance: Importance.high,
+          priority: Priority.high,
+          actions: [
+            AndroidNotificationAction(
+              _actionMarkDone,
+              'J\'ai fait cette action',
+              showsUserInterface: true,
+            ),
+          ],
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          categoryIdentifier: 'DAY_REMINDER',
+        ),
+      ),
+      payload: '$_dayReminderNotificationType|${selectedVictory2.id}',
+    );
+    
+    // Attendre un peu avant d'afficher la notification suivante
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    // 4. Notification du soir (rappel quotidien)
     await _notifications.show(
       999, // ID différent pour ne pas interférer avec les notifications programmées
       'Terminer votre journée',
@@ -294,11 +605,19 @@ class NotificationService {
           channelDescription: 'Rappel pour terminer la journée à 22h',
           importance: Importance.high,
           priority: Priority.high,
+          actions: [
+            const AndroidNotificationAction(
+              _actionCompleteNow,
+              'Terminer maintenant',
+              showsUserInterface: true,
+            ),
+          ],
         ),
         iOS: DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
+          categoryIdentifier: 'EVENING_REMINDER',
         ),
       ),
       payload: _eveningNotificationType,

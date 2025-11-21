@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// Widget pour afficher un emoji d'émotion dans un cercle avec bordure colorée
+/// Widget pour afficher un doodle d'émotion dans un cercle avec bordure colorée
 class WireframeSmiley extends StatelessWidget {
   final String emoji;
+  final String imagePath;
   final bool isSelected;
   final Color moodColor;
   final VoidCallback onTap;
@@ -10,6 +11,7 @@ class WireframeSmiley extends StatelessWidget {
   const WireframeSmiley({
     super.key,
     required this.emoji,
+    required this.imagePath,
     required this.isSelected,
     required this.moodColor,
     required this.onTap,
@@ -19,36 +21,14 @@ class WireframeSmiley extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
+      child: AnimatedOpacity(
         duration: const Duration(milliseconds: 200),
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? moodColor.withValues(alpha: 0.15)
-              : Colors.transparent,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isSelected ? moodColor : moodColor.withValues(alpha: 0.4),
-            width: isSelected ? 2.5 : 2,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: moodColor.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    spreadRadius: 1,
-                  ),
-                ]
-              : null,
-        ),
-        child: Center(
-          child: Text(
-            emoji,
-            style: TextStyle(
-              fontSize: isSelected ? 32 : 28,
-            ),
-          ),
+        opacity: isSelected ? 1.0 : 0.6,
+        child: Image.asset(
+          imagePath,
+          width: 70,
+          height: 70,
+          fit: BoxFit.contain,
         ),
       ),
     );

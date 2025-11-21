@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procedural Tree Generator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 90vw;
+            max-height: 70vh;
+            width: auto;
+            height: auto;
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #2d5016;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #3d7026;
+        }
+    </style>
+</head>
+<body>
+    <h1>Procedural Tree Generator - Comparison Mode</h1>
+    <canvas id="treeCanvas"></canvas>
+    <div class="controls">
+        <button onclick="generateTree()">Generate New Tree</button>
+        <button onclick="downloadImage()">Download Image</button>
+        <label>
+            Tree Opacity: 
+            <input type="range" id="opacitySlider" min="0" max="100" value="100" oninput="updateOpacity(this.value)">
+            <span id="opacityValue">100%</span>
+        </label>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('treeCanvas');
+        const ctx = canvas.getContext('2d');
+        let backgroundImage = null;
+        let treeOpacity = 1.0;
+        
+        // Load background image
+        const img = new Image();
+        img.onload = function() {
+            // Calculate scaled canvas size to fit on page
+            const maxWidth = window.innerWidth * 0.9;
+            const maxHeight = window.innerHeight * 0.7;
+            const scale = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
+            
+            // Set canvas size (scaled down if needed)
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            backgroundImage = img;
+            generateTree();
+        };
+        img.onerror = function() {
+            console.error('Failed to load background image');
+            // Fallback: use white background
+            backgroundImage = null;
+            generateTree();
+        };
+        img.src = 'assets/tree.jpg';
+        
+        // Update opacity function
+        function updateOpacity(value) {
+            treeOpacity = value / 100;
+            document.getElementById('opacityValue').textContent = value + '%';
+            generateTree();
+        }
+        
+        // Tree parameters matching the image
+        const config = {
+            trunkColor: '#8B4513',      // Saddle brown for trunk and branches (for comparison)
+            leafColor: '#FF6347',       // Tomato red for leaves (for comparison)
+            groundColor: '#8B4513',     // Brown for ground line
+            backgroundColor: '#ffffff',  // White background
+            
+            // Tree structure parameters
+            trunkBaseX: 400,            // Center of canvas
+            trunkBaseY: 900,            // Near bottom
+            trunkLength: 200,           // Initial trunk length
+            trunkThickness: 25,         // Base trunk thickness
+            
+            // Branching parameters
+            maxDepth: 10,               // Maximum recursion depth
+            branchAngle: 25 * Math.PI / 180,  // Base branching angle (25 degrees)
+            lengthRatio: 0.72,          // Each branch is 72% of parent length
+            thicknessRatio: 0.68,       // Each branch is 68% of parent thickness
+            angleVariation: 0.35,       // Random angle variation
+            curveIntensity: 0.25,       // How much branches curve
+            
+            // Trunk curve parameters (to match the left curve in image)
+            trunkCurveOffset: -30,      // Curve to the left
+            
+            // Leaf parameters
+            leafDensity: 0.02,          // Density of leaves along branches (much lower for sparse leaves)
+            leafSize: 8,                // Base leaf size
+            minDepthForLeaves: 2,       // Start adding leaves from depth 2 onwards
+            leafProbability: 0.3,       // Probability that a branch will have leaves (for sparsity)
+            
+            // Branch termination parameters
+            earlyTerminationBase: 0.15, // Base probability of early termination (15% at depth 1)
+            earlyTerminationIncrease: 0.12, // Increase per depth level (12% per level)
+            minDepthForBranching: 1,    // Minimum depth before branches can split
+        };
+
+        // Seeded random number generator for reproducibility
+        class SeededRandom {
+            constructor(seed) {
+                this.seed = seed || Math.floor(Math.random() * 1000000);
+            }
+            
+            next() {
+                this.seed = (this.seed * 9301 + 49297) % 233280;
+                return this.seed / 233280;
+            }
+            
+            nextDouble(min, max) {
+                return min + this.next() * (max - min);
+            }
+            
+            nextInt(min, max) {
+                return Math.floor(min + this.next() * (max - min + 1));
+            }
+        }
+
+        // Calculate a point on a quadratic Bezier curve
+        function bezierPoint(p0, p1, p2, t) {
+            const mt = 1 - t;
+            return {
+                x: mt * mt * p0.x + 2 * mt * t * p1.x + t * t * p2.x,
+                y: mt * mt * p0.y + 2 * mt * t * p1.y + t * t * p2.y
+            };
+        }
+
+        // Calculate tangent at a point on a Bezier curve
+        function bezierTangent(p0, p1, p2, t) {
+            const mt = 1 - t;
+            return {
+                x: 2 * mt * (p1.x - p0.x) + 2 * t * (p2.x - p1.x),
+                y: 2 * mt * (p1.y - p0.y) + 2 * t * (p2.y - p1.y)
+            };
+        }
+
+        // Normalize a vector
+        function normalize(v) {
+            const length = Math.sqrt(v.x * v.x + v.y * v.y);
+            if (length === 0) return { x: 0, y: 0 };
+            return { x: v.x / length, y: v.y / length };
+        }
+
+        // Draw a branch with Bezier curve
+        function drawBranch(start, control, end, thickness) {
+            ctx.globalAlpha = treeOpacity;
+            ctx.strokeStyle = config.trunkColor;
+            ctx.fillStyle = config.trunkColor;
+            ctx.lineWidth = thickness;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            ctx.beginPath();
+            ctx.moveTo(start.x, start.y);
+            ctx.quadraticCurveTo(control.x, control.y, end.x, end.y);
+            ctx.stroke();
+            ctx.globalAlpha = 1.0;
+        }
+
+        // Draw a leaf (oval/teardrop shape)
+        function drawLeaf(x, y, size, angle) {
+            ctx.save();
+            ctx.globalAlpha = treeOpacity;
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            ctx.fillStyle = config.leafColor;
+            ctx.beginPath();
+            // Draw an oval/teardrop shape
+            ctx.ellipse(0, 0, size * 0.8, size * 1.2, 0, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.restore();
+            ctx.globalAlpha = 1.0;
+        }
+
+        // Generate tree branches recursively
+        function generateBranches(parent, depth, maxDepth, random) {
+            if (depth >= maxDepth) return;
+
+            // Number of branches (2 or 3)
+            const numBranches = random.nextInt(2, 3);
+            
+            for (let i = 0; i < numBranches; i++) {
+                // Calculate branch angle with variation
+                const angleVariation = (random.next() - 0.5) * config.angleVariation;
+                const branchAngle = parent.angle + 
+                    config.branchAngle * (i % 2 === 0 ? 1 : -1) + 
+                    angleVariation;
+
+                // Branch length with slight variation
+                const lengthVariation = random.nextDouble(0.88, 1.12);
+                const branchLength = parent.length * config.lengthRatio * lengthVariation;
+
+                // Branch thickness (decreases with depth)
+                const branchThickness = parent.thickness * config.thicknessRatio;
+
+                // Start point is the end of parent branch
+                const branchStart = parent.end;
+
+                // Calculate end point
+                const branchEnd = {
+                    x: branchStart.x + Math.cos(branchAngle) * branchLength,
+                    y: branchStart.y + Math.sin(branchAngle) * branchLength
+                };
+
+                // Control point for Bezier curve (creates natural curve)
+                const curveOffset = (random.next() - 0.5) * config.curveIntensity;
+                const midPoint = {
+                    x: (branchStart.x + branchEnd.x) / 2,
+                    y: (branchStart.y + branchEnd.y) / 2
+                };
+                const perpAngle = branchAngle + Math.PI / 2;
+                const branchControl = {
+                    x: midPoint.x + Math.cos(perpAngle) * branchLength * curveOffset,
+                    y: midPoint.y + Math.sin(perpAngle) * branchLength * curveOffset
+                };
+
+                // Create branch object
+                const branch = {
+                    start: branchStart,
+                    end: branchEnd,
+                    control: branchControl,
+                    angle: branchAngle,
+                    length: branchLength,
+                    thickness: branchThickness,
+                    depth: depth + 1
+                };
+
+                // Draw the branch
+                drawBranch(branch.start, branch.control, branch.end, branch.thickness);
+
+                // Check if this branch should terminate early (become a terminal branch)
+                // Probability increases with depth, but allows termination from depth 2 onwards
+                const branchTerminationProb = Math.min(
+                    0.85, // Cap at 85% to ensure some branches continue
+                    config.earlyTerminationBase + ((depth + 1) * config.earlyTerminationIncrease)
+                );
+                const branchShouldTerminate = (depth + 1) >= config.minDepthForBranching && 
+                                             random.next() < branchTerminationProb;
+
+                if (branchShouldTerminate) {
+                    // This branch terminates early - add leaves as terminal branch
+                    generateLeaves(branch, random, true);
+                } else {
+                    // This branch continues - may have some leaves along it, then recurse
+                    // Generate leaves along the branch if deep enough (non-terminal)
+                    if (depth + 1 >= config.minDepthForLeaves) {
+                        generateLeaves(branch, random, false);
+                    }
+
+                    // Recursively generate child branches
+                    if (depth + 1 < maxDepth) {
+                        generateBranches(branch, depth + 1, maxDepth, random);
+                    } else {
+                        // Reached max depth - add leaves as terminal
+                        generateLeaves(branch, random, true);
+                    }
+                }
+            }
+        }
+
+        // Generate leaves along a branch
+        function generateLeaves(branch, random, isTerminal = false) {
+            // Terminal branches always get leaves, non-terminal branches use probability
+            if (!isTerminal && random.next() > config.leafProbability) {
+                return;
+            }
+            
+            // Calculate number of leaves based on branch length
+            const baseTrunkLength = canvas.height * 0.25;
+            const normalizedLength = branch.length / baseTrunkLength;
+            
+            // Terminal branches get more leaves, especially at the end
+            let numLeaves;
+            if (isTerminal) {
+                // Terminal branches: 1-3 leaves, more likely near the end
+                numLeaves = random.nextInt(1, 3);
+            } else {
+                // Non-terminal branches: fewer leaves, distributed along branch
+                const depthFactor = branch.depth >= config.maxDepth - 2 ? 1.0 : 0.5;
+                numLeaves = Math.max(0, Math.floor(normalizedLength * 1.5 * config.leafDensity * depthFactor));
+            }
+            
+            // If no leaves calculated for non-terminal, skip
+            if (numLeaves === 0 && !isTerminal) {
+                return;
+            }
+            
+            // For terminal branches, always add at least one leaf at the end
+            if (isTerminal && numLeaves === 0) {
+                numLeaves = 1;
+            }
+            
+            // Spacing along the branch
+            const leafSpacing = numLeaves > 1 ? 1.0 / (numLeaves + 1) : 0.5;
+            
+            for (let i = 0; i < numLeaves; i++) {
+                let t;
+                if (isTerminal) {
+                    // Terminal branches: leaves more towards the end (70% to 95%)
+                    t = 0.7 + (i + 1) * leafSpacing * 0.25;
+                } else {
+                    // Non-terminal branches: leaves along the branch (50% to 95%)
+                    t = 0.5 + (i + 1) * leafSpacing * 0.45;
+                }
+                
+                // Calculate position on the Bezier curve
+                const branchPos = bezierPoint(branch.start, branch.control, branch.end, t);
+                
+                // Calculate tangent to get perpendicular direction
+                const tangent = bezierTangent(branch.start, branch.control, branch.end, t);
+                const perpAngle = Math.atan2(tangent.y, tangent.x) + Math.PI / 2;
+                
+                // Offset from branch (small distance like in the image)
+                const baseOffset = branch.length * 0.12;
+                const randomOffset = (random.next() - 0.5) * branch.length * 0.05;
+                const totalOffset = baseOffset + randomOffset;
+                
+                // Alternate sides for natural distribution
+                const side = (i % 2 === 0) ? 1 : -1;
+                
+                // Leaf position
+                const leafPos = {
+                    x: branchPos.x + Math.cos(perpAngle) * totalOffset * side,
+                    y: branchPos.y + Math.sin(perpAngle) * totalOffset * side
+                };
+                
+                // Leaf angle (perpendicular to branch direction)
+                const leafAngle = Math.atan2(tangent.y, tangent.x) + Math.PI / 2 + (random.next() - 0.5) * 0.3;
+                
+                // Draw leaf (terminal branches can have slightly larger leaves)
+                const sizeMultiplier = isTerminal ? 1.1 : 1.0;
+                const leafSize = config.leafSize * sizeMultiplier * (0.8 + random.next() * 0.4);
+                drawLeaf(leafPos.x, leafPos.y, leafSize, leafAngle);
+            }
+        }
+
+        // Main function to generate the tree
+        function generateTree() {
+            // Clear canvas
+            ctx.fillStyle = config.backgroundColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background image if loaded
+            if (backgroundImage) {
+                ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+            }
+            
+            // Draw ground line (only if no background image)
+            if (!backgroundImage) {
+                ctx.strokeStyle = config.groundColor;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height - 10);
+                ctx.lineTo(canvas.width, canvas.height - 10);
+                ctx.stroke();
+            }
+            
+            // Initialize random generator
+            const random = new SeededRandom();
+            
+            // Adjust trunk position based on canvas size
+            const trunkBaseX = canvas.width / 2;
+            const trunkBaseY = canvas.height * 0.9;
+            const trunkLength = canvas.height * 0.25;
+            const trunkThickness = canvas.width * 0.03;
+            
+            // Generate trunk
+            const trunkStart = {
+                x: trunkBaseX,
+                y: trunkBaseY
+            };
+            
+            const trunkAngle = -Math.PI / 2; // Pointing up
+            const trunkEnd = {
+                x: trunkStart.x + Math.cos(trunkAngle) * trunkLength,
+                y: trunkStart.y + Math.sin(trunkAngle) * trunkLength
+            };
+            
+            // Control point for trunk curve (curves to the left like in image)
+            const trunkControl = {
+                x: trunkStart.x + Math.cos(trunkAngle) * trunkLength * 0.5 + config.trunkCurveOffset * (canvas.width / 800),
+                y: trunkStart.y + Math.sin(trunkAngle) * trunkLength * 0.5
+            };
+            
+            // Draw trunk
+            drawBranch(trunkStart, trunkControl, trunkEnd, trunkThickness);
+            
+            // Create trunk object for recursive generation
+            const trunk = {
+                start: trunkStart,
+                end: trunkEnd,
+                control: trunkControl,
+                angle: trunkAngle,
+                length: trunkLength,
+                thickness: trunkThickness,
+                depth: 0
+            };
+            
+            // Generate branches recursively
+            generateBranches(trunk, 0, config.maxDepth, random);
+        }
+
+        // Download the canvas as an image
+        function downloadImage() {
+            const link = document.createElement('a');
+            link.download = 'procedural_tree.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            if (backgroundImage) {
+                const maxWidth = window.innerWidth * 0.9;
+                const maxHeight = window.innerHeight * 0.7;
+                const scale = Math.min(maxWidth / backgroundImage.width, maxHeight / backgroundImage.height, 1);
+                
+                canvas.width = backgroundImage.width * scale;
+                canvas.height = backgroundImage.height * scale;
+                generateTree();
+            }
+        });
+
+        // Generate tree on page load (image loading will trigger generation)
+        window.onload = function() {
+            if (backgroundImage) {
+                generateTree();
+            }
+        };
+    </script>
+</body>
+</html>

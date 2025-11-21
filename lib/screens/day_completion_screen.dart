@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import '../models/emotion.dart';
 import '../models/victory_card.dart';
 import '../widgets/wireframe_smiley.dart';
+import '../utils/sprite_utils.dart';
 
 class DayCompletionScreen extends StatefulWidget {
   final List<VictoryCard> victories;
@@ -196,7 +197,7 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
   Widget _buildVictoriesRecap(ThemeData theme) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -222,59 +223,31 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
                 Icon(
                   Icons.favorite,
                   color: theme.colorScheme.secondary,
-                  size: 28,
+                  size: 24,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Chaque petit pas compte, même les plus petits 🌱',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSecondary,
-                      fontStyle: FontStyle.italic,
-                    ),
+                const SizedBox(width: 8),
+                Text(
+                  'Chaque petit pas compte 🌱',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSecondary,
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
               ],
             ),
           if (_accomplishedVictories.isNotEmpty)
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 12,
+              runSpacing: 12,
               alignment: WrapAlignment.center,
               children: _accomplishedVictories.map((victory) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: theme.colorScheme.tertiary.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        victory.emoji,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        victory.text,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurface,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
+                return SpriteDisplay(
+                  victoryId: victory.spriteId,
+                  size: 40,
+                  showBorder: false,
                 );
               }).toList(),
             ),
@@ -284,30 +257,36 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
   }
 
   Widget _buildEmotionSelector(ThemeData theme) {
-    return Center(
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final emotion in Emotion.emotions.take(5))
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: WireframeSmiley(
-                  emoji: emotion.emoji,
-                  isSelected: selectedEmotion == emotion,
-                  moodColor: emotion.moodColor,
-                  onTap: () {
-                    setState(() {
-                      selectedEmotion = emotion;
-                    });
-                  },
-                ),
+    // Sélectionner 5 émotions distinctes avec des doodles différents
+    // Épuisée, Triste, Bof/Neutre, OK/Calme, Fière/Joyeuse
+    final selectedEmotions = [
+      Emotion.emotions[0], // Épuisée
+      Emotion.emotions[1], // Triste / Débordée
+      Emotion.emotions[3], // Bof / Neutre
+      Emotion.emotions[4], // OK / Calme
+      Emotion.emotions[5], // Fière / Joyeuse
+    ];
+    
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        for (final emotion in selectedEmotions)
+          Expanded(
+            child: Center(
+              child: WireframeSmiley(
+                emoji: emotion.emoji,
+                imagePath: emotion.imagePath,
+                isSelected: selectedEmotion == emotion,
+                moodColor: emotion.moodColor,
+                onTap: () {
+                  setState(() {
+                    selectedEmotion = emotion;
+                  });
+                },
               ),
-          ],
-        ),
-      ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -333,143 +312,111 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
           ),
         ),
       ),
-      body: Column(
-        children: [
-          // Contenu scrollable
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Récapitulatif de la journée
-                  _buildVictoriesRecap(theme),
-                  const SizedBox(height: 32),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Récapitulatif de la journée
+            _buildVictoriesRecap(theme),
+            const SizedBox(height: 32),
 
-                  // Sélection de l'émotion
-                  Text(
-                    "Comment vous sentez-vous aujourd'hui ?",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // Smileys emoji centrés sur une seule ligne (5 seulement)
-                  _buildEmotionSelector(theme),
-                  const SizedBox(height: 32),
-                ],
+            // Sélection de l'émotion
+            Text(
+              "Comment vous sentez-vous aujourd'hui ?",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
               ),
             ),
-          ),
-          // Zone fixe en bas avec textarea et boutons
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: theme.scaffoldBackgroundColor,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Champ de commentaire
-                Text(
-                  'Un mot sur votre journée ?',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: _commentController,
-                    maxLines: 4,
-                    decoration: InputDecoration(
-                      hintText: _displayedPlaceholder,
-                      hintStyle: TextStyle(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                        fontStyle: FontStyle.italic,
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.all(20),
-                    ),
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurface,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
+            const SizedBox(height: 20),
+            // Smileys emoji centrés sur une seule ligne (5 seulement)
+            _buildEmotionSelector(theme),
+            const SizedBox(height: 32),
 
-                // Boutons d'action
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: selectedEmotion != null ? _shareDay : null,
-                        icon: const Icon(Icons.share),
-                        label: const Text('Partager'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          side: BorderSide(
-                            color: theme.colorScheme.primary,
-                            width: 1.5,
-                          ),
-                        ),
+            // Champ de commentaire
+            Text(
+              'Un mot sur votre journée ?',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
+              ),
+              child: TextField(
+                controller: _commentController,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  hintText: _displayedPlaceholder,
+                  hintStyle: TextStyle(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                    fontStyle: FontStyle.italic,
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.all(20),
+                ),
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Boutons d'action
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: selectedEmotion != null ? _shareDay : null,
+                    icon: const Icon(Icons.share),
+                    label: const Text('Partager'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      side: BorderSide(
+                        color: theme.colorScheme.primary,
+                        width: 1.5,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton.icon(
-                        onPressed: selectedEmotion != null ? _validateDay : null,
-                        icon: const Icon(Icons.check_circle),
-                        label: const Text('Valider'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.colorScheme.primary,
-                          foregroundColor: theme.colorScheme.onPrimary,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          elevation: 2,
-                        ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton.icon(
+                    onPressed: selectedEmotion != null ? _validateDay : null,
+                    icon: const Icon(Icons.check_circle),
+                    label: const Text('Valider'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
                       ),
+                      elevation: 2,
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

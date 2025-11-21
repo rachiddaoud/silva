@@ -34,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late List<VictoryCard> _victories;
   late PageController _pageController;
   ViewMode _currentView = ViewMode.today;
+  bool _isDayCompleted = false;
   final List<String> _dailyQuotes = [
     "Vous faites de votre mieux, et c'est suffisant.",
     "Le repos n'est pas une récompense, c'est une nécessité.",
@@ -47,6 +48,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _victories = VictoryCard.getDefaultVictories();
     _pageController = PageController(initialPage: 0);
     _checkAndResetVictories();
+    _checkDayCompletion();
     _setupNotificationCallback();
     _refreshMorningNotification();
   }
@@ -84,6 +86,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Vérifier si on doit réinitialiser quand l'app revient au premier plan
     if (state == AppLifecycleState.resumed) {
       _checkAndResetVictories();
+      _checkDayCompletion();
       _refreshMorningNotification();
       // Recharger les victoires pour refléter les changements depuis les notifications
       _reloadVictories();
@@ -133,6 +136,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       await DatabaseService().ensureYesterdayExists(user.uid);
+    }
+  }
+
+
+  Future<void> _checkDayCompletion() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final todayEntry = await DatabaseService().getTodayDayEntry(user.uid);
+      if (mounted) {
+        setState(() {
+          // Day is completed if we have an entry with an emotion
+          _isDayCompleted = todayEntry?.emotion != null;
+        });
+      }
     }
   }
 
@@ -228,6 +245,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       await DatabaseService().saveDayEntry(user.uid, dayEntry);
+    }
+    
+    if (mounted) {
+      setState(() {
+        _isDayCompleted = true;
+      });
     }
 
     // Ne pas réinitialiser les victoires - elles seront réinitialisées à minuit
@@ -465,20 +488,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ],
       ),
-      floatingActionButton: _currentView == ViewMode.today
-          ? FloatingActionButton.extended(
+      floatingActionButton: _shouldShowEndDayButton()
+          ? FloatingActionButton(
               onPressed: _showEmotionCheckin,
-              icon: const Icon(Icons.celebration_rounded),
-              label: const Text(
-                "Terminer ma journée",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+              child: const Icon(Icons.nightlight_round),
             )
           : null,
     );
+  }
+
+  bool _shouldShowEndDayButton() {
+    if (_currentView != ViewMode.today) return false;
+    if (_isDayCompleted) return false;
+    
+    final now = DateTime.now();
+    return now.hour >= 22;
   }
 
   Widget _buildProfileImage(ThemeData theme) {

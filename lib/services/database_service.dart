@@ -191,4 +191,21 @@ class DatabaseService {
       });
     }
   }
+
+  // Check if today's entry exists
+  Future<DayEntry?> getTodayDayEntry(String uid) async {
+    try {
+      final now = DateTime.now();
+      final docId = _dateToDocId(now);
+      final doc = await _daysCollection(uid).doc(docId).get();
+      
+      if (doc.exists) {
+        return DayEntry.fromJson(doc.data() as Map<String, dynamic>);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error checking today entry: $e');
+      return null;
+    }
+  }
 }

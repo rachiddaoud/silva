@@ -25,6 +25,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   String? _userName;
+  String? _photoURL;
   DateTime? _dateOfBirth;
   late AppTheme _currentTheme;
 
@@ -39,10 +40,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final enabled = await PreferencesService.areNotificationsEnabled();
     final user = FirebaseAuth.instance.currentUser;
     final name = user?.displayName ?? await PreferencesService.getUserName();
+    final photoURL = user?.photoURL;
     final dob = await PreferencesService.getDateOfBirth();
     setState(() {
       _notificationsEnabled = enabled;
       _userName = name;
+      _photoURL = photoURL;
       _dateOfBirth = dob;
     });
   }
@@ -325,11 +328,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           child: CircleAvatar(
                             radius: 28,
                             backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-                            child: Icon(
+                            backgroundImage: _photoURL != null ? NetworkImage(_photoURL!) : null,
+                            child: _photoURL == null ? Icon(
                               Icons.person,
                               color: theme.colorScheme.primary,
                               size: 32,
-                            ),
+                            ) : null,
                           ),
                         ),
                         const SizedBox(width: 20),

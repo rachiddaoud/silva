@@ -16,76 +16,92 @@ class VictoryCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isSelected = card.isAccomplished;
 
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
         decoration: BoxDecoration(
-          gradient: card.isAccomplished
-              ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    colorScheme.primary.withValues(alpha: 0.4),
-                    colorScheme.primary.withValues(alpha: 0.6),
-                  ],
-                )
-              : null,
-          color: card.isAccomplished ? null : theme.cardTheme.color ?? Colors.white,
-          borderRadius: BorderRadius.circular(18),
+          color: isSelected
+              ? colorScheme.primaryContainer.withValues(alpha: 0.4)
+              : theme.cardTheme.color ?? Colors.white,
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: card.isAccomplished
+            color: isSelected
                 ? colorScheme.primary
-                : colorScheme.onSurface.withValues(alpha: 0.2),
-            width: card.isAccomplished ? 2 : 1,
+                : colorScheme.outline.withValues(alpha: 0.08),
+            width: isSelected ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: card.isAccomplished
-                  ? colorScheme.primary.withValues(alpha: 0.3)
-                  : Colors.black.withValues(alpha: 0.05),
-              blurRadius: card.isAccomplished ? 6 : 3,
-              offset: const Offset(0, 1),
+              color: isSelected
+                  ? colorScheme.primary.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.04),
+              blurRadius: isSelected ? 8 : 4,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Display sprite from sprite sheet
-              SpriteDisplay(
-                victoryId: card.spriteId,
-                size: card.isAccomplished ? 64 : 56,
-                showBorder: false,
-              ),
-              const SizedBox(height: 6),
-              Flexible(
-                child: Text(
-                  card.text,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: card.isAccomplished
-                        ? colorScheme.onSurface // Darker text for better contrast
-                        : colorScheme.onSurface.withValues(alpha: 0.8),
-                    fontWeight: card.isAccomplished
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    height: 1.2,
-                  ),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Sprite
+            AnimatedScale(
+              scale: isSelected ? 1.1 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              child: Container(
+                decoration: isSelected
+                    ? BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: colorScheme.primary.withValues(alpha: 0.2),
+                            blurRadius: 12,
+                            spreadRadius: -2,
+                          )
+                        ],
+                      )
+                    : null,
+                child: SpriteDisplay(
+                  victoryId: card.spriteId,
+                  size: 48,
+                  showBorder: false,
                 ),
               ),
+            ),
+            const SizedBox(height: 10),
+            // Text
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(
+                card.text,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isSelected
+                      ? colorScheme.onSurface
+                      : colorScheme.onSurface.withValues(alpha: 0.75),
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  height: 1.2,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            // Optional Checkmark for extra clarity
+            if (isSelected) ...[
+              const SizedBox(height: 4),
+              Icon(
+                Icons.check_circle,
+                size: 14,
+                color: colorScheme.primary,
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );
   }
 }
-

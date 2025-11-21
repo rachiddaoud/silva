@@ -1,13 +1,54 @@
+import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
-class DailyQuoteCard extends StatelessWidget {
+class DailyQuoteCard extends StatefulWidget {
   final String quote;
 
   const DailyQuoteCard({
     super.key,
     required this.quote,
   });
+
+  @override
+  State<DailyQuoteCard> createState() => _DailyQuoteCardState();
+}
+
+class _DailyQuoteCardState extends State<DailyQuoteCard> {
+  final GlobalKey _globalKey = GlobalKey();
+
+  Future<void> _shareImage() async {
+    try {
+      // Find the render boundary
+      final boundary = _globalKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return;
+
+      // Capture image
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+
+      final pngBytes = byteData.buffer.asUint8List();
+
+      // Save to temporary file
+      final tempDir = await getTemporaryDirectory();
+      final file = await File('${tempDir.path}/quote.png').create();
+      await file.writeAsBytes(pngBytes);
+
+      // Share
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Une pensée pour toi ✨ #MaBulle',
+      );
+    } catch (e) {
+      debugPrint('Error sharing image: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,60 +58,73 @@ class DailyQuoteCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 24),
       child: Stack(
         children: [
-          // Main Card Content
-          Container(
-            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-            decoration: BoxDecoration(
-              color: theme.cardColor.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-                width: 1,
+          // Main Card Content (Wrapped in RepaintBoundary for capture)
+          RepaintBoundary(
+            key: _globalKey,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+              decoration: BoxDecoration(
+                color: theme.cardColor, // Opaque color for better image capture
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.shadowColor.withValues(alpha: 0.05),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.shadowColor.withValues(alpha: 0.05),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                // Quote Text
-                Text(
-                  quote,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.playfairDisplay(
-                    fontSize: 22,
-                    height: 1.4,
-                    fontStyle: FontStyle.italic,
-                    color: theme.colorScheme.onSurface,
-                    fontWeight: FontWeight.w500,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Quote Text
+                  Text(
+                    widget.quote,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.playfairDisplay(
+                      fontSize: 22,
+                      height: 1.4,
+                      fontStyle: FontStyle.italic,
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                // Decorative Divider
-                Container(
-                  width: 40,
-                  height: 2,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
+                  const SizedBox(height: 20),
+                  // Decorative Divider
+                  Container(
+                    width: 40,
+                    height: 2,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                // Label
-                Text(
-                  "PENSÉE DU JOUR",
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    letterSpacing: 2,
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.primary,
+                  const SizedBox(height: 12),
+                  // Label
+                  Text(
+                    "PENSÉE DU JOUR",
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      letterSpacing: 2,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.primary,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  // Branding
+                  Text(
+                    "Ma Bulle",
+                    style: GoogleFonts.greatVibes(
+                      fontSize: 16,
+                      color: theme.colorScheme.secondary.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           
@@ -97,6 +151,37 @@ class DailyQuoteCard extends StatelessWidget {
                   Icons.format_quote_rounded,
                   color: theme.colorScheme.primary,
                   size: 20,
+                ),
+              ),
+            ),
+          ),
+
+          // Share Button (Top Right)
+          Positioned(
+            top: 0,
+            right: 24,
+            child: Transform.translate(
+              offset: const Offset(0, -12),
+              child: GestureDetector(
+                onTap: _shareImage,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.shadowColor.withValues(alpha: 0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.share_rounded,
+                    color: theme.colorScheme.primary,
+                    size: 20,
+                  ),
                 ),
               ),
             ),

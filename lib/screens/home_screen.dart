@@ -329,7 +329,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ]),
           ),
         ),
-        // Grille 3x3 des victoires
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           sliver: SliverGrid(
@@ -337,7 +336,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               crossAxisCount: 3,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
-              childAspectRatio: 1.1,
+              childAspectRatio: 0.85, // Taller for better text fit
             ),
             delegate: SliverChildBuilderDelegate(
               (context, index) {

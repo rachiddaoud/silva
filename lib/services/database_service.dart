@@ -1,0 +1,194 @@
+import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
+import '../models/day_entry.dart';
+import '../models/emotion.dart';
+import '../models/victory_card.dart';
+
+class DatabaseService {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Collection references
+  CollectionReference _usersCollection() => _firestore.collection('users');
+
+  DocumentReference _userDoc(String uid) => _usersCollection().doc(uid);
+
+  CollectionReference _daysCollection(String uid) =>
+      _userDoc(uid).collection('days');
+
+  // Save or update a day entry
+  Future<void> saveDayEntry(String uid, DayEntry entry) async {
+    try {
+      // Use date as document ID (YYYY-MM-DD) to ensure uniqueness per day
+      final docId = _dateToDocId(entry.date);
+      await _daysCollection(uid).doc(docId).set(entry.toJson());
+    } catch (e) {
+      debugPrint('Error saving day entry: $e');
+      rethrow;
+    }
+  }
+
+  // Get history as a stream
+  Stream<List<DayEntry>> getHistoryStream(String uid) {
+    return _daysCollection(uid)
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return DayEntry.fromJson(doc.data() as Map<String, dynamic>);
+      }).toList();
+    });
+  }
+  
+  // Get history as a Future (one-time fetch)
+  Future<List<DayEntry>> getHistory(String uid) async {
+    try {
+      final snapshot = await _daysCollection(uid)
+          .orderBy('date', descending: true)
+          .get();
+      
+      return snapshot.docs.map((doc) {
+        return DayEntry.fromJson(doc.data() as Map<String, dynamic>);
+      }).toList();
+    } catch (e) {
+      debugPrint('Error getting history: $e');
+      return [];
+    }
+  }
+
+  // Check if yesterday exists, if not create empty
+  Future<void> ensureYesterdayExists(String uid) async {
+    final now = DateTime.now();
+    final yesterday = now.subtract(const Duration(days: 1));
+    final docId = _dateToDocId(yesterday);
+
+    final doc = await _daysCollection(uid).doc(docId).get();
+
+    if (!doc.exists) {
+      // Create empty entry for yesterday
+      final emptyEntry = DayEntry(
+        date: yesterday,
+        emotion: null,
+        comment: null,
+        victoryCards: [],
+      );
+      await _daysCollection(uid).doc(docId).set(emptyEntry.toJson());
+    }
+  }
+
+  // Create fake history for new users
+  Future<void> createFakeHistory(String uid) async {
+    final now = DateTime.now();
+    final defaultVictories = VictoryCard.getDefaultVictories();
+    final random = Random();
+
+    // Check if user already has data to avoid overwriting
+    final snapshot = await _daysCollection(uid).limit(1).get();
+    if (snapshot.docs.isNotEmpty) {
+      return;
+    }
+
+    final batch = _firestore.batch();
+
+    // List of possible comments
+    final possibleComments = [
+      'Très belle journée, je me sens vraiment bien !',
+      'Journée tranquille, quelques moments de repos.',
+      'Journée difficile mais j\'ai tenu bon.',
+      'Belle énergie aujourd\'hui !',
+      'Petit à petit, jour après jour.',
+      'J\'ai fait de mon mieux aujourd\'hui.',
+      'Quelques moments difficiles mais j\'ai réussi à tenir.',
+      'Journée calme et reposante.',
+      'Je suis fière de mes petits pas.',
+      'Chaque victoire compte, même les plus petites.',
+      'J\'ai pris soin de moi aujourd\'hui.',
+      'Journée chargée mais j\'ai géré.',
+      null,
+      null,
+    ];
+
+    // Generate data for past 7 days
+    // Ensure at least 4 days are filled, one is empty
+    final filledDaysCount = random.nextInt(4) + 4; // 4 to 7 filled
+    final filledDaysIndices = <int>{};
+
+    while (filledDaysIndices.length < filledDaysCount) {
+      filledDaysIndices.add(random.nextInt(7));
+    }
+    
+    // Ensure at least one empty day if we rolled 7 filled days (though requirement says "only one empty day", let's stick to "mostly filled")
+    // Requirement: "fake data for the past 7 days with only one empty day and others filled"
+    // Let's be precise: 6 filled, 1 empty.
+    
+    filledDaysIndices.clear();
+    final emptyDayIndex = random.nextInt(7); // 0 to 6
+    for (int i = 0; i < 7; i++) {
+      if (i != emptyDayIndex) {
+        filledDaysIndices.add(i);
+      }
+    }
+
+    for (int i = 0; i < 7; i++) {
+      final date = now.subtract(Duration(days: i + 1));
+      final isFilled = filledDaysIndices.contains(i);
+      final docId = _dateToDocId(date);
+      final docRef = _daysCollection(uid).doc(docId);
+
+      if (isFilled) {
+        final emotionIndex = random.nextInt(Emotion.emotions.length);
+        final emotion = Emotion.emotions[emotionIndex];
+
+        final commentIndex = random.nextInt(possibleComments.length);
+        final comment = possibleComments[commentIndex];
+
+        final numVictories = random.nextInt(6) + 2;
+        final shuffledVictories = List<VictoryCard>.from(defaultVictories);
+        shuffledVictories.shuffle(random);
+        final selectedVictories = shuffledVictories.take(numVictories).toList();
+        // Mark them as accomplished for the history
+        final accomplishedVictories = selectedVictories.map((v) => v.copyWith(isAccomplished: true)).toList();
+
+        final entry = DayEntry(
+          date: date,
+          emotion: emotion,
+          comment: comment,
+          victoryCards: accomplishedVictories,
+        );
+        batch.set(docRef, entry.toJson());
+      } else {
+        final entry = DayEntry(
+          date: date,
+          emotion: null,
+          comment: null,
+          victoryCards: [],
+        );
+        batch.set(docRef, entry.toJson());
+      }
+    }
+
+    await batch.commit();
+  }
+
+  String _dateToDocId(DateTime date) {
+    return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+  }
+
+  // Update victories for today if the entry exists
+  Future<void> updateTodayVictories(String uid, List<VictoryCard> victories) async {
+    final now = DateTime.now();
+    final docId = _dateToDocId(now);
+    final docRef = _daysCollection(uid).doc(docId);
+
+    final doc = await docRef.get();
+    if (doc.exists) {
+      // Only update if the day is already logged (completed)
+      // We only update the victory cards list
+      final accomplishedVictories = victories.where((v) => v.isAccomplished).toList();
+      
+      await docRef.update({
+        'victoryCardIds': accomplishedVictories.map((v) => v.id).toList(),
+      });
+    }
+  }
+}

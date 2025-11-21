@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/emotion.dart';
 import '../models/victory_card.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/day_entry.dart';
 import '../services/preferences_service.dart';
+import '../services/database_service.dart';
 import '../utils/sprite_utils.dart';
 
 class HistoryView extends StatefulWidget {
@@ -28,9 +30,21 @@ class _HistoryViewState extends State<HistoryView> {
     });
 
     // Initialiser les données mock si l'historique est vide
-    await PreferencesService.initializeMockData();
+    // await PreferencesService.initializeMockData();
 
-    final history = await PreferencesService.getHistory();
+    // final history = await PreferencesService.getHistory();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          _history = [];
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
+    final history = await DatabaseService().getHistory(user.uid);
     
     // Générer une liste des 7 derniers jours (excluant aujourd'hui)
     final now = DateTime.now();

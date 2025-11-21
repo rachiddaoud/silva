@@ -13,6 +13,7 @@ import '../widgets/path_view.dart';
 import 'settings_screen.dart';
 import '../services/preferences_service.dart';
 import '../services/notification_service.dart';
+import '../services/database_service.dart';
 import '../app_navigator.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -127,6 +128,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         });
       }
     }
+    
+    // Ensure yesterday exists (persistence check)
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await DatabaseService().ensureYesterdayExists(user.uid);
+    }
   }
 
 
@@ -178,6 +185,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
     // Sauvegarder les victoires mises à jour
     await PreferencesService.saveTodayVictories(_victories);
+    
+    // Sync with Firestore if user is logged in
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await DatabaseService().updateTodayVictories(user.uid, _victories);
+    }
+
     // Reprogrammer les rappels si nécessaire
     await NotificationService.scheduleDayReminders();
   }
@@ -210,7 +224,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
 
     // Sauvegarder l'entrée
-    await PreferencesService.saveDayEntry(dayEntry);
+    // await PreferencesService.saveDayEntry(dayEntry);
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await DatabaseService().saveDayEntry(user.uid, dayEntry);
+    }
 
     // Ne pas réinitialiser les victoires - elles seront réinitialisées à minuit
     // Les victoires restent telles quelles après avoir terminé la journée

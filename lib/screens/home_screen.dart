@@ -115,10 +115,60 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _checkAndResetVictories() async {
     final shouldReset = await PreferencesService.shouldResetVictories();
-    if (shouldReset && mounted) {
-      setState(() {
-        _victories = VictoryCard.getDefaultVictories();
-      });
+    
+    if (shouldReset) {
+      // Before resetting, save the previous day's victories if they exist
+      final lastResetDate = await PreferencesService.getLastResetDate();
+      final savedVictories = await PreferencesService.getTodayVictories();
+      
+      // Only save if we have a valid previous date and some victories were accomplished
+      if (lastResetDate != null) {
+        final accomplishedVictories = savedVictories.where((v) => v.isAccomplished).toList();
+        
+        // We should check if an entry already exists for this date (e.g. manually completed)
+        final history = await PreferencesService.getHistory();
+        final existingIndex = history.indexWhere((e) =>
+            e.date.year == lastResetDate.year &&
+            e.date.month == lastResetDate.month &&
+            e.date.day == lastResetDate.day);
+            
+        DayEntry entryToSave;
+        
+        if (existingIndex >= 0) {
+          // Entry exists (maybe user did manual check-in), update victories but keep emotion/comment
+          final existingEntry = history[existingIndex];
+          entryToSave = DayEntry(
+            date: existingEntry.date,
+            emotion: existingEntry.emotion,
+            comment: existingEntry.comment,
+            victoryCards: accomplishedVictories, // Update with latest state
+          );
+        } else {
+          // No entry exists, create a new one (auto-save at midnight)
+          entryToSave = DayEntry(
+            date: lastResetDate,
+            emotion: null, // No emotion recorded
+            comment: null,
+            victoryCards: accomplishedVictories,
+          );
+        }
+        
+        // Save locally
+        await PreferencesService.saveDayEntry(entryToSave);
+        
+        // Save remotely if logged in
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await DatabaseService().saveDayEntry(user.uid, entryToSave);
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _victories = VictoryCard.getDefaultVictories();
+        });
+      }
+      
       await PreferencesService.setLastResetDate(DateTime.now());
       await PreferencesService.saveTodayVictories(_victories);
       // Reprogrammer les rappels de la journée

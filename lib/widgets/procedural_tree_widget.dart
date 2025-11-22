@@ -39,7 +39,8 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
   ui.Image? _leafDead3Image;
   ui.Image? _flowerImage;
   ui.Image? _jasminImage;
-  ui.Image? _groundImage;
+  ui.Image? _grassBackgroundImage;
+  ui.Image? _grassForegroundImage;
   late AnimationController _windController;
   late Animation<double> _windAnimation;
   
@@ -57,7 +58,8 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
     _loadLeafDead3Image();
     _loadFlowerImage();
     _loadJasminImage();
-    _loadGroundImage();
+    _loadGrassBackgroundImage();
+    _loadGrassForegroundImage();
     
     // Animation pour l'effet de vent (oscillation continue)
     _windController = AnimationController(
@@ -183,22 +185,43 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
     }
   }
 
-  Future<void> _loadGroundImage() async {
+  Future<void> _loadGrassBackgroundImage() async {
     try {
-      final ByteData data = await rootBundle.load('assets/tree/terre.png');
+      final ByteData data = await rootBundle.load('assets/tree/grass_background.png');
       final Uint8List bytes = data.buffer.asUint8List();
       final ui.Codec codec = await ui.instantiateImageCodec(bytes);
       final ui.FrameInfo frameInfo = await codec.getNextFrame();
       if (mounted) {
         setState(() {
-          _groundImage = frameInfo.image;
+          _grassBackgroundImage = frameInfo.image;
         });
       }
     } catch (e) {
       // Si l'image ne peut pas être chargée, on ne dessinera pas de terre
       if (mounted) {
         setState(() {
-          _groundImage = null;
+          _grassBackgroundImage = null;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadGrassForegroundImage() async {
+    try {
+      final ByteData data = await rootBundle.load('assets/tree/grass_foreground.png');
+      final Uint8List bytes = data.buffer.asUint8List();
+      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+      final ui.FrameInfo frameInfo = await codec.getNextFrame();
+      if (mounted) {
+        setState(() {
+          _grassForegroundImage = frameInfo.image;
+        });
+      }
+    } catch (e) {
+      // Si l'image ne peut pas être chargée, on ne dessinera pas de terre
+      if (mounted) {
+        setState(() {
+          _grassForegroundImage = null;
         });
       }
     }
@@ -213,7 +236,8 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
     _leafDead3Image?.dispose();
     _flowerImage?.dispose();
     _jasminImage?.dispose();
-    _groundImage?.dispose();
+    _grassBackgroundImage?.dispose();
+    _grassForegroundImage?.dispose();
     _windController.dispose();
     _treeController.dispose();
     super.dispose();
@@ -277,7 +301,8 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
               leafDead3Image: _leafDead3Image,
               flowerImage: _flowerImage,
               jasminImage: _jasminImage,
-              groundImage: _groundImage,
+              grassBackgroundImage: _grassBackgroundImage,
+              grassForegroundImage: _grassForegroundImage,
               windPhase: _windAnimation.value,
             ),
           ),
@@ -298,7 +323,8 @@ class TreePainter extends CustomPainter {
   final ui.Image? leafDead3Image;
   final ui.Image? flowerImage;
   final ui.Image? jasminImage;
-  final ui.Image? groundImage;
+  final ui.Image? grassBackgroundImage;
+  final ui.Image? grassForegroundImage;
   final double windPhase; // Phase du vent (0 à 2π) pour l'animation
   final Map<tree_model.Branch, Offset> _deformedEnds = {}; // Cache des extrémités déformées
   final Map<tree_model.Branch, Offset> _deformedStarts = {}; // Cache des points de départ déformés
@@ -313,7 +339,8 @@ class TreePainter extends CustomPainter {
     this.leafDead3Image,
     this.flowerImage,
     this.jasminImage,
-    this.groundImage,
+    this.grassBackgroundImage,
+    this.grassForegroundImage,
     this.windPhase = 0.0,
   }) {
     // Mettre à jour les positions de toutes les feuilles et fleurs en parcourant les branches
@@ -343,6 +370,9 @@ class TreePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Dessiner l'arrière-plan (herbe derrière l'arbre)
+    _drawGrassBackground(canvas, size);
+
     // Calculer les positions déformées de manière hiérarchique
     _calculateDeformedPositions();
     
@@ -372,32 +402,26 @@ class TreePainter extends CustomPainter {
       }
     }
     
-    // Dessiner la terre par-dessus (en premier plan) pour que l'arbre soit derrière
-    _drawGround(canvas, size);
+    // Dessiner l'avant-plan (herbe devant l'arbre)
+    _drawGrassForeground(canvas, size);
   }
 
-  /// Dessine l'image de terre à la base de l'arbre
-  void _drawGround(Canvas canvas, Size size) {
-    if (groundImage == null) return;
+  /// Dessine l'image de l'herbe en arrière-plan
+  void _drawGrassBackground(Canvas canvas, Size size) {
+    if (grassBackgroundImage == null) return;
     
-    // Vérifier que l'image n'a pas été disposée
     try {
-      // Dimensions de l'image de terre
-      final imageWidth = groundImage!.width.toDouble();
-      final imageHeight = groundImage!.height.toDouble();
+      final imageWidth = grassBackgroundImage!.width.toDouble();
+      final imageHeight = grassBackgroundImage!.height.toDouble();
       final aspectRatio = imageWidth / imageHeight;
       
-      // Largeur de la terre : un peu plus large que l'arbre pour un effet naturel
       final groundWidth = treeSize * 0.8;
       final groundHeight = groundWidth / aspectRatio;
       
-      // Position : centrée horizontalement, positionnée pour que le centre vertical soit à la base de l'arbre
       final groundX = (size.width - groundWidth) / 2;
-      // Le centre vertical de la terre doit être à la position de départ du tronc
       final treeBaseY = treeSize * 0.75;
-      final groundY = treeBaseY - groundHeight / 2; // Centrer verticalement sur la base de l'arbre
+      final groundY = treeBaseY - groundHeight / 2;
       
-      // Rectangle de destination
       final dstRect = Rect.fromLTWH(
         groundX,
         groundY,
@@ -405,18 +429,51 @@ class TreePainter extends CustomPainter {
         groundHeight,
       );
       
-      // Rectangle source (toute l'image)
       final srcRect = Rect.fromLTWH(0, 0, imageWidth, imageHeight);
       
-      // Dessiner l'image de terre
       canvas.drawImageRect(
-        groundImage!,
+        grassBackgroundImage!,
         srcRect,
         dstRect,
         Paint()..filterQuality = FilterQuality.high,
       );
     } catch (e) {
-      // L'image a été disposée, ne rien dessiner
+      return;
+    }
+  }
+
+  /// Dessine l'image de l'herbe en avant-plan
+  void _drawGrassForeground(Canvas canvas, Size size) {
+    if (grassForegroundImage == null) return;
+    
+    try {
+      final imageWidth = grassForegroundImage!.width.toDouble();
+      final imageHeight = grassForegroundImage!.height.toDouble();
+      final aspectRatio = imageWidth / imageHeight;
+      
+      final groundWidth = treeSize * 0.8;
+      final groundHeight = groundWidth / aspectRatio;
+      
+      final groundX = (size.width - groundWidth) / 2;
+      final treeBaseY = treeSize * 0.75;
+      final groundY = treeBaseY - groundHeight / 2;
+      
+      final dstRect = Rect.fromLTWH(
+        groundX,
+        groundY,
+        groundWidth,
+        groundHeight,
+      );
+      
+      final srcRect = Rect.fromLTWH(0, 0, imageWidth, imageHeight);
+      
+      canvas.drawImageRect(
+        grassForegroundImage!,
+        srcRect,
+        dstRect,
+        Paint()..filterQuality = FilterQuality.high,
+      );
+    } catch (e) {
       return;
     }
   }
@@ -957,12 +1014,15 @@ class TreePainter extends CustomPainter {
   bool shouldRepaint(TreePainter oldDelegate) {
     return oldDelegate.tree != tree ||
         oldDelegate.treeSize != treeSize ||
+        oldDelegate.parameters != parameters ||
         oldDelegate.leafImage != leafImage ||
+        oldDelegate.leafDead1Image != leafDead1Image ||
+        oldDelegate.leafDead2Image != leafDead2Image ||
+        oldDelegate.leafDead3Image != leafDead3Image ||
         oldDelegate.flowerImage != flowerImage ||
         oldDelegate.jasminImage != jasminImage ||
-        oldDelegate.groundImage != groundImage ||
-        oldDelegate.windPhase != windPhase ||
-        oldDelegate.parameters.seed != parameters.seed;
+        oldDelegate.grassBackgroundImage != grassBackgroundImage ||
+        oldDelegate.grassForegroundImage != grassForegroundImage ||
+        oldDelegate.windPhase != windPhase;
   }
 }
-

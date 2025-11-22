@@ -84,6 +84,8 @@ flutter:
     - assets/tree/flower.png
     - assets/tree/jasmin.png
     - assets/tree/terre.png
+    - assets/tree/grass_foreground.png
+    - assets/tree/grass_background.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

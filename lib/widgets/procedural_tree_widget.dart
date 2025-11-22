@@ -41,6 +41,7 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
   ui.Image? _jasminImage;
   ui.Image? _grassBackgroundImage;
   ui.Image? _grassForegroundImage;
+  ui.Image? _barkImage;
   late AnimationController _windController;
   late Animation<double> _windAnimation;
   
@@ -60,6 +61,7 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
     _loadJasminImage();
     _loadGrassBackgroundImage();
     _loadGrassForegroundImage();
+    _loadBarkImage();
     
     // Animation pour l'effet de vent (oscillation continue)
     _windController = AnimationController(
@@ -227,6 +229,27 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
     }
   }
 
+  Future<void> _loadBarkImage() async {
+    try {
+      final ByteData data = await rootBundle.load('assets/tree/bark_texture.png');
+      final Uint8List bytes = data.buffer.asUint8List();
+      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+      final ui.FrameInfo frameInfo = await codec.getNextFrame();
+      if (mounted) {
+        setState(() {
+          _barkImage = frameInfo.image;
+        });
+      }
+    } catch (e) {
+      // Si l'image ne peut pas être chargée, on utilisera la couleur unie
+      if (mounted) {
+        setState(() {
+          _barkImage = null;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
     // Libérer les images pour éviter les fuites mémoire
@@ -238,6 +261,7 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
     _jasminImage?.dispose();
     _grassBackgroundImage?.dispose();
     _grassForegroundImage?.dispose();
+    _barkImage?.dispose();
     _windController.dispose();
     _treeController.dispose();
     super.dispose();
@@ -303,6 +327,7 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
               jasminImage: _jasminImage,
               grassBackgroundImage: _grassBackgroundImage,
               grassForegroundImage: _grassForegroundImage,
+              barkImage: _barkImage,
               windPhase: _windAnimation.value,
             ),
           ),
@@ -325,6 +350,7 @@ class TreePainter extends CustomPainter {
   final ui.Image? jasminImage;
   final ui.Image? grassBackgroundImage;
   final ui.Image? grassForegroundImage;
+  final ui.Image? barkImage;
   final double windPhase; // Phase du vent (0 à 2π) pour l'animation
   final Map<tree_model.Branch, Offset> _deformedEnds = {}; // Cache des extrémités déformées
   final Map<tree_model.Branch, Offset> _deformedStarts = {}; // Cache des points de départ déformés
@@ -341,6 +367,7 @@ class TreePainter extends CustomPainter {
     this.jasminImage,
     this.grassBackgroundImage,
     this.grassForegroundImage,
+    this.barkImage,
     this.windPhase = 0.0,
   }) {
     // Mettre à jour les positions de toutes les feuilles et fleurs en parcourant les branches
@@ -568,9 +595,40 @@ class TreePainter extends CustomPainter {
     final branchColor = Color.lerp(brown, green, depthRatio * 0.5)!;
 
     final paint = Paint()
-      ..color = branchColor
       ..style = PaintingStyle.fill
       ..strokeCap = StrokeCap.round;
+
+    // Récupérer les positions déformées (calculées hiérarchiquement)
+    // Ces variables DOIVENT être définies ici pour être visibles dans toute la fonction
+    final deformedStart = _deformedStarts[branch] ?? branch.start;
+    final deformedEnd = _deformedEnds[branch] ?? branch.end;
+
+    if (barkImage != null) {
+      // Utiliser la texture d'écorce
+      // Créer un shader à partir de l'image
+      // Mettre à l'échelle la texture pour qu'elle soit visible mais pas trop grosse
+      // On utilise une matrice pour transformer la texture
+      final matrix = Matrix4.identity();
+      
+      // Échelle de la texture (ajuster selon la taille de l'image et l'effet désiré)
+      // Plus le scale est grand, plus la texture est petite (répétée)
+      final scale = 2.0 * (treeSize / 500.0); 
+      
+      // Ancrer la texture au début de la branche pour éviter l'effet de glissement (swimming)
+      // quand l'arbre bouge avec le vent.
+      matrix.translate(deformedStart.dx, deformedStart.dy);
+      matrix.scale(scale, scale);
+      
+      paint.shader = ImageShader(
+        barkImage!, 
+        TileMode.repeated, 
+        TileMode.repeated, 
+        matrix.storage,
+      );
+    } else {
+      // Fallback couleur unie
+      paint.color = branchColor;
+    }
 
     // Vérifier si la branche a des enfants (branches qui commencent à son extrémité)
     final tolerance = treeSize * 0.01; // Tolérance relative à la taille de l'arbre
@@ -579,10 +637,6 @@ class TreePainter extends CustomPainter {
       b.depth == branch.depth + 1 && 
       (b.start - branch.end).distance < tolerance // Tolérance pour les erreurs d'arrondi
     );
-
-    // Récupérer les positions déformées (calculées hiérarchiquement)
-    final deformedStart = _deformedStarts[branch] ?? branch.start;
-    final deformedEnd = _deformedEnds[branch] ?? branch.end;
     
     // Calculer le point de contrôle déformé
     // Interpoler entre le point de contrôle original et un point basé sur les extrémités déformées

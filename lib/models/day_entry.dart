@@ -23,6 +23,12 @@ class DayEntry {
       'date': date.toIso8601String(),
       'emotionIndex': emotion != null ? Emotion.emotions.indexOf(emotion!) : null,
       'comment': comment,
+      // Nouveau format : sauvegarder l'état complet
+      'victoryCardsData': victoryCards.map((v) => {
+        'id': v.id,
+        'isAccomplished': v.isAccomplished,
+      }).toList(),
+      // Garder l'ancien format pour compatibilité descendante si nécessaire (optionnel)
       'victoryCardIds': victoryCards.map((v) => v.id).toList(),
     };
   }
@@ -37,18 +43,41 @@ class DayEntry {
       emotion = Emotion.emotions[emotionIndex];
     }
 
-    final victoryCardIds = (json['victoryCardIds'] as List<dynamic>?)
-            ?.map((id) => id as int)
-            .toList() ??
-        [];
-    
     final defaultVictories = VictoryCard.getDefaultVictories();
-    final victoryCards = victoryCardIds
-        .map((id) => defaultVictories.firstWhere(
-              (v) => v.id == id,
-              orElse: () => defaultVictories.first,
-            ))
-        .toList();
+    List<VictoryCard> victoryCards = [];
+
+    // Essayer le nouveau format d'abord
+    if (json.containsKey('victoryCardsData')) {
+      final cardsData = (json['victoryCardsData'] as List<dynamic>);
+      victoryCards = cardsData.map((data) {
+        final map = data as Map<String, dynamic>;
+        final id = map['id'] as int;
+        final isAccomplished = map['isAccomplished'] as bool? ?? true;
+        
+        final defaultCard = defaultVictories.firstWhere(
+          (v) => v.id == id,
+          orElse: () => defaultVictories.first,
+        );
+        return defaultCard.copyWith(isAccomplished: isAccomplished);
+      }).toList();
+    } 
+    // Fallback sur l'ancien format (IDs seulement)
+    else {
+      final victoryCardIds = (json['victoryCardIds'] as List<dynamic>?)
+              ?.map((id) => id as int)
+              .toList() ??
+          [];
+      
+      victoryCards = victoryCardIds.map((id) {
+        final defaultCard = defaultVictories.firstWhere(
+          (v) => v.id == id,
+          orElse: () => defaultVictories.first,
+        );
+        // FIX: Si on charge depuis les IDs (ancien format), on suppose qu'elles sont accomplies
+        // car l'historique ne stockait que les cartes sélectionnées/accomplies.
+        return defaultCard.copyWith(isAccomplished: true);
+      }).toList();
+    }
 
     return DayEntry(
       date: DateTime.parse(json['date'] as String),

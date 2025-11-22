@@ -16,13 +16,22 @@ class ProceduralTreeWidget extends StatefulWidget {
   final double size;
   final double growthLevel; // 0.0 à 1.0 pour contrôler la progression
   final TreeParameters parameters;
+  final TreeController controller;
 
   const ProceduralTreeWidget({
     super.key,
     this.size = 200,
     this.growthLevel = 0.5,
     required this.parameters,
+    required this.controller,
+    this.targetLeafCount = 0,
+    this.targetFlowerCount = 0,
+    this.targetDeadLeafCount = 0,
   });
+
+  final int targetLeafCount;
+  final int targetFlowerCount;
+  final int targetDeadLeafCount;
 
   @override
   State<ProceduralTreeWidget> createState() => ProceduralTreeWidgetState();
@@ -78,7 +87,16 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
     );
     
     // Initialiser l'arbre
-    _treeController.updateTree(
+    _updateTree();
+    
+    // Appliquer les cibles initiales
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateTreeTargets();
+    });
+  }
+
+  void _updateTree() {
+    widget.controller.updateTree(
       growthLevel: widget.growthLevel,
       size: widget.size,
       parameters: widget.parameters,
@@ -274,17 +292,17 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
 
   /// Ajoute une fleur aléatoirement sur une branche disponible
   void addRandomFlower() {
-    _treeController.addRandomFlower();
+    widget.controller.addRandomFlower();
   }
 
   /// Incrémente l'âge de toutes les feuilles vivantes (fait grandir l'arbre d'un jour)
   void growLeaves() {
-    _treeController.growLeaves();
+    widget.controller.growLeaves();
   }
 
   /// Avance le processus de mort des feuilles
   void advanceLeafDeath() {
-    _treeController.advanceLeafDeath();
+    widget.controller.advanceLeafDeath();
   }
 
   @override
@@ -296,27 +314,43 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
         oldWidget.size != widget.size ||
         oldWidget.parameters.seed != widget.parameters.seed) {
       
-      _treeController.updateTree(
+      widget.controller.updateTree(
         growthLevel: widget.growthLevel,
         size: widget.size,
         parameters: widget.parameters,
       );
     }
+    
+    // Mettre à jour les cibles si elles ont changé
+    // Mettre à jour les cibles si elles ont changé
+    if (oldWidget.targetLeafCount != widget.targetLeafCount ||
+        oldWidget.targetFlowerCount != widget.targetFlowerCount ||
+        oldWidget.targetDeadLeafCount != widget.targetDeadLeafCount) {
+      _updateTreeTargets();
+    }
+  }
+  
+  void _updateTreeTargets() {
+    widget.controller.setTargetCounts(
+      targetLeafCount: widget.targetLeafCount,
+      targetFlowerCount: widget.targetFlowerCount,
+      targetDeadLeafCount: widget.targetDeadLeafCount,
+    );
   }
   
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge([_windAnimation, _treeController]),
+      animation: Listenable.merge([_windAnimation, widget.controller]),
       builder: (context, child) {
-        if (_treeController.tree == null) return const SizedBox();
+        if (widget.controller.tree == null) return const SizedBox();
         
         return SizedBox(
           width: widget.size,
           height: widget.size,
           child: CustomPaint(
             painter: TreePainter(
-              tree: _treeController.tree!,
+              tree: widget.controller.tree!,
               treeSize: widget.size,
               parameters: widget.parameters,
               leafImage: _leafImage,

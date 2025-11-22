@@ -148,6 +148,43 @@ class Leaf {
       2 * u * (p1.dy - p0.dy) + 2 * t * (p2.dy - p1.dy),
     );
   }
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'tOnBranch': tOnBranch,
+      'side': side,
+      'age': age,
+      'maxAge': maxAge,
+      'randomSizeFactor': randomSizeFactor,
+      'currentGrowth': currentGrowth,
+      'state': state.index,
+      'deathAge': deathAge,
+      'position': {'dx': position.dx, 'dy': position.dy},
+      'branchPosition': {'dx': branchPosition.dx, 'dy': branchPosition.dy},
+    };
+  }
+
+  factory Leaf.fromJson(Map<String, dynamic> json) {
+    return Leaf(
+      id: json['id'] as String,
+      tOnBranch: json['tOnBranch'] as double,
+      side: json['side'] as int,
+      age: json['age'] as double,
+      maxAge: json['maxAge'] as double,
+      randomSizeFactor: json['randomSizeFactor'] as double,
+      currentGrowth: json['currentGrowth'] as double,
+      state: LeafState.values[json['state'] as int],
+      deathAge: json['deathAge'] as int,
+      position: Offset(
+        (json['position'] as Map<String, dynamic>)['dx'] as double,
+        (json['position'] as Map<String, dynamic>)['dy'] as double,
+      ),
+      branchPosition: Offset(
+        (json['branchPosition'] as Map<String, dynamic>)['dx'] as double,
+        (json['branchPosition'] as Map<String, dynamic>)['dy'] as double,
+      ),
+    );
+  }
 }
 
 /// Classe représentant une fleur attachée à une branche
@@ -230,6 +267,36 @@ class Flower {
     return Offset(
       2 * u * (p1.dx - p0.dx) + 2 * t * (p2.dx - p1.dx),
       2 * u * (p1.dy - p0.dy) + 2 * t * (p2.dy - p1.dy),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'tOnBranch': tOnBranch,
+      'side': side,
+      'sizeFactor': sizeFactor,
+      'flowerType': flowerType,
+      'position': {'dx': position.dx, 'dy': position.dy},
+      'branchPosition': {'dx': branchPosition.dx, 'dy': branchPosition.dy},
+    };
+  }
+
+  factory Flower.fromJson(Map<String, dynamic> json) {
+    return Flower(
+      id: json['id'] as String,
+      tOnBranch: json['tOnBranch'] as double,
+      side: json['side'] as int,
+      sizeFactor: json['sizeFactor'] as double,
+      flowerType: json['flowerType'] as int,
+      position: Offset(
+        (json['position'] as Map<String, dynamic>)['dx'] as double,
+        (json['position'] as Map<String, dynamic>)['dy'] as double,
+      ),
+      branchPosition: Offset(
+        (json['branchPosition'] as Map<String, dynamic>)['dx'] as double,
+        (json['branchPosition'] as Map<String, dynamic>)['dy'] as double,
+      ),
     );
   }
 }
@@ -362,6 +429,62 @@ class Branch {
     }
     return allFlowers;
   }
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'children': children.map((c) => c.toJson()).toList(),
+      'leaves': leaves.map((l) => l.toJson()).toList(),
+      'flowers': flowers.map((f) => f.toJson()).toList(),
+      'age': age,
+      'start': {'dx': start.dx, 'dy': start.dy},
+      'end': {'dx': end.dx, 'dy': end.dy},
+      'controlPoint': {'dx': controlPoint.dx, 'dy': controlPoint.dy},
+      'thickness': thickness,
+      'length': length,
+      'angle': angle,
+      'depth': depth,
+    };
+  }
+
+  factory Branch.fromJson(Map<String, dynamic> json) {
+    final branch = Branch(
+      id: json['id'] as String,
+      start: Offset(
+        (json['start'] as Map<String, dynamic>)['dx'] as double,
+        (json['start'] as Map<String, dynamic>)['dy'] as double,
+      ),
+      end: Offset(
+        (json['end'] as Map<String, dynamic>)['dx'] as double,
+        (json['end'] as Map<String, dynamic>)['dy'] as double,
+      ),
+      controlPoint: Offset(
+        (json['controlPoint'] as Map<String, dynamic>)['dx'] as double,
+        (json['controlPoint'] as Map<String, dynamic>)['dy'] as double,
+      ),
+      thickness: json['thickness'] as double,
+      length: json['length'] as double,
+      angle: json['angle'] as double,
+      depth: json['depth'] as int,
+      age: json['age'] as int,
+    );
+
+    if (json['children'] != null) {
+      final childrenList = (json['children'] as List).map((c) => Branch.fromJson(c as Map<String, dynamic>)).toList();
+      branch.children.addAll(childrenList);
+    }
+
+    if (json['leaves'] != null) {
+      final leavesList = (json['leaves'] as List).map((l) => Leaf.fromJson(l as Map<String, dynamic>)).toList();
+      branch.leaves.addAll(leavesList);
+    }
+
+    if (json['flowers'] != null) {
+      final flowersList = (json['flowers'] as List).map((f) => Flower.fromJson(f as Map<String, dynamic>)).toList();
+      branch.flowers.addAll(flowersList);
+    }
+
+    return branch;
+  }
 }
 
 /// Classe représentant l'arbre complet
@@ -406,6 +529,23 @@ class Tree {
     // Adapter selon les besoins: par exemple, 1 jour = 0.05 de croissance
     // jusqu'à atteindre 1.0 (arbre mature)
     return (age * 0.05).clamp(0.0, 1.0);
+  }
+  Map<String, dynamic> toJson() {
+    return {
+      'age': age,
+      'trunk': trunk.toJson(),
+      'treeSize': treeSize,
+      'parameters': parameters.toJson(),
+    };
+  }
+
+  factory Tree.fromJson(Map<String, dynamic> json) {
+    return Tree(
+      age: json['age'] as int,
+      trunk: Branch.fromJson(json['trunk'] as Map<String, dynamic>),
+      treeSize: json['treeSize'] as double,
+      parameters: TreeParameters.fromJson(json['parameters'] as Map<String, dynamic>),
+    );
   }
 }
 
@@ -459,6 +599,29 @@ class TreeParameters {
       angleVariation: 0.2 + random.nextDouble() * 0.4, // 0.2-0.6
       curveIntensity: 0.1 + random.nextDouble() * 0.4, // 0.1-0.5
       seed: random.nextInt(1000000),
+    );
+  }
+  Map<String, dynamic> toJson() {
+    return {
+      'maxDepth': maxDepth,
+      'baseBranchAngle': baseBranchAngle,
+      'lengthRatio': lengthRatio,
+      'thicknessRatio': thicknessRatio,
+      'angleVariation': angleVariation,
+      'curveIntensity': curveIntensity,
+      'seed': seed,
+    };
+  }
+
+  factory TreeParameters.fromJson(Map<String, dynamic> json) {
+    return TreeParameters(
+      maxDepth: json['maxDepth'] as int,
+      baseBranchAngle: json['baseBranchAngle'] as double,
+      lengthRatio: json['lengthRatio'] as double,
+      thicknessRatio: json['thicknessRatio'] as double,
+      angleVariation: json['angleVariation'] as double,
+      curveIntensity: json['curveIntensity'] as double,
+      seed: json['seed'] as int,
     );
   }
 }

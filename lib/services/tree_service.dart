@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:ma_bulle/models/tree_model.dart';
+import 'package:ma_bulle/models/day_entry.dart';
 
 /// Service responsable de la génération de la structure de l'arbre
 class TreeGenerator {
@@ -212,6 +213,11 @@ class TreeController extends ChangeNotifier {
   Tree? _tree;
   Tree? get tree => _tree;
 
+  void setTree(Tree tree) {
+    _tree = tree;
+    notifyListeners();
+  }
+
   /// Initialise ou met à jour l'arbre
   void updateTree({
     required double growthLevel,
@@ -243,25 +249,249 @@ class TreeController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Simule une journée de croissance basée sur les données du jour
+  Map<String, int> simulateDay(DayEntry? entry) {
+    final stats = {
+      'leavesAdded': 0,
+      'flowersAdded': 0,
+      'deadLeavesAdded': 0, // Feuilles devenues mortes
+      'leavesRemoved': 0,
+      'flowersRemoved': 0,
+    };
+    
+    if (_tree == null) return stats;
+
+    // 1. Croissance naturelle (vieillissement)
+    growLeaves();
+
+    if (entry != null) {
+      // 2. Gestion des victoires (ajout de feuilles)
+      final victories = entry.victoryCards.where((v) => v.isAccomplished).length;
+      for (int i = 0; i < victories; i++) {
+        if (_addSingleRandomLeaf()) {
+          stats['leavesAdded'] = (stats['leavesAdded'] ?? 0) + 1;
+        }
+      }
+
+      // 3. Gestion des émotions
+      if (entry.emotion != null) {
+        final emotionLabel = entry.emotion!.name.toLowerCase();
+        
+        // Bonnes émotions -> Fleurs
+        if (['joyeux', 'fier', 'paisible', 'excité', 'joyful', 'proud', 'peaceful', 'excited'].contains(emotionLabel)) {
+           if (addRandomFlower()) {
+             stats['flowersAdded'] = (stats['flowersAdded'] ?? 0) + 1;
+           }
+        } 
+        // Mauvaises émotions -> Feuilles mortes
+        else if (['triste', 'anxieux', 'en colère', 'fatigué', 'sad', 'anxious', 'angry', 'tired'].contains(emotionLabel)) {
+           final killed = advanceLeafDeath();
+           stats['deadLeavesAdded'] = (stats['deadLeavesAdded'] ?? 0) + killed;
+        }
+      }
+    }
+    
+    notifyListeners();
+    return stats;
+  }
+
+  /// Met à jour l'état de l'arbre pour atteindre les nombres cibles de feuilles et fleurs
+  void setTargetCounts({
+    required int targetLeafCount,
+    required int targetFlowerCount,
+    required int targetDeadLeafCount,
+  }) {
+    if (_tree == null) return;
+
+    final allLeaves = _tree!.getAllLeaves();
+    final allFlowers = _tree!.getAllFlowers();
+    
+    // 1. Gérer les fleurs
+    int currentFlowerCount = allFlowers.length;
+    
+    // Ajouter des fleurs si nécessaire
+    if (currentFlowerCount < targetFlowerCount) {
+      final needed = targetFlowerCount - currentFlowerCount;
+      for (int i = 0; i < needed; i++) {
+        addRandomFlower();
+      }
+    } 
+    // Supprimer des fleurs si nécessaire (en partant des plus anciennes ou aléatoirement)
+    else if (currentFlowerCount > targetFlowerCount) {
+      final toRemoveCount = currentFlowerCount - targetFlowerCount;
+      final flowersToRemove = allFlowers.take(toRemoveCount).toList();
+      
+      for (final flower in flowersToRemove) {
+        _removeFlowerFromTree(flower);
+      }
+      notifyListeners();
+    }
+
+    // 2. Gérer les feuilles (vivantes et mortes)
+    final aliveLeaves = allLeaves.where((l) => l.state == LeafState.alive).toList();
+    final deadLeaves = allLeaves.where((l) => l.state != LeafState.alive).toList();
+    
+    int currentAliveCount = aliveLeaves.length;
+    int currentDeadCount = deadLeaves.length;
+    
+    // Ajuster les feuilles mortes
+    if (currentDeadCount < targetDeadLeafCount) {
+      final neededDead = targetDeadLeafCount - currentDeadCount;
+      final excessAlive = currentAliveCount - targetLeafCount;
+      
+      int killedCount = 0;
+      if (excessAlive > 0) {
+        final toKill = math.min(neededDead, excessAlive);
+        for (int i = 0; i < toKill; i++) {
+          if (aliveLeaves.isNotEmpty) {
+            final leaf = aliveLeaves.removeLast();
+            leaf.startDeath();
+            leaf.deathAge = 2; 
+            leaf.state = LeafState.dead2;
+            killedCount++;
+          }
+        }
+      }
+      
+      final remainingNeeded = neededDead - killedCount;
+      for (int i = 0; i < remainingNeeded; i++) {
+        _addDeadLeaf();
+      }
+    } else if (currentDeadCount > targetDeadLeafCount) {
+      final toRemove = currentDeadCount - targetDeadLeafCount;
+      final deadToRemove = deadLeaves.take(toRemove).toList();
+      for (final leaf in deadToRemove) {
+        _removeLeafFromTree(leaf);
+      }
+    }
+    
+    // Re-calculer après modifications des mortes
+    final updatedLeaves = _tree!.getAllLeaves();
+    final updatedAlive = updatedLeaves.where((l) => l.state == LeafState.alive).toList();
+    currentAliveCount = updatedAlive.length;
+    
+    // Ajuster les feuilles vivantes
+    if (currentAliveCount < targetLeafCount) {
+      final needed = targetLeafCount - currentAliveCount;
+      for (int i = 0; i < needed; i++) {
+        _addSingleRandomLeaf();
+      }
+    } else if (currentAliveCount > targetLeafCount) {
+      final toRemove = currentAliveCount - targetLeafCount;
+      final aliveToRemove = updatedAlive.take(toRemove).toList();
+      for (final leaf in aliveToRemove) {
+        _removeLeafFromTree(leaf);
+      }
+    }
+    
+    notifyListeners();
+  }
+
+  void _removeFlowerFromTree(Flower flower) {
+    if (_tree == null) return;
+    for (final branch in _tree!.getAllBranches()) {
+      if (branch.flowers.contains(flower)) {
+        branch.removeFlower(flower.id);
+        return;
+      }
+    }
+  }
+
+  void _removeLeafFromTree(Leaf leaf) {
+    if (_tree == null) return;
+    for (final branch in _tree!.getAllBranches()) {
+      if (branch.leaves.contains(leaf)) {
+        branch.removeLeaf(leaf.id);
+        return;
+      }
+    }
+  }
+
+  bool _addSingleRandomLeaf() {
+    if (_tree == null) return false;
+    final random = math.Random();
+    final branches = _tree!.getAllBranches().where((b) => b.depth > 0 && b.canAddLeaf()).toList();
+    if (branches.isEmpty) return false;
+    
+    final branch = branches[random.nextInt(branches.length)];
+    
+    final t = 0.2 + random.nextDouble() * 0.8;
+    final side = random.nextBool() ? 1 : -1;
+    
+    final leafId = '${branch.id}_${t.toStringAsFixed(3)}_$side';
+    final depthFactor = 1.0 - (branch.depth - 1) * 0.12;
+    final clampedDepthFactor = depthFactor.clamp(0.3, 1.0);
+    final maxAge = 0.3 + (clampedDepthFactor * 0.3);
+    
+    final newLeaf = Leaf(
+      id: leafId,
+      tOnBranch: t,
+      side: side,
+      age: maxAge * 0.5,
+      maxAge: maxAge,
+      randomSizeFactor: 0.8 + random.nextDouble() * 0.4,
+      currentGrowth: 1.0,
+      state: LeafState.alive,
+      position: Offset.zero,
+      branchPosition: Offset.zero,
+    );
+    
+    branch.addLeaf(newLeaf);
+    return true;
+  }
+
+  void _addDeadLeaf() {
+    if (_tree == null) return;
+    final random = math.Random();
+    final branches = _tree!.getAllBranches().where((b) => b.depth > 0 && b.canAddLeaf()).toList();
+    if (branches.isEmpty) return;
+    
+    final branch = branches[random.nextInt(branches.length)];
+    
+    final t = 0.2 + random.nextDouble() * 0.8;
+    final side = random.nextBool() ? 1 : -1;
+    
+    final leafId = '${branch.id}_dead_${t.toStringAsFixed(3)}_$side';
+    final depthFactor = 1.0 - (branch.depth - 1) * 0.12;
+    final clampedDepthFactor = depthFactor.clamp(0.3, 1.0);
+    final maxAge = 0.3 + (clampedDepthFactor * 0.3);
+    
+    final newLeaf = Leaf(
+      id: leafId,
+      tOnBranch: t,
+      side: side,
+      age: maxAge, 
+      maxAge: maxAge,
+      randomSizeFactor: 0.8 + random.nextDouble() * 0.4,
+      currentGrowth: 1.0,
+      state: LeafState.dead2,
+      deathAge: 2,
+      position: Offset.zero,
+      branchPosition: Offset.zero,
+    );
+    
+    branch.addLeaf(newLeaf);
+  }
+
   /// Incrémente l'âge de toutes les feuilles vivantes (fait grandir l'arbre d'un jour)
   void growLeaves() {
     if (_tree == null) return;
-    
     _tree!.growOneDay();
     notifyListeners();
   }
 
   /// Avance le processus de mort des feuilles
-  void advanceLeafDeath() {
-    if (_tree == null) return;
+  /// Retourne le nombre de feuilles tuées
+  int advanceLeafDeath() {
+    if (_tree == null) return 0;
     
     final allLeaves = _tree!.getAllLeaves();
     
-    // Sélectionner 1-2 feuilles vivantes aléatoires pour lancer le processus de mort
     final aliveLeaves = allLeaves
         .where((l) => l.currentGrowth > 0.0 && l.state == LeafState.alive)
         .toList();
     
+    int killedCount = 0;
     if (aliveLeaves.isNotEmpty) {
       final random = math.Random();
       final numToKill = aliveLeaves.length > 1 ? (1 + random.nextInt(2)) : 1;
@@ -269,12 +499,14 @@ class TreeController extends ChangeNotifier {
       for (int i = 0; i < numToKill && aliveLeaves.isNotEmpty; i++) {
         final index = random.nextInt(aliveLeaves.length);
         final leaf = aliveLeaves[index];
-        leaf.startDeath(); // Lance le processus de mort (passe à dead_1)
+        leaf.startDeath();
         aliveLeaves.removeAt(index);
+        killedCount++;
       }
     }
     
     notifyListeners();
+    return killedCount;
   }
 
   /// Ajoute 1-2 feuilles aléatoirement sur des branches disponibles
@@ -283,18 +515,15 @@ class TreeController extends ChangeNotifier {
     
     final random = math.Random();
     
-    // Récupérer toutes les branches (exclure le tronc)
     final branches = _tree!.getAllBranches();
     final availableBranches = branches.where((branch) => branch.depth > 0).toList();
     
     if (availableBranches.isEmpty) return;
     
-    // Filtrer les branches qui ont de l'espace
     final branchesWithSpace = availableBranches.where((branch) => branch.canAddLeaf()).toList();
     
     if (branchesWithSpace.isEmpty) return;
     
-    // Calculer le nombre de feuilles à ajouter
     final treeAge = _tree!.age;
     final totalBranches = branches.length;
     
@@ -373,15 +602,15 @@ class TreeController extends ChangeNotifier {
   }
 
   /// Ajoute une fleur aléatoirement sur une branche disponible
-  void addRandomFlower() {
-    if (_tree == null) return;
+  bool addRandomFlower() {
+    if (_tree == null) return false;
     
     final random = math.Random();
     
     final branches = _tree!.getAllBranches();
     final availableBranches = branches.where((branch) => branch.depth > 0).toList();
     
-    if (availableBranches.isEmpty) return;
+    if (availableBranches.isEmpty) return false;
     
     final weights = availableBranches.map((branch) {
       return 1.0 + (branch.age * 4.0);
@@ -402,7 +631,7 @@ class TreeController extends ChangeNotifier {
     
     selectedBranch ??= availableBranches[random.nextInt(availableBranches.length)];
     
-    if (selectedBranch.depth == 0) return;
+    if (selectedBranch.depth == 0) return false;
     
     final t = 0.2 + random.nextDouble() * 0.8;
     final branchPos = _bezierPoint(selectedBranch.start, selectedBranch.controlPoint, selectedBranch.end, t);
@@ -443,12 +672,14 @@ class TreeController extends ChangeNotifier {
       
       selectedBranch.addFlower(newFlower);
       notifyListeners();
+      return true;
     }
+    return false;
   }
 
-  /// Réapplique les feuilles existantes sur les nouvelles branches de l'arbre
   void _reapplyLeaves(List<Leaf> oldLeaves, double treeSize) {
     final newBranches = _tree!.getAllBranches();
+    int reappliedCount = 0;
     
     for (final oldLeaf in oldLeaves) {
       final parts = oldLeaf.id.split('_');
@@ -460,6 +691,7 @@ class TreeController extends ChangeNotifier {
       try {
         matchingBranch = newBranches.firstWhere((b) => b.id == branchId);
       } catch (e) {
+        debugPrint('⚠️ Branche introuvable pour la feuille ${oldLeaf.id} (branchId: $branchId)');
         continue;
       }
       
@@ -481,7 +713,9 @@ class TreeController extends ChangeNotifier {
       
       newLeaf.updatePosition(matchingBranch, treeSize);
       matchingBranch.addLeaf(newLeaf);
+      reappliedCount++;
     }
+    debugPrint('🍃 Feuilles réappliquées: $reappliedCount / ${oldLeaves.length}');
   }
 
   /// Réapplique les fleurs existantes sur les nouvelles branches de l'arbre

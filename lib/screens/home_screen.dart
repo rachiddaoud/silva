@@ -9,8 +9,9 @@ import '../widgets/victory_card_widget.dart';
 import 'day_completion_screen.dart';
 import '../widgets/today_history_toggle.dart';
 import '../widgets/history_view.dart';
-import '../widgets/path_view.dart';
+
 import '../widgets/daily_quote_card.dart';
+import '../widgets/home_tree_widget.dart';
 import 'settings_screen.dart';
 import '../services/preferences_service.dart';
 import '../services/notification_service.dart';
@@ -212,9 +213,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     int pageIndex = 0;
     if (mode == ViewMode.history) {
       pageIndex = 1;
-    } else if (mode == ViewMode.path) {
-      pageIndex = 2;
     }
+
     _pageController.animateToPage(
       pageIndex,
       duration: const Duration(milliseconds: 300),
@@ -228,8 +228,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _currentView = ViewMode.today;
       } else if (index == 1) {
         _currentView = ViewMode.history;
-      } else if (index == 2) {
-        _currentView = ViewMode.path;
       }
     });
   }
@@ -353,6 +351,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               // Citation du jour
               // Citation du jour
               DailyQuoteCard(quote: _currentQuote),
+              
+              // Arbre de croissance
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.0),
+                child: HomeTreeWidget(),
+              ),
+
+              // Titre Victoires
               // Titre Victoires
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
@@ -449,7 +455,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     children: [
                       _buildTodayView(),
                       const HistoryView(),
-                      const PathView(),
+
                     ],
                   ),
                 ),

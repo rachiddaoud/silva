@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum ViewMode { today, history, path }
+enum ViewMode { today, history }
 
 class TodayHistoryToggle extends StatelessWidget {
   final ViewMode selectedMode;
@@ -19,8 +19,7 @@ class TodayHistoryToggle extends StatelessWidget {
         return Icons.today_rounded;
       case ViewMode.history:
         return Icons.history_rounded;
-      case ViewMode.path:
-        return Icons.eco_rounded;
+
     }
   }
 
@@ -31,8 +30,7 @@ class TodayHistoryToggle extends StatelessWidget {
         return 'Aujourd\'hui';
       case ViewMode.history:
         return 'Historique';
-      case ViewMode.path:
-        return 'Chemin';
+
     }
   }
 
@@ -50,12 +48,11 @@ class TodayHistoryToggle extends StatelessWidget {
       leftPosition = 0;
     } else if (selectedMode == ViewMode.history) {
       leftPosition = iconButtonWidth;
-    } else if (selectedMode == ViewMode.path) {
-      leftPosition = iconButtonWidth * 2;
     }
+
     
-    // Total width: 2 icon buttons + 1 selected button
-    final totalWidth = iconButtonWidth * 2 + selectedButtonWidth;
+    // Total width: 1 icon button + 1 selected button
+    final totalWidth = iconButtonWidth + selectedButtonWidth;
     
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 16),
@@ -120,13 +117,7 @@ class TodayHistoryToggle extends StatelessWidget {
                 iconButtonWidth,
                 selectedButtonWidth,
               ),
-              _buildToggleButton(
-                context,
-                ViewMode.path,
-                theme,
-                iconButtonWidth,
-                selectedButtonWidth,
-              ),
+
             ],
           ),
         ],

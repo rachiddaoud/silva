@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:ma_bulle/services/database_service.dart';
 import 'package:ma_bulle/models/tree/tree_parameters.dart';
 import 'package:ma_bulle/services/preferences_service.dart';
 import 'package:ma_bulle/services/tree_service.dart';
@@ -22,30 +24,73 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     _loadTree();
   }
 
-  void _loadTree() {
-    PreferencesService.getTreeState().then((savedTree) {
-      if (savedTree != null) {
-        debugPrint('📦 Loading tree from JSON: ${savedTree.getAllBranches().length} branches, ${savedTree.getAllLeaves().length} leaves, ${savedTree.getAllFlowers().length} flowers');
-        _treeController.setTree(savedTree);
-      } else {
-        debugPrint('🌱 No saved tree found, creating new tree');
-        _treeController.updateTree(
-          growthLevel: 0.0,
-          size: 250.0,
-          parameters: _treeParameters,
-          resetAge: true,
-        );
+  void _loadTree() async {
+    // 1. Try local storage first (fastest)
+    var savedTree = await PreferencesService.getTreeState();
+    
+    // 2. If no local tree, try Firebase (sync)
+    if (savedTree == null) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        debugPrint('☁️ Checking Firebase for tree...');
+        savedTree = await DatabaseService().getTreeState(user.uid);
+        if (savedTree != null) {
+          debugPrint('☁️ Tree found in Firebase! Saving locally...');
+          await PreferencesService.saveTreeState(savedTree);
+        }
       }
-      
-      if (mounted) {
-        setState(() {});
-      }
-    });
+    }
+
+    if (savedTree != null) {
+      debugPrint('📦 Loading tree: ${savedTree.getAllBranches().length} branches');
+      _treeController.setTree(savedTree);
+    } else {
+      debugPrint('🌱 No saved tree found (local or remote), creating new tree');
+      _treeController.updateTree(
+        growthLevel: 0.0,
+        size: 250.0,
+        parameters: _treeParameters,
+        resetAge: true,
+      );
+    }
+    
+    if (mounted) {
+      setState(() {});
+    }
   }
 
-  void _saveTree() {
+  void _saveTree() async {
     if (_treeController.tree != null) {
-      PreferencesService.saveTreeState(_treeController.tree!);
+      // 1. Save locally
+      await PreferencesService.saveTreeState(_treeController.tree!);
+      
+      // 2. Save to Firebase if logged in
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Fire and forget (don't await to block UI)
+        DatabaseService().saveTreeState(user.uid, _treeController.tree!).catchError((e) {
+          debugPrint('❌ Error saving tree to Firebase: $e');
+        });
+      }
+    }
+  }
+
+  bool _isProcessing = false;
+
+  Future<void> _handleDebugAction(Future<void> Function() action) async {
+    if (_isProcessing) return;
+    
+    setState(() {
+      _isProcessing = true;
+    });
+    
+    await action();
+    _saveTree();
+    
+    if (mounted) {
+      setState(() {
+        _isProcessing = false;
+      });
     }
   }
 
@@ -62,6 +107,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
       height: 250,
       width: double.infinity,
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           Center(
             child: ProceduralTreeWidget(
@@ -90,51 +136,43 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
                   icon: Icons.add,
                   label: "Leaf",
                   color: Colors.green,
-                  onTap: () {
+                  onTap: () => _handleDebugAction(() async {
                     _treeController.addLeaf();
-                    _saveTree();
-                    setState(() {});
-                  },
+                  }),
                 ),
                 const SizedBox(height: 6),
                 _buildDebugButton(
                   icon: Icons.local_florist,
                   label: "Flower",
                   color: Colors.pink,
-                  onTap: () {
+                  onTap: () => _handleDebugAction(() async {
                     _treeController.addFlower();
-                    _saveTree();
-                    setState(() {});
-                  },
+                  }),
                 ),
                 const SizedBox(height: 6),
                 _buildDebugButton(
                   icon: Icons.delete_outline,
                   label: "Kill",
                   color: Colors.brown,
-                  onTap: () {
+                  onTap: () => _handleDebugAction(() async {
                     _treeController.decayLeaf();
-                    _saveTree();
-                    setState(() {});
-                  },
+                  }),
                 ),
                 const SizedBox(height: 6),
                 _buildDebugButton(
                   icon: Icons.wb_sunny,
                   label: "+1 Day",
                   color: Colors.orange,
-                  onTap: () {
-                    _treeController.simulateDay(null);
-                    _saveTree();
-                    setState(() {});
-                  },
+                  onTap: () => _handleDebugAction(() async {
+                    _treeController.grow();
+                  }),
                 ),
                 const SizedBox(height: 6),
                 _buildDebugButton(
                   icon: Icons.refresh,
                   label: "Reset",
                   color: Colors.red,
-                  onTap: () {
+                  onTap: () => _handleDebugAction(() async {
                     _treeController.updateTree(
                       growthLevel: 0.0,
                       size: 250.0,
@@ -142,9 +180,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
                       resetAge: true,
                       forceRegenerate: true,
                     );
-                    _saveTree();
-                    setState(() {});
-                  },
+                  }),
                 ),
               ],
             ),

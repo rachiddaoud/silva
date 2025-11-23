@@ -8,7 +8,8 @@
 get_device_id() {
   case "$1" in
     "pixel" | "rachid")
-      echo "3A240DLJH000X6"
+      # Fixed IP for wireless debugging (requires 'adb tcpip 5555' via USB once)
+      echo "192.168.178.79:5555"
       ;;
     "sim")
       echo "B49CA4C3-9C83-49E2-BAF8-36DBC11E12E6"
@@ -57,6 +58,13 @@ run_device() {
   fi
   
   echo "Running on device: $device_name ($device_id)"
+  
+  # If device_id looks like an IP address (contains :), try to connect first
+  if [[ "$device_id" == *":"* ]]; then
+    echo "Attempting to connect to wireless device..."
+    adb connect "$device_id"
+  fi
+
   flutter run -d "$device_id" "${@:2}"
 }
 

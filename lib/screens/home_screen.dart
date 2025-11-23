@@ -352,10 +352,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               DailyQuoteCard(quote: _currentQuote),
               
               // Arbre de croissance
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.0),
-                child: HomeTreeWidget(),
-              ),
+              const HomeTreeWidget(),
 
               // Titre Victoires
               // Titre Victoires

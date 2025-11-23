@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../models/day_entry.dart';
 import '../models/emotion.dart';
 import '../models/victory_card.dart';
+import '../models/tree/tree_state.dart';
 
 class DatabaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -205,6 +206,28 @@ class DatabaseService {
       return null;
     } catch (e) {
       debugPrint('Error checking today entry: $e');
+      return null;
+    }
+  }
+  // Tree Persistence
+  Future<void> saveTreeState(String uid, TreeState tree) async {
+    try {
+      await _userDoc(uid).collection('tree').doc('current').set(tree.toJson());
+    } catch (e) {
+      debugPrint('Error saving tree state: $e');
+      rethrow;
+    }
+  }
+
+  Future<TreeState?> getTreeState(String uid) async {
+    try {
+      final doc = await _userDoc(uid).collection('tree').doc('current').get();
+      if (doc.exists && doc.data() != null) {
+        return TreeState.fromJson(doc.data() as Map<String, dynamic>);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting tree state: $e');
       return null;
     }
   }

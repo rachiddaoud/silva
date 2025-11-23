@@ -21,15 +21,10 @@ class AuthService {
       );
       
       // Authenticate the user
-      final GoogleSignInAccount? googleUser = await GoogleSignIn.instance.authenticate();
-      
-      if (googleUser == null) {
-        // The user canceled the sign-in
-        return null;
-      }
+      final GoogleSignInAccount googleUser = await GoogleSignIn.instance.authenticate();
 
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
       // Create a new credential (only idToken is available in google_sign_in 7.2.0)
       final OAuthCredential credential = GoogleAuthProvider.credential(

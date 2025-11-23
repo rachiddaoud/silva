@@ -55,7 +55,8 @@ class _MyAppState extends State<MyApp> {
     ]);
     
     final theme = results[0] as AppTheme;
-    final onboardingComplete = results[1] as bool;
+    // Note: onboardingComplete (results[1]) is intentionally not used
+    // We rely solely on Firebase auth status, not local preferences
     
     // Ensure notifications are initialized (if not already by the wait above, 
     // though we didn't await notificationFuture in the list, let's just let it run)

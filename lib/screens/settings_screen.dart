@@ -4,7 +4,6 @@ import '../services/preferences_service.dart';
 import '../services/notification_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
-import '../app_navigator.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
 

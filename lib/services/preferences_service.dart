@@ -5,7 +5,7 @@ import '../models/theme_config.dart';
 import '../models/day_entry.dart';
 import '../models/emotion.dart';
 import '../models/victory_card.dart';
-import '../models/tree_model.dart';
+import '../models/tree/tree_state.dart';
 
 class PreferencesService {
   static const String _themeKey = 'selected_theme';
@@ -271,20 +271,20 @@ class PreferencesService {
   }
 
   // Arbre
-  static Future<Tree?> getTreeState() async {
+  static Future<TreeState?> getTreeState() async {
     final prefs = await SharedPreferences.getInstance();
     final treeJson = prefs.getString(_treeStateKey);
     if (treeJson == null) return null;
 
     try {
       final Map<String, dynamic> json = jsonDecode(treeJson);
-      return Tree.fromJson(json);
+      return TreeState.fromJson(json);
     } catch (e) {
       return null;
     }
   }
 
-  static Future<void> saveTreeState(Tree tree) async {
+  static Future<void> saveTreeState(TreeState tree) async {
     final prefs = await SharedPreferences.getInstance();
     final json = tree.toJson();
     await prefs.setString(_treeStateKey, jsonEncode(json));

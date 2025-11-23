@@ -3,7 +3,6 @@ import '../models/emotion.dart';
 import '../models/victory_card.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/day_entry.dart';
-import '../services/preferences_service.dart';
 import '../services/database_service.dart';
 import '../utils/sprite_utils.dart';
 

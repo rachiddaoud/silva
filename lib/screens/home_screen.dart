@@ -386,9 +386,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           sliver: SliverGrid(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 0.85, // Taller for better text fit
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 0.8, // Adjusted for new card design
             ),
             delegate: SliverChildBuilderDelegate(
               (context, index) {

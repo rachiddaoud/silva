@@ -21,84 +21,141 @@ class VictoryCardWidget extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
           color: isSelected
-              ? colorScheme.primaryContainer.withValues(alpha: 0.4)
+              ? colorScheme.primaryContainer
               : theme.cardTheme.color ?? Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isSelected
                 ? colorScheme.primary
-                : colorScheme.outline.withValues(alpha: 0.08),
+                : colorScheme.outline.withValues(alpha: 0.1),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
               color: isSelected
-                  ? colorScheme.primary.withValues(alpha: 0.15)
-                  : Colors.black.withValues(alpha: 0.04),
-              blurRadius: isSelected ? 8 : 4,
-              offset: const Offset(0, 2),
+                  ? colorScheme.primary.withValues(alpha: 0.3)
+                  : Colors.black.withValues(alpha: 0.05),
+              blurRadius: isSelected ? 12 : 8,
+              offset: const Offset(0, 4),
+              spreadRadius: isSelected ? 1 : 0,
             ),
           ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            // Sprite
-            AnimatedScale(
-              scale: isSelected ? 1.1 : 1.0,
-              duration: const Duration(milliseconds: 200),
-              child: Container(
-                decoration: isSelected
-                    ? BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: colorScheme.primary.withValues(alpha: 0.2),
-                            blurRadius: 12,
-                            spreadRadius: -2,
-                          )
+            // Background subtle pattern or gradient for selected state
+            if (isSelected)
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          colorScheme.primary.withValues(alpha: 0.05),
+                          colorScheme.primary.withValues(alpha: 0.15),
                         ],
-                      )
-                    : null,
-                child: SpriteDisplay(
-                  victoryId: card.spriteId,
-                  size: 48,
-                  showBorder: false,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              
+            // Content
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Sprite with glow
+                    AnimatedScale(
+                      scale: isSelected ? 1.15 : 1.0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.elasticOut,
+                      child: Container(
+                        decoration: isSelected
+                            ? BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: colorScheme.primary.withValues(alpha: 0.4),
+                                    blurRadius: 20,
+                                    spreadRadius: -5,
+                                  )
+                                ],
+                              )
+                            : null,
+                        child: SpriteDisplay(
+                          victoryId: card.spriteId,
+                          size: 52,
+                          showBorder: false,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Text
+                    Text(
+                      card.text,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isSelected
+                            ? colorScheme.onPrimaryContainer
+                            : colorScheme.onSurface.withValues(alpha: 0.8),
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        height: 1.2,
+                        letterSpacing: -0.2,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            // Text
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Text(
-                card.text,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isSelected
-                      ? colorScheme.onSurface
-                      : colorScheme.onSurface.withValues(alpha: 0.75),
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  height: 1.2,
+            
+            // Checkmark badge
+            if (isSelected)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.elasticOut,
+                  builder: (context, value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: colorScheme.primary.withValues(alpha: 0.4),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            )
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.check,
+                          size: 12,
+                          color: colorScheme.onPrimary,
+                        ),
+                      ),
+                    );
+                  },
                 ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            // Optional Checkmark for extra clarity
-            if (isSelected) ...[
-              const SizedBox(height: 4),
-              Icon(
-                Icons.check_circle,
-                size: 14,
-                color: colorScheme.primary,
-              ),
-            ],
           ],
         ),
       ),

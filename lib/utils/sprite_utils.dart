@@ -11,8 +11,8 @@ class SpriteInfo {
   const SpriteInfo({
     required this.row,
     required this.column,
-    this.totalRows = 4,
-    this.totalColumns = 6,
+    this.totalRows = 3,
+    this.totalColumns = 3,
   });
 
   @override
@@ -34,27 +34,21 @@ class SpriteInfo {
 /// The sprite sheet has 4 rows and 6 columns = 24 sprites
 /// Mapped to 9 victory types based on the illustration content
 class VictorySpriteMapper {
-  static const spriteSheet = 'assets/doodles/spritesheat.png';
+  static const spriteSheet = 'assets/doodles/spritesheat_v2.png';
 
   /// Map victory types to sprite positions
-  /// Row 0: Sleep, Self-care, Mindfulness, Confusion?, Stress-relief, Meditation
-  /// Row 1: Neutral, Meditation, Celebration, Care, Heart-care
-  /// Row 2: Hands/Love, Shower/Bath, Meditation, Wind/Breathing, Bath/Relax
-  /// Row 3: Stop/Hand, Outdoor, Meditation, Couch/Rest
+  /// The new sprite sheet is a 3x3 grid where the position directly corresponds
+  /// to the victory ID (0-8) reading left-to-right, top-to-bottom.
   static SpriteInfo getSpriteForVictory(int victoryId) {
-    final Map<int, SpriteInfo> spriteMap = {
-      0: const SpriteInfo(row: 1, column: 4), // Water - Hands with heart
-      1: const SpriteInfo(row: 2, column: 4), // Shower - Shower scene
-      2: const SpriteInfo(row: 2, column: 0), // Help - Hands with heart
-      3: const SpriteInfo(row: 0, column: 2), // Meal - Meditation (calm eating)
-      4: const SpriteInfo(row: 2, column: 3), // Breathing - Wind
-      5: const SpriteInfo(row: 3, column: 3), // Rest baby - Sleep
-      6: const SpriteInfo(row: 3, column: 0), // Say No - Stop hand
-      7: const SpriteInfo(row: 0, column: 1), // Smile - Celebration
-      8: const SpriteInfo(row: 3, column: 2), // Sun - Self-care/hug
-    };
-
-    return spriteMap[victoryId] ?? const SpriteInfo(row: 0, column: 0);
+    // Ensure ID is within bounds (0-8)
+    final int safeId = victoryId.clamp(0, 8);
+    
+    return SpriteInfo(
+      row: safeId ~/ 3,
+      column: safeId % 3,
+      totalRows: 3,
+      totalColumns: 3,
+    );
   }
 }
 
@@ -114,8 +108,8 @@ class _SpriteDisplayState extends State<SpriteDisplay> {
   Widget build(BuildContext context) {
     final spriteInfo = VictorySpriteMapper.getSpriteForVictory(widget.victoryId);
     
-    const int totalRows = 4;
-    const int totalColumns = 6;
+    const int totalRows = 3;
+    const int totalColumns = 3;
 
     // No container, no decoration - just the sprite
     return SizedBox(

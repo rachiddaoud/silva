@@ -45,38 +45,19 @@ class _HistoryViewState extends State<HistoryView> {
 
     final history = await DatabaseService().getHistory(user.uid);
     
-    // Générer une liste des 7 derniers jours (excluant aujourd'hui)
-    final now = DateTime.now();
-    final List<DayEntry> completeHistory = [];
-    
-    for (int i = 1; i <= 7; i++) {
-      final date = now.subtract(Duration(days: i));
-      // Normaliser la date à minuit pour la comparaison
-      final normalizedDate = DateTime(date.year, date.month, date.day);
-      
-      // Chercher si une entrée existe pour cette date
-      final existingEntry = history.firstWhere(
-        (e) {
-          final eNormalized = DateTime(e.date.year, e.date.month, e.date.day);
-          return eNormalized == normalizedDate;
-        },
-        orElse: () => DayEntry(
-          date: normalizedDate,
-          emotion: null, // Jour vide
-          comment: null,
-          victoryCards: [],
-        ),
-      );
-      
-      completeHistory.add(existingEntry);
-    }
-    
     // Trier par date décroissante (plus récent en premier)
-    completeHistory.sort((a, b) => b.date.compareTo(a.date));
+    history.sort((a, b) => b.date.compareTo(a.date));
 
     if (mounted) {
       setState(() {
-        _history = completeHistory;
+        _history = history;
+        _isLoading = false;
+      });
+    }
+
+    if (mounted) {
+      setState(() {
+        _history = history;
         _isLoading = false;
       });
     }

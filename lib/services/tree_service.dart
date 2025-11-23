@@ -9,6 +9,7 @@ import 'dart:math' as math;
 class TreeController extends ChangeNotifier {
   TreeState? _tree;
   TreeState? get tree => _tree;
+  TreeParameters _parameters = const TreeParameters(); // Store parameters
 
 
   void setTree(TreeState tree) {
@@ -25,6 +26,7 @@ class TreeController extends ChangeNotifier {
     bool resetAge = false,
     bool forceRegenerate = false,
   }) {
+    _parameters = parameters; // Update stored parameters
     // If loaded from JSON, we generally want to keep the structure unless:
     // 1. forceRegenerate is true (explicit reset)
     // 2. growthLevel has changed (tree is growing)
@@ -37,11 +39,15 @@ class TreeController extends ChangeNotifier {
     final existingFlowers = _tree?.getAllFlowers() ?? [];
     final oldAge = _tree?.age ?? 0;
     
+    // User requested to start with 3 days of growth
+    final effectiveAge = resetAge ? 3 : oldAge;
+    final effectiveGrowthLevel = resetAge ? 0.03 : growthLevel;
+    
     _tree = TreeGenerator.generateTree(
-      growthLevel: growthLevel,
+      growthLevel: effectiveGrowthLevel,
       treeSize: size,
       parameters: parameters,
-      treeAge: resetAge ? 0 : oldAge,
+      treeAge: effectiveAge,
     );
     
     // Reapply items if we have a new tree
@@ -115,7 +121,7 @@ class TreeController extends ChangeNotifier {
   }
 
   /// Simulates a day of growth based on daily data
-  Map<String, int> simulateDay(DayEntry? entry) {
+  Map<String, int> simulateDay(DayEntry? entry, {bool notify = true}) {
     final stats = {
       'leavesAdded': 0,
       'flowersAdded': 0,
@@ -128,12 +134,44 @@ class TreeController extends ChangeNotifier {
 
     // 1. Natural growth
     _tree = TreeLogic.growOneDay(_tree!);
+    
+    // 1.5 Update structure based on new age
+    // We need to regenerate the skeleton to match the new age/growth level
+    // but keep the leaves and flowers we just grew/kept.
+    final newGrowthLevel = _tree!.getGrowthLevel();
+    final currentLeaves = _tree!.getAllLeaves();
+    final currentFlowers = _tree!.getAllFlowers();
+    
+    // Generate new skeleton
+    var newTree = TreeGenerator.generateTree(
+      growthLevel: newGrowthLevel,
+      treeSize: _tree!.treeSize,
+      parameters: _parameters,
+      treeAge: _tree!.age,
+    );
+    
+    // Reapply items
+    if (currentLeaves.isNotEmpty) {
+      newTree = _reapplyLeaves(newTree, currentLeaves);
+    }
+    if (currentFlowers.isNotEmpty) {
+      newTree = _reapplyFlowers(newTree, currentFlowers);
+    }
+    
+    _tree = newTree;
 
     if (entry != null) {
       // 2. Victories -> Leaves
       final victories = entry.victoryCards.where((v) => v.isAccomplished).length;
-      for (int i = 0; i < victories; i++) {
-        if (addLeaf()) {
+      
+      // Rule: When young (< 30 days), 3 victories = 1 leaf. Otherwise 1 victory = 1 leaf.
+      int leavesToAdd = victories;
+      if (_tree!.age < 30) {
+        leavesToAdd = victories ~/ 3;
+      }
+      
+      for (int i = 0; i < leavesToAdd; i++) {
+        if (addLeaf(notify: false)) { // Don't notify for individual leaves in simulation
           stats['leavesAdded'] = (stats['leavesAdded'] ?? 0) + 1;
         }
       }
@@ -143,19 +181,19 @@ class TreeController extends ChangeNotifier {
         final emotionLabel = entry.emotion!.name.toLowerCase();
         
         if (['joyeux', 'fier', 'paisible', 'excité', 'joyful', 'proud', 'peaceful', 'excited'].contains(emotionLabel)) {
-           if (addFlower()) {
+           if (addFlower(notify: false)) {
              stats['flowersAdded'] = (stats['flowersAdded'] ?? 0) + 1;
            }
         } 
         else if (['triste', 'anxieux', 'en colère', 'fatigué', 'sad', 'anxious', 'angry', 'tired'].contains(emotionLabel)) {
-           if (decayLeaf()) {
+           if (decayLeaf(notify: false)) {
              stats['deadLeavesAdded'] = (stats['deadLeavesAdded'] ?? 0) + 1;
            }
         }
       }
     }
     
-    notifyListeners();
+    if (notify) notifyListeners();
     return stats;
   }
 
@@ -236,7 +274,7 @@ class TreeController extends ChangeNotifier {
   }
 
   /// 3. ADD FLOWER: Adds a flower to a specific branch or a random one
-  bool addFlower({String? branchId, double? t, int? side}) {
+  bool addFlower({String? branchId, double? t, int? side, bool notify = true}) {
     if (_tree == null) return false;
 
     if (branchId != null && t != null && side != null) {
@@ -253,20 +291,17 @@ class TreeController extends ChangeNotifier {
         side: side,
         sizeFactor: sizeFactor,
         flowerType: math.Random().nextInt(2),
-        // Flowers might need age/growth too if we want them to grow
-        // Assuming FlowerState has no age currently, but if we want it to grow, we should add it.
-        // For now, we'll just add it. If the user wants flower growth, we need to update FlowerState.
       );
 
       _tree = _addFlowerToBranch(_tree!, branchId, newFlower);
-      notifyListeners();
+      if (notify) notifyListeners();
       return true;
     } else {
-      return _addRandomFlower();
+      return _addRandomFlower(notify: notify);
     }
   }
 
-  bool _addRandomFlower() {
+  bool _addRandomFlower({bool notify = true}) {
     if (_tree == null) return false;
     
     final allBranches = _tree!.getAllBranches();
@@ -280,11 +315,11 @@ class TreeController extends ChangeNotifier {
     final t = 0.2 + random.nextDouble() * 0.8;
     final side = random.nextBool() ? 1 : -1;
     
-    return addFlower(branchId: branch.id, t: t, side: side);
+    return addFlower(branchId: branch.id, t: t, side: side, notify: notify);
   }
 
   /// 4. DECAY LEAF: Starts decaying a random leaf
-  bool decayLeaf() {
+  bool decayLeaf({bool notify = true}) {
     if (_tree == null) return false;
     
     final allLeaves = _tree!.getAllLeaves();
@@ -300,7 +335,7 @@ class TreeController extends ChangeNotifier {
       deathAge: 0,
     ));
     
-    notifyListeners();
+    if (notify) notifyListeners();
     return true;
   }
 

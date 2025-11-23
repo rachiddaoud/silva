@@ -169,6 +169,15 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
                 ),
                 const SizedBox(height: 6),
                 _buildDebugButton(
+                  icon: Icons.history,
+                  label: "Replay",
+                  color: Colors.purple,
+                  onTap: () => _handleDebugAction(() async {
+                    await _regenerateFromHistory();
+                  }),
+                ),
+                const SizedBox(height: 6),
+                _buildDebugButton(
                   icon: Icons.refresh,
                   label: "Reset",
                   color: Colors.red,
@@ -188,6 +197,68 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
         ],
       ),
     );
+  }
+
+  Future<void> _regenerateFromHistory() async {
+    debugPrint('🔄 Regenerating tree from history...');
+    
+    // 1. Fetch history
+    List<dynamic> history = [];
+    
+    // Try Firebase first if logged in
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      history = await DatabaseService().getHistory(user.uid);
+    } 
+    
+    // If no Firebase history (or not logged in), try local
+    if (history.isEmpty) {
+      history = await PreferencesService.getHistory();
+    }
+    
+    if (history.isEmpty) {
+      debugPrint('⚠️ No history found to replay.');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Aucun historique trouvé pour régénérer l\'arbre.')),
+        );
+      }
+      return;
+    }
+    
+    // 2. Sort history by date (oldest first)
+    history.sort((a, b) => a.date.compareTo(b.date));
+    
+    // 3. Reset tree
+    _treeController.updateTree(
+      growthLevel: 0.0,
+      size: 250.0,
+      parameters: const TreeParameters(),
+      resetAge: true,
+      forceRegenerate: true,
+    );
+    
+    // 4. Replay each day
+    int daysProcessed = 0;
+    for (final entry in history) {
+      final stats = _treeController.simulateDay(entry, notify: false);
+      daysProcessed++;
+      
+      final dateStr = "${entry.date.year}-${entry.date.month.toString().padLeft(2, '0')}-${entry.date.day.toString().padLeft(2, '0')}";
+      debugPrint('📅 $dateStr: +${stats['leavesAdded']} leaves, +${stats['flowersAdded']} flowers, +${stats['deadLeavesAdded']} dead leaves');
+    }
+    
+    // 5. Finalize
+    if (_treeController.tree != null) {
+      _treeController.setTree(_treeController.tree!);
+    }
+    
+    debugPrint('✅ Tree regenerated from $daysProcessed days of history.');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Arbre régénéré à partir de $daysProcessed jours d\'historique.')),
+      );
+    }
   }
 
   void _showTreeInfo() {

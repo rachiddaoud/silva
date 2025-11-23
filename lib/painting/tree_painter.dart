@@ -363,14 +363,15 @@ class TreePainter extends CustomPainter {
       canvas.save();
       canvas.translate(leafPos.dx, leafPos.dy);
       
-      // Rotate leaf to match branch angle + some randomness + wind
-      // We want the leaf to point OUT from the branch (perpendicular).
+      // Rotate leaf to lean along the branch tangent
       // The image points UP (negative Y) from its anchor.
-      // Rotation needed = branchAngle + (side + 1) * 90 degrees.
+      // side = 1 means right side, side = -1 means left side
+      // We want leaves to point somewhat along the branch but not perfectly perpendicular
+      // Use perpAngle as base but reduce the offset to lean toward the tangent
       
-      final baseRotation = branchAngle + (leaf.side + 1) * math.pi / 2;
+      final leafAngle = perpAngle + (leaf.side * math.pi / 6); // perpendicular ± 30°
       final windRotation = math.sin(windPhase + t * 5) * 0.2;
-      canvas.rotate(baseRotation + windRotation);
+      canvas.rotate(leafAngle + windRotation);
       
       final imageAspectRatio = imageToUse.width.toDouble() / imageToUse.height.toDouble();
       final height = leafSize;
@@ -443,8 +444,8 @@ class TreePainter extends CustomPainter {
 
     final imageToUse = flower.flowerType == 1 ? jasminImage : flowerImage;
     
-    final baseSize = tree.treeSize * 0.08;
-    final flowerSize = baseSize * flower.sizeFactor;
+    // Size flowers based on branch thickness for better proportions
+    final flowerSize = thicknessAtPoint * 2.5 * flower.sizeFactor;
 
     if (imageToUse != null) {
       canvas.save();

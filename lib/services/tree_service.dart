@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'package:ma_bulle/models/day_entry.dart';
-import 'package:ma_bulle/models/tree/tree_parameters.dart';
-import 'package:ma_bulle/models/tree/tree_state.dart';
-import 'package:ma_bulle/logic/tree_logic.dart';
+import 'package:silva/models/day_entry.dart';
+import 'package:silva/models/tree/tree_parameters.dart';
+import 'package:silva/models/tree/tree_state.dart';
+import 'package:silva/logic/tree_logic.dart';
 import 'dart:math' as math;
 
 /// Controller to manage tree state and interactions

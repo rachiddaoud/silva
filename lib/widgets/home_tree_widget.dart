@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:ma_bulle/services/database_service.dart';
-import 'package:ma_bulle/models/tree/tree_parameters.dart';
-import 'package:ma_bulle/services/preferences_service.dart';
-import 'package:ma_bulle/services/tree_service.dart';
-import 'package:ma_bulle/widgets/procedural_tree_widget.dart';
+import 'package:silva/services/database_service.dart';
+import 'package:silva/models/tree/tree_parameters.dart';
+import 'package:silva/services/preferences_service.dart';
+import 'package:silva/services/tree_service.dart';
+import 'package:silva/widgets/procedural_tree_widget.dart';
 
 class HomeTreeWidget extends StatefulWidget {
   const HomeTreeWidget({super.key});

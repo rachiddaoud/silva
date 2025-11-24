@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:ma_bulle/models/tree/tree_parameters.dart';
-import 'package:ma_bulle/models/tree/tree_state.dart';
-import 'package:ma_bulle/logic/tree_logic.dart';
+import 'package:silva/models/tree/tree_parameters.dart';
+import 'package:silva/models/tree/tree_state.dart';
+import 'package:silva/logic/tree_logic.dart';
 
 /// Painter for rendering the procedural tree
 class TreePainter extends CustomPainter {

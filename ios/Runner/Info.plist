@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Bulle</string>
+	<string>Silva</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Bulle</string>
+	<string>Silva</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -46,7 +46,7 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>GIDClientID</key>
-	<string>174370766580-n69t3ojpaqah5i0634575lr2stt8n0s3.apps.googleusercontent.com</string>
+	<string>174370766580-i2gbdaov6kd5ov6tg2tuhg66nbaf3k0f.apps.googleusercontent.com</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -54,7 +54,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.174370766580-n69t3ojpaqah5i0634575lr2stt8n0s3</string>
+				<string>com.googleusercontent.apps.174370766580-i2gbdaov6kd5ov6tg2tuhg66nbaf3k0f</string>
 			</array>
 		</dict>
 	</array>

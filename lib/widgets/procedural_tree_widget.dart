@@ -3,10 +3,10 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:ma_bulle/models/tree/tree_parameters.dart';
-import 'package:ma_bulle/models/tree/tree_state.dart';
-import 'package:ma_bulle/services/tree_service.dart';
-import 'package:ma_bulle/painting/tree_painter.dart';
+import 'package:silva/models/tree/tree_parameters.dart';
+import 'package:silva/models/tree/tree_state.dart';
+import 'package:silva/services/tree_service.dart';
+import 'package:silva/painting/tree_painter.dart';
 
 /// Widget to display the procedural tree
 class ProceduralTreeWidget extends StatefulWidget {

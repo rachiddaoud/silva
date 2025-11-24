@@ -12,7 +12,7 @@ import '../models/emotion.dart';
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
-  static const platform = MethodChannel('com.ma_bulle/notifications');
+  static const platform = MethodChannel('com.silva/notifications');
   
   // Callback pour gérer la navigation depuis la notification
   static VoidCallback? onNotificationTappedCallback;

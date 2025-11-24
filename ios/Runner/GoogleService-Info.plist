@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>174370766580-n69t3ojpaqah5i0634575lr2stt8n0s3.apps.googleusercontent.com</string>
+	<string>174370766580-i2gbdaov6kd5ov6tg2tuhg66nbaf3k0f.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.174370766580-n69t3ojpaqah5i0634575lr2stt8n0s3</string>
+	<string>com.googleusercontent.apps.174370766580-i2gbdaov6kd5ov6tg2tuhg66nbaf3k0f</string>
 	<key>ANDROID_CLIENT_ID</key>
 	<string>174370766580-l28uojnbtdu1qv3il7lqu2d3iig9bvrc.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
@@ -15,7 +15,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.bulle</string>
+	<string>com.example.silva</string>
 	<key>PROJECT_ID</key>
 	<string>ma-bulle-auth-demo</string>
 	<key>STORAGE_BUCKET</key>
@@ -31,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:174370766580:ios:ab739418a8e5f6f132a8a1</string>
+	<string>1:174370766580:ios:6eead10cbb626bd532a8a1</string>
 </dict>
 </plist>

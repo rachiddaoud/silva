@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
-import 'package:ma_bulle/models/tree/tree_parameters.dart';
-import 'package:ma_bulle/models/tree/tree_state.dart';
+import 'package:silva/models/tree/tree_parameters.dart';
+import 'package:silva/models/tree/tree_state.dart';
 
 /// Pure logic for tree geometry calculations
 class TreeGeometry {

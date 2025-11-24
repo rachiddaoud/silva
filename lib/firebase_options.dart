@@ -16,10 +16,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -50,7 +47,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyANJaths-_q8VgiODSuYqgB8yIy5SOErZc',
-    appId: '1:174370766580:android:a7f87e2eb408645932a8a1',
+    appId: '1:174370766580:android:88ca971d45e3d0f932a8a1',
     messagingSenderId: '174370766580',
     projectId: 'ma-bulle-auth-demo',
     storageBucket: 'ma-bulle-auth-demo.firebasestorage.app',
@@ -58,10 +55,19 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyA44s9JjLQnbGNV6tbYl7rvh1OwP5mec-w',
-    appId: '1:174370766580:ios:ab739418a8e5f6f132a8a1',
+    appId: '1:174370766580:ios:6eead10cbb626bd532a8a1',
     messagingSenderId: '174370766580',
     projectId: 'ma-bulle-auth-demo',
     storageBucket: 'ma-bulle-auth-demo.firebasestorage.app',
-    iosBundleId: 'com.example.bulle',
+    iosBundleId: 'com.example.silva',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyDqKn51sQ7IZOF_DBK4Gzu_SMQ3fPuip2s',
+    appId: '1:174370766580:web:6da7de5fc061026d32a8a1',
+    messagingSenderId: '174370766580',
+    projectId: 'ma-bulle-auth-demo',
+    authDomain: 'ma-bulle-auth-demo.firebaseapp.com',
+    storageBucket: 'ma-bulle-auth-demo.firebasestorage.app',
   );
 }

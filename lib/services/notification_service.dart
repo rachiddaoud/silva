@@ -8,6 +8,7 @@ import 'preferences_service.dart';
 import '../app_navigator.dart';
 import '../screens/day_completion_screen.dart';
 import '../models/emotion.dart';
+import '../utils/quotes_data.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notifications =
@@ -27,11 +28,8 @@ class NotificationService {
   static const String _actionMarkDone = 'action_mark_done';
 
   // Citations du jour
-  static const List<String> _dailyQuotes = [
-    "Vous faites de votre mieux, et c'est suffisant.",
-    "Le repos n'est pas une récompense, c'est une nécessité.",
-    "Prendre soin de vous, c'est prendre soin de votre bébé.",
-  ];
+  // Citations du jour
+  static const List<String> _dailyQuotes = dailyQuotes;
 
   // Obtenir la citation du jour
   static String _getCurrentQuote() {

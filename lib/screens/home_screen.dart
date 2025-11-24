@@ -16,6 +16,7 @@ import '../services/preferences_service.dart';
 import '../services/notification_service.dart';
 import '../services/database_service.dart';
 import '../app_navigator.dart';
+import '../utils/quotes_data.dart';
 
 class HomeScreen extends StatefulWidget {
   final AppTheme currentTheme;
@@ -36,11 +37,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late PageController _pageController;
   ViewMode _currentView = ViewMode.today;
   bool _isDayCompleted = false;
-  final List<String> _dailyQuotes = [
-    "Vous faites de votre mieux, et c'est suffisant.",
-    "Le repos n'est pas une récompense, c'est une nécessité.",
-    "Prendre soin de vous, c'est prendre soin de votre bébé.",
-  ];
+  final List<String> _dailyQuotes = dailyQuotes;
 
   @override
   void initState() {

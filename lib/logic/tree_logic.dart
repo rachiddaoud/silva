@@ -162,8 +162,25 @@ class TreeGenerator {
 
     for (int i = 0; i < numBranches; i++) {
       final angleVariationFactor = (random.nextDouble() - 0.5) * parameters.angleVariation;
+      
+      // Properly distribute branches to avoid overlapping
+      double angleMultiplier;
+      if (numBranches == 2) {
+        // Two branches: alternate left and right
+        angleMultiplier = (i % 2 == 0 ? 1 : -1);
+      } else {
+        // Three branches: center, left, right
+        if (i == 0) {
+          angleMultiplier = 0; // Center/straight
+        } else if (i == 1) {
+          angleMultiplier = -1; // Left
+        } else {
+          angleMultiplier = 1; // Right
+        }
+      }
+      
       final branchAngle = parent.angle +
-          parameters.baseBranchAngle * (i % 2 == 0 ? 1 : -1) +
+          parameters.baseBranchAngle * angleMultiplier +
           angleVariationFactor;
 
       final lengthVariation = 0.85 + random.nextDouble() * 0.3;

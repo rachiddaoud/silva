@@ -46,6 +46,7 @@ class VictoryCardWidget extends StatelessWidget {
           ],
         ),
         child: Stack(
+          alignment: Alignment.center,
           children: [
             // Background subtle pattern or gradient for selected state
             if (isSelected)
@@ -68,14 +69,15 @@ class VictoryCardWidget extends StatelessWidget {
               ),
               
             // Content
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Sprite with glow
-                    AnimatedScale(
+            Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Sprite with glow
+                  Flexible(
+                    child: AnimatedScale(
                       scale: isSelected ? 1.15 : 1.0,
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.elasticOut,
@@ -94,30 +96,32 @@ class VictoryCardWidget extends StatelessWidget {
                             : null,
                         child: SpriteDisplay(
                           victoryId: card.spriteId,
-                          size: 52,
+                          size: 48,
                           showBorder: false,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    // Text
-                    Text(
+                  ),
+                  const SizedBox(height: 8),
+                  // Text
+                  Flexible(
+                    child: Text(
                       card.text,
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         color: isSelected
                             ? colorScheme.onPrimaryContainer
                             : colorScheme.onSurface.withValues(alpha: 0.8),
                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        height: 1.2,
+                        height: 1.1,
                         letterSpacing: -0.2,
                       ),
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
             

@@ -66,6 +66,7 @@ class DatabaseService {
     final doc = await _daysCollection(uid).doc(docId).get();
 
     if (!doc.exists) {
+      debugPrint('📝 Creating empty entry for yesterday: $docId');
       // Create empty entry for yesterday
       final emptyEntry = DayEntry(
         date: yesterday,
@@ -74,6 +75,9 @@ class DatabaseService {
         victoryCards: [],
       );
       await _daysCollection(uid).doc(docId).set(emptyEntry.toJson());
+      debugPrint('✅ Empty entry created for yesterday');
+    } else {
+      debugPrint('✓ Yesterday entry already exists: $docId');
     }
   }
 
@@ -206,6 +210,24 @@ class DatabaseService {
       return null;
     } catch (e) {
       debugPrint('Error checking today entry: $e');
+      return null;
+    }
+  }
+
+  // Check if yesterday's entry exists
+  Future<DayEntry?> getYesterdayDayEntry(String uid) async {
+    try {
+      final now = DateTime.now();
+      final yesterday = now.subtract(const Duration(days: 1));
+      final docId = _dateToDocId(yesterday);
+      final doc = await _daysCollection(uid).doc(docId).get();
+      
+      if (doc.exists) {
+        return DayEntry.fromJson(doc.data() as Map<String, dynamic>);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error checking yesterday entry: $e');
       return null;
     }
   }

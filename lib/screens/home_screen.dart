@@ -50,6 +50,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _pageController = PageController(initialPage: 0);
     _checkAndResetVictories();
     _checkDayCompletion();
+    _checkYesterdayEmotion(); // Check if yesterday needs emotion
     _setupNotificationCallback();
     _refreshMorningNotification();
   }
@@ -88,6 +89,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       _checkAndResetVictories();
       _checkDayCompletion();
+      _checkYesterdayEmotion(); // Check if yesterday needs emotion
       _refreshMorningNotification();
       // Recharger les victoires pour refléter les changements depuis les notifications
       _reloadVictories();
@@ -143,6 +145,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             comment: existingEntry.comment,
             victoryCards: accomplishedVictories, // Update with latest state
           );
+          debugPrint('📝 Updating existing entry for ${lastResetDate.toString().substring(0, 10)}');
         } else {
           // No entry exists, create a new one (auto-save at midnight)
           entryToSave = DayEntry(
@@ -151,15 +154,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             comment: null,
             victoryCards: accomplishedVictories,
           );
+          debugPrint('📝 Creating new empty entry for ${lastResetDate.toString().substring(0, 10)} with ${accomplishedVictories.length} victories');
         }
         
         // Save locally
         await PreferencesService.saveDayEntry(entryToSave);
+        debugPrint('✅ Saved locally');
         
         // Save remotely if logged in
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
           await DatabaseService().saveDayEntry(user.uid, entryToSave);
+          debugPrint('✅ Saved to Firebase for user ${user.uid}');
         }
       }
 
@@ -202,6 +208,48 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         });
       }
     }
+  }
+
+  Future<void> _checkYesterdayEmotion() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final yesterdayEntry = await DatabaseService().getYesterdayDayEntry(user.uid);
+      
+      // Show prompt if yesterday exists but has no emotion
+      if (yesterdayEntry != null && yesterdayEntry.emotion == null) {
+        // Wait a bit for UI to settle before navigating
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          _navigateToYesterdayCompletion(yesterdayEntry);
+        }
+      }
+    }
+  }
+
+  void _navigateToYesterdayCompletion(DayEntry yesterdayEntry) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => DayCompletionScreen(
+          victories: yesterdayEntry.victoryCards.isEmpty 
+              ? VictoryCard.getDefaultVictories() 
+              : yesterdayEntry.victoryCards,
+          onComplete: (emotion, comment) async {
+            final user = FirebaseAuth.instance.currentUser;
+            if (user != null) {
+              final updatedEntry = DayEntry(
+                date: yesterdayEntry.date,
+                emotion: emotion,
+                comment: comment.isEmpty ? null : comment,
+                victoryCards: yesterdayEntry.victoryCards,
+              );
+              await DatabaseService().saveDayEntry(user.uid, updatedEntry);
+            }
+          },
+          targetDate: yesterdayEntry.date,
+          showBackWarning: true, // Show warning if user tries to go back without setting emotion
+        ),
+      ),
+    );
   }
 
 
@@ -516,5 +564,3 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 }
-
-

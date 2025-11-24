@@ -9,11 +9,15 @@ import '../utils/sprite_utils.dart';
 class DayCompletionScreen extends StatefulWidget {
   final List<VictoryCard> victories;
   final Function(Emotion, String) onComplete;
+  final DateTime? targetDate; // Optional: defaults to today
+  final bool showBackWarning; // Show warning if user tries to go back without emotion
 
   const DayCompletionScreen({
     super.key,
     required this.victories,
     required this.onComplete,
+    this.targetDate,
+    this.showBackWarning = false,
   });
 
   @override
@@ -139,9 +143,10 @@ class _DayCompletionScreenState extends State<DayCompletionScreen> {
     final emotionText = selectedEmotion!.name;
     final count = _accomplishedCount;
     final plural = count > 1 ? 's' : '';
+    final targetDate = widget.targetDate ?? DateTime.now();
     
     final shareText = '''
-🌟 Ma journée du ${_formatDate(DateTime.now())}
+🌟 Ma journée du ${_formatDate(targetDate)}
 
 $count victoire$plural accomplie$plural :
 $victoriesText
@@ -156,7 +161,25 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
     Share.share(shareText);
   }
 
-  static String _formatDate(DateTime date) {
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final yesterday = now.subtract(const Duration(days: 1));
+    
+    // Check if it's yesterday
+    if (date.year == yesterday.year &&
+        date.month == yesterday.month &&
+        date.day == yesterday.day) {
+      return 'Hier';
+    }
+    
+    // Check if it's today
+    if (date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day) {
+      return 'Aujourd\'hui';
+    }
+    
+    // Otherwise format as "day month year"
     const months = [
       'janvier',
       'février',
@@ -293,26 +316,53 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final targetDate = widget.targetDate ?? DateTime.now();
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          'Terminer ma journée',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: theme.colorScheme.onSurface,
+    return PopScope(
+      canPop: !widget.showBackWarning || selectedEmotion != null,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) return;
+        
+        // Show confirmation dialog
+        final shouldPop = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Quitter sans enregistrer ?'),
+            content: const Text(
+              'Vous n\'avez pas encore enregistré votre humeur. Êtes-vous sûr de vouloir quitter ?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Annuler'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Quitter'),
+              ),
+            ],
+          ),
+        );
+        
+        if (shouldPop == true && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text(
+            'Terminer ${_formatDate(targetDate)}',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: theme.colorScheme.onSurface,
+            ),
           ),
         ),
-      ),
-      body: SingleChildScrollView(
+        body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -417,6 +467,7 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
             const SizedBox(height: 20),
           ],
         ),
+      ),
       ),
     );
   }

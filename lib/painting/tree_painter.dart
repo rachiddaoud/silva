@@ -444,8 +444,13 @@ class TreePainter extends CustomPainter {
 
     final imageToUse = flower.flowerType == 1 ? jasminImage : flowerImage;
     
-    // Size flowers based on branch thickness for better proportions
-    final flowerSize = thicknessAtPoint * 2.5 * flower.sizeFactor;
+    // Scale flower size based on tree age - smaller flowers for young trees
+    final ageFactor = tree.age < 30 
+        ? 0.5 + (tree.age / 30.0) * 0.5  // 50% to 100% over first 30 days
+        : 1.0;  // Full size after 30 days
+    
+    final baseSize = tree.treeSize * 0.08 * ageFactor;
+    final flowerSize = baseSize * flower.sizeFactor;
 
     if (imageToUse != null) {
       canvas.save();

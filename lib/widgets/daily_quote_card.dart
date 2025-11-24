@@ -42,7 +42,7 @@ class _DailyQuoteCardState extends State<DailyQuoteCard> {
       // Share
       await Share.shareXFiles(
         [XFile(file.path)],
-        text: 'Une pensée pour toi ✨ #MaBulle',
+        text: 'Une pensée pour toi ✨ #Silva',
       );
     } catch (e) {
       debugPrint('Error sharing image: $e');
@@ -208,7 +208,7 @@ class _QuoteContent extends StatelessWidget {
             const SizedBox(height: 8),
             // Branding
             Text(
-              "Ma Bulle",
+              "Silva",
               style: GoogleFonts.greatVibes(
                 fontSize: 16,
                 color: theme.colorScheme.secondary.withValues(alpha: 0.6),

@@ -72,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const Spacer(),
               // Logo or Welcome Text
               Text(
-                'Bienvenue sur\nMa Bulle',
+                'Bienvenue sur\nSilva',
                 style: TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.bold,

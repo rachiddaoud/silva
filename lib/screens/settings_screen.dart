@@ -7,6 +7,8 @@ import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
 import '../l10n/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 
 class SettingsScreen extends StatefulWidget {
   final AppTheme currentTheme;
@@ -423,7 +425,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _sendFeedback() async {
+    final l10n = AppLocalizations.of(context)!;
+    final emailUri = Uri(
+      scheme: 'mailto',
+      path: 'daoud.mohamed.rachid@gmail.com',
+      query: 'subject=${Uri.encodeComponent(l10n.feedbackEmailSubject)}',
+    );
+
+    try {
+      final canLaunch = await canLaunchUrl(emailUri);
+      if (canLaunch) {
+        await launchUrl(
+          emailUri,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.feedbackEmailError),
+              backgroundColor: Theme.of(context).colorScheme.error,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error launching email: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${l10n.feedbackEmailError}: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+
   @override
+
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -618,6 +664,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 16),
                 _buildSettingsTile(
+                  icon: Icons.feedback_outlined,
+                  title: AppLocalizations.of(context)!.sendFeedback,
+                  subtitle: AppLocalizations.of(context)!.sendFeedbackSubtitle,
+                  color: theme.colorScheme.primary,
+                  onTap: _sendFeedback,
+                ),
+                const SizedBox(height: 16),
+                _buildSettingsTile(
+
                   icon: Icons.info_outline_rounded,
                   title: AppLocalizations.of(context)!.about,
                   color: theme.colorScheme.onSurface,

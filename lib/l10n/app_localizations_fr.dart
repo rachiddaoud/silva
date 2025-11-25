@@ -266,4 +266,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String treeFlowers(int count) {
     return 'Fleurs: $count';
   }
+
+  @override
+  String get sendFeedback => 'Envoyer un feedback';
+
+  @override
+  String get sendFeedbackSubtitle => 'Partagez vos idées et suggestions';
+
+  @override
+  String get feedbackEmailSubject => 'Feedback Silva';
+
+  @override
+  String get feedbackEmailError => 'Impossible d\'ouvrir le client email';
 }

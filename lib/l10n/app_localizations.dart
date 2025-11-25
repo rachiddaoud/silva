@@ -547,6 +547,30 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Fleurs: {count}'**
   String treeFlowers(int count);
+
+  /// No description provided for @sendFeedback.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer un feedback'**
+  String get sendFeedback;
+
+  /// No description provided for @sendFeedbackSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partagez vos idées et suggestions'**
+  String get sendFeedbackSubtitle;
+
+  /// No description provided for @feedbackEmailSubject.
+  ///
+  /// In fr, this message translates to:
+  /// **'Feedback Silva'**
+  String get feedbackEmailSubject;
+
+  /// No description provided for @feedbackEmailError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ouvrir le client email'**
+  String get feedbackEmailError;
 }
 
 class _AppLocalizationsDelegate

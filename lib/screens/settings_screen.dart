@@ -6,15 +6,20 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
+import '../l10n/app_localizations.dart';
 
 class SettingsScreen extends StatefulWidget {
   final AppTheme currentTheme;
   final ValueChanged<AppTheme> onThemeChanged;
+  final Locale? currentLocale;
+  final ValueChanged<Locale?> onLocaleChanged;
 
   const SettingsScreen({
     super.key,
     required this.currentTheme,
     required this.onThemeChanged,
+    this.currentLocale,
+    required this.onLocaleChanged,
   });
 
   @override
@@ -27,11 +32,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _photoURL;
   DateTime? _dateOfBirth;
   late AppTheme _currentTheme;
+  late Locale? _currentLocale;
 
   @override
   void initState() {
     super.initState();
     _currentTheme = widget.currentTheme;
+    _currentLocale = widget.currentLocale;
     _loadData();
   }
 
@@ -71,6 +78,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } else {
       await NotificationService.cancelDailyNotification();
       await NotificationService.cancelMorningNotification();
+    }
+  }
+
+  String _getLanguageName() {
+    final l10n = AppLocalizations.of(context)!;
+    if (_currentLocale == null) {
+      return l10n.systemDefault;
+    }
+    switch (_currentLocale!.languageCode) {
+      case 'fr':
+        return l10n.french;
+      case 'en':
+        return l10n.english;
+      default:
+        return l10n.systemDefault;
     }
   }
 
@@ -116,7 +138,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             Text(
-              'Choisir un thème',
+              AppLocalizations.of(context)!.chooseTheme,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -124,7 +146,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 24),
             // Color themes section
             Text(
-              'Couleurs',
+              AppLocalizations.of(context)!.colors,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -145,7 +167,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 32),
             // Seasonal themes section
             Text(
-              'Saisons',
+              AppLocalizations.of(context)!.seasons,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -164,6 +186,108 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLanguageSelector() {
+    final l10n = AppLocalizations.of(context)!;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Text(
+              l10n.language,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 24),
+            _buildLanguageOption(null, '🌐 ${l10n.systemDefault}'),
+            const SizedBox(height: 12),
+            _buildLanguageOption(const Locale('fr'), '🇫🇷 ${l10n.french}'),
+            const SizedBox(height: 12),
+            _buildLanguageOption(const Locale('en'), '🇬🇧 ${l10n.english}'),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageOption(Locale? locale, String label) {
+    final isSelected = (_currentLocale?.languageCode == locale?.languageCode) &&
+                       (_currentLocale == null && locale == null ||
+                        _currentLocale != null && locale != null);
+    final theme = Theme.of(context);
+    
+    return InkWell(
+      onTap: () {
+        widget.onLocaleChanged(locale);
+        setState(() {
+          _currentLocale = locale;
+        });
+        Navigator.pop(context);
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? theme.colorScheme.primary.withValues(alpha: 0.1)
+              : theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurface.withValues(alpha: 0.05),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurface,
+                ),
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle,
+                color: theme.colorScheme.primary,
+                size: 24,
+              ),
           ],
         ),
       ),
@@ -269,7 +393,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Paramètres'),
+        title: Text(AppLocalizations.of(context)!.settingsTitle),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -377,16 +501,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // Settings List
                 _buildSettingsTile(
                   icon: Icons.palette_outlined,
-                  title: 'Thème',
+                  title: AppLocalizations.of(context)!.chooseTheme, // Or "Thème" if I add it to ARB, but "chooseTheme" is close enough or I can add "themeTitle"
                   subtitle: ThemeConfig.themes[_currentTheme]!.name,
                   onTap: _showThemeSelector,
                   color: theme.colorScheme.primary,
                 ),
                 const SizedBox(height: 16),
                 _buildSettingsTile(
+                  icon: Icons.language_rounded,
+                  title: AppLocalizations.of(context)!.language,
+                  subtitle: _getLanguageName(),
+                  onTap: _showLanguageSelector,
+                  color: theme.colorScheme.tertiary,
+                ),
+                const SizedBox(height: 16),
+                _buildSettingsTile(
                   icon: _notificationsEnabled ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
-                  title: 'Notifications',
-                  subtitle: _notificationsEnabled ? 'Actives' : 'Désactivées',
+                  title: AppLocalizations.of(context)!.notifications,
+                  subtitle: _notificationsEnabled ? AppLocalizations.of(context)!.active : AppLocalizations.of(context)!.inactive,
                   color: theme.colorScheme.secondary,
                   trailing: Switch.adaptive(
                     value: _notificationsEnabled,
@@ -397,8 +529,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 16),
                 _buildSettingsTile(
                   icon: Icons.bug_report_outlined,
-                  title: 'Test Notifications',
-                  subtitle: 'Envoyer un test',
+                  title: AppLocalizations.of(context)!.testNotifications,
+                  subtitle: AppLocalizations.of(context)!.sendTest,
                   color: theme.colorScheme.tertiary,
                   onTap: () async {
                     await NotificationService.showTestNotification();
@@ -417,20 +549,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 16),
                 _buildSettingsTile(
                   icon: Icons.info_outline_rounded,
-                  title: 'À propos',
+                  title: AppLocalizations.of(context)!.about,
                   color: theme.colorScheme.onSurface,
                   onTap: () {
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
-                        title: const Text('Mes Petits Pas'),
-                        content: const Text(
-                          'Une application pour vous accompagner dans votre parcours post-partum. Chaque petit pas compte.',
+                        title: Text(AppLocalizations.of(context)!.appTitle),
+                        content: Text(
+                          AppLocalizations.of(context)!.aboutDescription,
                         ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Fermer'),
+                            child: Text(AppLocalizations.of(context)!.close),
                           ),
                         ],
                       ),
@@ -440,25 +572,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 32),
                 _buildSettingsTile(
                   icon: Icons.logout_rounded,
-                  title: 'Se déconnecter',
+                  title: AppLocalizations.of(context)!.logout,
                   color: theme.colorScheme.error,
                   onTap: () async {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (context) => AlertDialog(
-                        title: const Text('Déconnexion'),
-                        content: const Text('Voulez-vous vraiment vous déconnecter ?'),
+                        title: Text(AppLocalizations.of(context)!.logout),
+                        content: Text(AppLocalizations.of(context)!.logoutConfirmation),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Annuler'),
+                            child: Text(AppLocalizations.of(context)!.cancel),
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(context, true),
                             style: TextButton.styleFrom(
                               foregroundColor: theme.colorScheme.error,
                             ),
-                            child: const Text('Se déconnecter'),
+                            child: Text(AppLocalizations.of(context)!.logout),
                           ),
                         ],
                       ),
@@ -477,6 +609,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     builder: (context) => HomeScreen(
                                       currentTheme: widget.currentTheme,
                                       onThemeChanged: widget.onThemeChanged,
+                                      currentLocale: widget.currentLocale,
+                                      onLocaleChanged: widget.onLocaleChanged,
                                     ),
                                   ),
                                 );

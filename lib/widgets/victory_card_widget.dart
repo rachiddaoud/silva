@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/victory_card.dart';
 import '../utils/sprite_utils.dart';
+import '../utils/localization_utils.dart';
 
 class VictoryCardWidget extends StatelessWidget {
   final VictoryCard card;
@@ -106,7 +107,7 @@ class VictoryCardWidget extends StatelessWidget {
                   // Text
                   Flexible(
                     child: Text(
-                      card.text,
+                      getVictoryText(context, card.id),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 11,

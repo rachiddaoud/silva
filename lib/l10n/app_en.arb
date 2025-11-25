@@ -1,0 +1,170 @@
+{
+  "appTitle": "My Little Steps",
+  "victoriesTitle": "Victories",
+  "congratulationsMessage": "Well done! You completed {count} victor{pluralSuffix} today.",
+  "@congratulationsMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "pluralSuffix": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsTitle": "Settings",
+  "chooseTheme": "Choose a theme",
+  "colors": "Colors",
+  "seasons": "Seasons",
+  "notifications": "Notifications",
+  "active": "Active",
+  "inactive": "Disabled",
+  "testNotifications": "Test Notifications",
+  "sendTest": "Send a test",
+  "about": "About",
+  "logout": "Log out",
+  "logoutConfirmation": "Do you really want to log out?",
+  "cancel": "Cancel",
+  "close": "Close",
+  "aboutDescription": "An app to support you in your postpartum journey. Every little step counts.",
+  "victoryWater": "I drank a big glass of water",
+  "victoryShower": "I took a shower",
+  "victoryHelp": "I asked for help",
+  "victoryMeal": "I ate a hot meal",
+  "victoryBreathe": "I breathed for 1 minute",
+  "victoryBaby": "I put the baby down for 5 min",
+  "victoryNo": "I said \"No\"",
+  "victorySmile": "I smiled",
+  "victorySun": "I saw the sun for 5 min",
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "dayNotFilled": "Day not filled",
+  "history": "History",
+  "loginError": "Login error: {error}",
+  "@loginError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "welcomeTitle": "Welcome to\nSilva",
+  "welcomeSubtitle": "Your space for serenity and daily victories.",
+  "continueWithGoogle": "Continue with Google",
+  "finishDayTitle": "Finish {date}",
+  "@finishDayTitle": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "howDoYouFeel": "How do you feel today?",
+  "wordAboutDay": "A word about your day?",
+  "share": "Share",
+  "validate": "Validate",
+  "everyStepCounts": "Every little step counts 🌱",
+  "selectMoodError": "Please select your mood",
+  "quitWithoutSaving": "Quit without saving?",
+  "quitWithoutSavingMessage": "You haven't saved your mood yet. Are you sure you want to quit?",
+  "quit": "Quit",
+  "shareTitle": "🌟 My day on {date}",
+  "@shareTitle": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "shareVictories": "{count} victor{plural} completed:",
+  "@shareVictories": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "plural": {
+        "type": "String"
+      }
+    }
+  },
+  "shareMood": "💭 How I feel: {mood}",
+  "@shareMood": {
+    "placeholders": {
+      "mood": {
+        "type": "String"
+      }
+    }
+  },
+  "emotionExhausted": "Exhausted",
+  "emotionSad": "Sad / Overwhelmed",
+  "emotionAnxious": "Anxious",
+  "emotionNeutral": "Meh / Neutral",
+  "emotionCalm": "OK / Calm",
+  "emotionHappy": "Proud / Happy",
+  "language": "Language",
+  "systemDefault": "System default",
+  "french": "Français",
+  "english": "English",
+  "notifFinishDay": "Finish your day",
+  "notifFinishDayBody": "{name}, don't forget to finish your day and note your mood!",
+  "@notifFinishDayBody": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "notifFinishNow": "Finish now",
+  "notifGoodMorning": "Good morning {name}!",
+  "@notifGoodMorning": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "notifQuoteOfDay": "Your quote of the day: {quote}",
+  "@notifQuoteOfDay": {
+    "placeholders": {
+      "quote": {"type": "String"}
+    }
+  },
+  "notifReminder": "Little reminder 💚",
+  "notifReminderBody": "{name}, don't forget: {victory}",
+  "@notifReminderBody": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "victory": {"type": "String"}
+    }
+  },
+  "notifActionDone": "I did this action",
+  "treeRegenerated": "Tree regenerated from {days} days of history.",
+  "@treeRegenerated": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "treeInfo1": "• Each day filled makes the tree grow 🌱",
+  "treeInfo2": "• Positive days make the tree bloom 🌸",
+  "treeInfo3": "• Difficult days can cause dead leaves 🍂",
+  "treeAge": "Age: {age} days",
+  "@treeAge": {
+    "placeholders": {
+      "age": {"type": "int"}
+    }
+  },
+  "treeBranches": "Branches: {count}",
+  "@treeBranches": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "treeLeaves": "Leaves: {count}",
+  "@treeLeaves": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "treeFlowers": "Flowers: {count}",
+  "@treeFlowers": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  }
+}

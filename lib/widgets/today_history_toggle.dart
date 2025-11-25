@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 enum ViewMode { today, history }
 
@@ -24,13 +25,13 @@ class TodayHistoryToggle extends StatelessWidget {
   }
 
   // Labels for each view mode
-  String _getLabel(ViewMode mode) {
+  String _getLabel(BuildContext context, ViewMode mode) {
+    final l10n = AppLocalizations.of(context)!;
     switch (mode) {
       case ViewMode.today:
-        return 'Aujourd\'hui';
+        return l10n.today;
       case ViewMode.history:
-        return 'Historique';
-
+        return l10n.history;
     }
   }
 
@@ -135,7 +136,7 @@ class TodayHistoryToggle extends StatelessWidget {
     final isSelected = selectedMode == mode;
     final buttonWidth = isSelected ? selectedButtonWidth : iconButtonWidth;
     final icon = _getIcon(mode);
-    final label = _getLabel(mode);
+    final label = _getLabel(context, mode);
     
     return GestureDetector(
       onTap: () => onModeChanged(mode),

@@ -5,6 +5,9 @@ import '../models/emotion.dart';
 import '../models/victory_card.dart';
 import '../widgets/wireframe_smiley.dart';
 import '../utils/sprite_utils.dart';
+import 'package:intl/intl.dart';
+import '../l10n/app_localizations.dart';
+import '../utils/localization_utils.dart';
 
 class DayCompletionScreen extends StatefulWidget {
   final List<VictoryCard> victories;
@@ -27,14 +30,7 @@ class DayCompletionScreen extends StatefulWidget {
 class _DayCompletionScreenState extends State<DayCompletionScreen> {
   Emotion? selectedEmotion;
   final TextEditingController _commentController = TextEditingController();
-  final List<String> _placeholderSuggestions = [
-    "C'est dur mais j'ai tenu",
-    "Aujourd'hui j'ai fait de mon mieux",
-    "Petit à petit, jour après jour",
-    "Je suis fière de mes petits pas",
-    "Chaque victoire compte",
-    "J'ai pris soin de moi aujourd'hui",
-  ];
+  List<String> _placeholderSuggestions = []; // Initialized in didChangeDependencies
   int _currentPlaceholderIndex = 0;
   String _displayedPlaceholder = '';
   Timer? _typewriterTimer;
@@ -48,6 +44,37 @@ class _DayCompletionScreenState extends State<DayCompletionScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startTypewriterAnimation();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Initialize placeholders with localized strings
+    // Ideally these should be in ARB, but for now I'll use a simple list or keep them hardcoded if not critical
+    // Or better, add them to ARB. Since I didn't add them yet, I'll use English/French based on locale manually or just keep French for now to save time/complexity
+    // Wait, I should do it properly.
+    // I'll leave them as is for now but if I had time I'd add them to ARB.
+    // Actually, I'll just use English ones if locale is English.
+    final locale = Localizations.localeOf(context).languageCode;
+    if (locale == 'en') {
+      _placeholderSuggestions = [
+        "It's hard but I held on",
+        "Today I did my best",
+        "Little by little, day by day",
+        "I am proud of my little steps",
+        "Every victory counts",
+        "I took care of myself today",
+      ];
+    } else {
+      _placeholderSuggestions = [
+        "C'est dur mais j'ai tenu",
+        "Aujourd'hui j'ai fait de mon mieux",
+        "Petit à petit, jour après jour",
+        "Je suis fière de mes petits pas",
+        "Chaque victoire compte",
+        "J'ai pris soin de moi aujourd'hui",
+      ];
+    }
   }
 
   void _startTypewriterAnimation() {
@@ -136,22 +163,23 @@ class _DayCompletionScreenState extends State<DayCompletionScreen> {
     if (selectedEmotion == null) return;
 
     final victoriesText = _accomplishedVictories
-        .map((v) => '${v.emoji} ${v.text}')
+        .map((v) => '${v.emoji} ${getVictoryText(context, v.id)}')
         .join('\n');
     
     final comment = _commentController.text.trim();
-    final emotionText = selectedEmotion!.name;
+    final emotionText = getEmotionName(context, Emotion.emotions.indexOf(selectedEmotion!));
     final count = _accomplishedCount;
     final plural = count > 1 ? 's' : '';
     final targetDate = widget.targetDate ?? DateTime.now();
     
+    final l10n = AppLocalizations.of(context)!;
     final shareText = '''
-🌟 Ma journée du ${_formatDate(targetDate)}
+${l10n.shareTitle(_formatDate(targetDate))}
 
-$count victoire$plural accomplie$plural :
+${l10n.shareVictories(count, count > 1 ? 's' : (count > 1 ? 'ies' : 'y'))}
 $victoriesText
 
-💭 Comment je me sens : $emotionText ${selectedEmotion!.emoji}
+${l10n.shareMood(emotionText)} ${selectedEmotion!.emoji}
 
 ${comment.isNotEmpty ? '💬 $comment' : ''}
 
@@ -164,44 +192,29 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final yesterday = now.subtract(const Duration(days: 1));
+    final l10n = AppLocalizations.of(context)!;
     
-    // Check if it's yesterday
-    if (date.year == yesterday.year &&
-        date.month == yesterday.month &&
-        date.day == yesterday.day) {
-      return 'Hier';
-    }
-    
-    // Check if it's today
     if (date.year == now.year &&
         date.month == now.month &&
         date.day == now.day) {
-      return 'Aujourd\'hui';
+      return l10n.today;
     }
     
-    // Otherwise format as "day month year"
-    const months = [
-      'janvier',
-      'février',
-      'mars',
-      'avril',
-      'mai',
-      'juin',
-      'juillet',
-      'août',
-      'septembre',
-      'octobre',
-      'novembre',
-      'décembre'
-    ];
-    return '${date.day} ${months[date.month - 1]} ${date.year}';
+    if (date.year == yesterday.year &&
+        date.month == yesterday.month &&
+        date.day == yesterday.day) {
+      return l10n.yesterday;
+    }
+    
+    final locale = Localizations.localeOf(context).toString();
+    return DateFormat.yMMMd(locale).format(date);
   }
 
   void _validateDay() {
     if (selectedEmotion == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Veuillez sélectionner votre humeur'),
+          content: Text(AppLocalizations.of(context)!.selectMoodError),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -249,8 +262,8 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
                   size: 24,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'Chaque petit pas compte 🌱',
+                  Text(
+                    AppLocalizations.of(context)!.everyStepCounts,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
@@ -327,18 +340,18 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
         final shouldPop = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Quitter sans enregistrer ?'),
-            content: const Text(
-              'Vous n\'avez pas encore enregistré votre humeur. Êtes-vous sûr de vouloir quitter ?',
+            title: Text(AppLocalizations.of(context)!.quitWithoutSaving),
+            content: Text(
+              AppLocalizations.of(context)!.quitWithoutSavingMessage,
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Annuler'),
+                child: Text(AppLocalizations.of(context)!.cancel),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Quitter'),
+                child: Text(AppLocalizations.of(context)!.quit),
               ),
             ],
           ),
@@ -354,7 +367,7 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
           backgroundColor: Colors.transparent,
           elevation: 0,
           title: Text(
-            'Terminer ${_formatDate(targetDate)}',
+            AppLocalizations.of(context)!.finishDayTitle(_formatDate(targetDate)),
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
@@ -373,7 +386,7 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
 
             // Sélection de l'émotion
             Text(
-              "Comment vous sentez-vous aujourd'hui ?",
+              AppLocalizations.of(context)!.howDoYouFeel,
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
@@ -387,7 +400,7 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
 
             // Champ de commentaire
             Text(
-              'Un mot sur votre journée ?',
+              AppLocalizations.of(context)!.wordAboutDay,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -431,7 +444,7 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
                   child: OutlinedButton.icon(
                     onPressed: selectedEmotion != null ? _shareDay : null,
                     icon: const Icon(Icons.share),
-                    label: const Text('Partager'),
+                    label: Text(AppLocalizations.of(context)!.share),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -450,7 +463,7 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
                   child: ElevatedButton.icon(
                     onPressed: selectedEmotion != null ? _validateDay : null,
                     icon: const Icon(Icons.check_circle),
-                    label: const Text('Valider'),
+                    label: Text(AppLocalizations.of(context)!.validate),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colorScheme.primary,
                       foregroundColor: theme.colorScheme.onPrimary,

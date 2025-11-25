@@ -17,15 +17,20 @@ import '../services/notification_service.dart';
 import '../services/database_service.dart';
 import '../app_navigator.dart';
 import '../utils/quotes_data.dart';
+import '../l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
   final AppTheme currentTheme;
   final ValueChanged<AppTheme> onThemeChanged;
+  final Locale? currentLocale;
+  final ValueChanged<Locale?> onLocaleChanged;
 
   const HomeScreen({
     super.key,
     required this.currentTheme,
     required this.onThemeChanged,
+    this.currentLocale,
+    required this.onLocaleChanged,
   });
 
   @override
@@ -37,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late PageController _pageController;
   ViewMode _currentView = ViewMode.today;
   bool _isDayCompleted = false;
-  final List<String> _dailyQuotes = dailyQuotes;
+  // final List<String> _dailyQuotes = dailyQuotes; // Removed, using getDailyQuotes dynamically
 
   @override
   void initState() {
@@ -283,6 +288,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         builder: (context) => SettingsScreen(
           currentTheme: widget.currentTheme,
           onThemeChanged: widget.onThemeChanged,
+          currentLocale: widget.currentLocale,
+          onLocaleChanged: widget.onLocaleChanged,
         ),
       ),
     );
@@ -354,7 +361,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            "Bravo ! Vous avez terminé $accomplishedCount victoire${accomplishedCount > 1 ? 's' : ''} aujourd'hui.",
+            AppLocalizations.of(context)!.congratulationsMessage(accomplishedCount, accomplishedCount > 1 ? 's' : ''),
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w400,
@@ -379,7 +386,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final dayOfYear = DateTime.now().difference(
       DateTime(DateTime.now().year, 1, 1),
     ).inDays;
-    return _dailyQuotes[dayOfYear % _dailyQuotes.length];
+    final locale = Localizations.localeOf(context).languageCode;
+    final quotes = getDailyQuotes(locale);
+    return quotes[dayOfYear % quotes.length];
   }
 
   Widget _buildTodayView() {
@@ -412,7 +421,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Victoires',
+                      AppLocalizations.of(context)!.victoriesTitle,
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,

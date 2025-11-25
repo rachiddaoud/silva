@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/preferences_service.dart';
+import '../l10n/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -42,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur de connexion: $e'),
+            content: Text(AppLocalizations.of(context)!.loginError(e.toString())),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -72,7 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const Spacer(),
               // Logo or Welcome Text
               Text(
-                'Bienvenue sur\nSilva',
+                AppLocalizations.of(context)!.welcomeTitle,
                 style: TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.bold,
@@ -83,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Votre espace de sérénité et de victoires quotidiennes.',
+                AppLocalizations.of(context)!.welcomeSubtitle,
                 style: TextStyle(
                   fontSize: 18,
                   color: theme.colorScheme.onSurface.withOpacity(0.7),
@@ -102,9 +103,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         errorBuilder: (context, error, stackTrace) => 
                             const Icon(Icons.login),
                       ),
-                      label: const Text(
-                        'Continuer avec Google',
-                        style: TextStyle(fontSize: 16),
+                      label: Text(
+                        AppLocalizations.of(context)!.continueWithGoogle,
+                        style: const TextStyle(fontSize: 16),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,

@@ -1,0 +1,170 @@
+{
+  "appTitle": "Mes Petits Pas",
+  "victoriesTitle": "Victoires",
+  "congratulationsMessage": "Bravo ! Vous avez terminé {count} victoire{pluralSuffix} aujourd'hui.",
+  "@congratulationsMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "pluralSuffix": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsTitle": "Paramètres",
+  "chooseTheme": "Choisir un thème",
+  "colors": "Couleurs",
+  "seasons": "Saisons",
+  "notifications": "Notifications",
+  "active": "Actives",
+  "inactive": "Désactivées",
+  "testNotifications": "Test Notifications",
+  "sendTest": "Envoyer un test",
+  "about": "À propos",
+  "logout": "Se déconnecter",
+  "logoutConfirmation": "Voulez-vous vraiment vous déconnecter ?",
+  "cancel": "Annuler",
+  "close": "Fermer",
+  "aboutDescription": "Une application pour vous accompagner dans votre parcours post-partum. Chaque petit pas compte.",
+  "victoryWater": "J'ai bu un grand verre d'eau",
+  "victoryShower": "J'ai pris ma douche",
+  "victoryHelp": "J'ai demandé de l'aide",
+  "victoryMeal": "J'ai mangé un repas chaud",
+  "victoryBreathe": "J'ai respiré 1 minute",
+  "victoryBaby": "J'ai posé le bébé 5 min",
+  "victoryNo": "J'ai dit \"Non\"",
+  "victorySmile": "J'ai souri",
+  "victorySun": "J'ai vu le soleil 5 min",
+  "today": "Aujourd'hui",
+  "yesterday": "Hier",
+  "dayNotFilled": "Jour non rempli",
+  "history": "Historique",
+  "loginError": "Erreur de connexion: {error}",
+  "@loginError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "welcomeTitle": "Bienvenue sur\nSilva",
+  "welcomeSubtitle": "Votre espace de sérénité et de victoires quotidiennes.",
+  "continueWithGoogle": "Continuer avec Google",
+  "finishDayTitle": "Terminer {date}",
+  "@finishDayTitle": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "howDoYouFeel": "Comment vous sentez-vous aujourd'hui ?",
+  "wordAboutDay": "Un mot sur votre journée ?",
+  "share": "Partager",
+  "validate": "Valider",
+  "everyStepCounts": "Chaque petit pas compte 🌱",
+  "selectMoodError": "Veuillez sélectionner votre humeur",
+  "quitWithoutSaving": "Quitter sans enregistrer ?",
+  "quitWithoutSavingMessage": "Vous n'avez pas encore enregistré votre humeur. Êtes-vous sûr de vouloir quitter ?",
+  "quit": "Quitter",
+  "shareTitle": "🌟 Ma journée du {date}",
+  "@shareTitle": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "shareVictories": "{count} victoire{plural} accomplie{plural} :",
+  "@shareVictories": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "plural": {
+        "type": "String"
+      }
+    }
+  },
+  "shareMood": "💭 Comment je me sens : {mood}",
+  "@shareMood": {
+    "placeholders": {
+      "mood": {
+        "type": "String"
+      }
+    }
+  },
+  "emotionExhausted": "Épuisée",
+  "emotionSad": "Triste / Débordée",
+  "emotionAnxious": "Anxieuse",
+  "emotionNeutral": "Bof / Neutre",
+  "emotionCalm": "OK / Calme",
+  "emotionHappy": "Fière / Joyeuse",
+  "language": "Langue",
+  "systemDefault": "Système par défaut",
+  "french": "Français",
+  "english": "English",
+  "notifFinishDay": "Terminer votre journée",
+  "notifFinishDayBody": "{name}, n'oubliez pas de terminer votre journée et de noter votre humeur !",
+  "@notifFinishDayBody": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "notifFinishNow": "Terminer maintenant",
+  "notifGoodMorning": "Bonjour {name} !",
+  "@notifGoodMorning": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "notifQuoteOfDay": "Votre citation du jour : {quote}",
+  "@notifQuoteOfDay": {
+    "placeholders": {
+      "quote": {"type": "String"}
+    }
+  },
+  "notifReminder": "Petit rappel 💚",
+  "notifReminderBody": "{name}, n'oubliez pas : {victory}",
+  "@notifReminderBody": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "victory": {"type": "String"}
+    }
+  },
+  "notifActionDone": "J'ai fait cette action",
+  "treeRegenerated": "Arbre régénéré à partir de {days} jours d'historique.",
+  "@treeRegenerated": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "treeInfo1": "• Chaque jour rempli fait pousser l'arbre 🌱",
+  "treeInfo2": "• Les jours positifs font fleurir l'arbre 🌸",
+  "treeInfo3": "• Les jours difficiles peuvent causer des feuilles mortes 🍂",
+  "treeAge": "Âge: {age} jours",
+  "@treeAge": {
+    "placeholders": {
+      "age": {"type": "int"}
+    }
+  },
+  "treeBranches": "Branches: {count}",
+  "@treeBranches": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "treeLeaves": "Feuilles: {count}",
+  "@treeLeaves": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "treeFlowers": "Fleurs: {count}",
+  "@treeFlowers": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  }
+}

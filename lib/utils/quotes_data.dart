@@ -1,4 +1,4 @@
-const List<String> dailyQuotes = [
+const List<String> dailyQuotesFr = [
   // Original quotes
   "Vous faites de votre mieux, et c'est suffisant.",
   "Le repos n'est pas une récompense, c'est une nécessité.",
@@ -108,3 +108,39 @@ const List<String> dailyQuotes = [
   "Je me traite avec plus de douceur chaque jour.",
   "Je suis exactement la maman qu’il faut, même quand j’en doute.",
 ];
+
+const List<String> dailyQuotesEn = [
+  "You are doing your best, and that is enough.",
+  "Rest is not a reward, it is a necessity.",
+  "Taking care of yourself is taking care of your baby.",
+  "Today, I am doing my best, and that is already a lot.",
+  "I deserve gentleness, patience, and rest.",
+  "I am enough, exactly as I am.",
+  "I take the time I need to feel and breathe.",
+  "My emotions are valid and have their place.",
+  "I can feel vulnerable and strong at the same time.",
+  "I allow myself to ask for help.",
+  "I am learning, a little more every day.",
+  "I choose compassion towards myself.",
+  "I am more resilient than I think.",
+  "My body is recovering at its own pace, and I honor it.",
+  "I thank my body for everything it accomplishes.",
+  "I deserve to feel beautiful, even on difficult days.",
+  "I am patient with my healing.",
+  "My body is strong, generous, and courageous.",
+  "I give myself permission to slow down.",
+  "I respect my limits without guilt.",
+  "I am both transforming and whole.",
+  "My energy is returning slowly.",
+  "I am proud of myself.",
+];
+
+List<String> getDailyQuotes(String languageCode) {
+  if (languageCode == 'en') {
+    return dailyQuotesEn;
+  }
+  return dailyQuotesFr;
+}
+
+// Deprecated: use getDailyQuotes instead
+const List<String> dailyQuotes = dailyQuotesFr;

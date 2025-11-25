@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:silva/services/database_service.dart';
 import 'package:silva/models/tree/tree_parameters.dart';
@@ -256,7 +257,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     debugPrint('✅ Tree regenerated from $daysProcessed days of history.');
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Arbre régénéré à partir de $daysProcessed jours d\'historique.')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.treeRegenerated(daysProcessed))),
       );
     }
   }
@@ -267,36 +268,35 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('À propos de votre arbre'),
-        content: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Votre arbre grandit avec vous ! 🌱\n\n'
-              '• Chaque victoire ajoute une feuille 🍃\n'
-              '• Les jours positifs font fleurir l\'arbre 🌸\n'
-              '• Les jours difficiles peuvent causer des feuilles mortes 🍂\n'
-              '• L\'arbre vieillit et grandit chaque jour 🌳',
-              style: TextStyle(fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 8),
-            Text('Âge: ${tree.age} jours'),
-            Text('Branches: ${tree.getAllBranches().length}'),
-            Text('Feuilles: ${tree.getAllLeaves().length}'),
-            Text('Fleurs: ${tree.getAllFlowers().length}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fermer'),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return AlertDialog(
+          title: const Text('🌳'),
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${l10n.treeInfo1}\n'
+                '${l10n.treeInfo2}\n'
+                '${l10n.treeInfo3}\n'
+                '\n'
+                '${l10n.treeAge(tree.age)}\n'
+                '${l10n.treeBranches(tree.getAllBranches().length)}\n'
+                '${l10n.treeLeaves(tree.getAllLeaves().length)}\n'
+                '${l10n.treeFlowers(tree.getAllFlowers().length)}',
+                style: const TextStyle(fontSize: 14),
+              ),
+            ],
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
     );
   }
 

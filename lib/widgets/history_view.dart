@@ -5,6 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/day_entry.dart';
 import '../services/database_service.dart';
 import '../utils/sprite_utils.dart';
+import 'package:intl/intl.dart';
+import '../l10n/app_localizations.dart';
+import '../utils/localization_utils.dart';
 
 class HistoryView extends StatefulWidget {
   const HistoryView({super.key});
@@ -77,7 +80,7 @@ class _HistoryViewState extends State<HistoryView> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Chargement de l\'historique...',
+              'Chargement de l\'historique...', // TODO: Localize this too if needed, but keeping simple for now
               style: TextStyle(
                 fontSize: 16,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
@@ -100,7 +103,7 @@ class _HistoryViewState extends State<HistoryView> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Aucun historique pour le moment',
+              'Aucun historique pour le moment', // TODO: Localize
               style: TextStyle(
                 fontSize: 16,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
@@ -149,22 +152,22 @@ class _TimelineEntry extends StatelessWidget {
     required this.isLast,
   });
 
-  String _formatDate(DateTime date) {
+  String _formatDate(BuildContext context, DateTime date) {
     final today = DateTime.now();
     final yesterday = today.subtract(const Duration(days: 1));
+    final l10n = AppLocalizations.of(context)!;
     
     if (date.year == today.year &&
         date.month == today.month &&
         date.day == today.day) {
-      return "Aujourd'hui";
+      return l10n.today;
     } else if (date.year == yesterday.year &&
         date.month == yesterday.month &&
         date.day == yesterday.day) {
-      return "Hier";
+      return l10n.yesterday;
     } else {
-      final weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-      final months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-      return "${weekdays[date.weekday - 1]} ${date.day} ${months[date.month - 1]}";
+      final locale = Localizations.localeOf(context).toString();
+      return DateFormat.yMMMd(locale).format(date);
     }
   }
 
@@ -195,7 +198,7 @@ class _TimelineEntry extends StatelessWidget {
                 children: [
                   // Date et émotion
                   Text(
-                    _formatDate(date),
+                    _formatDate(context, date),
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -212,7 +215,7 @@ class _TimelineEntry extends StatelessWidget {
                         return Row(
                           children: [
                             Text(
-                              e.name,
+                              getEmotionName(context, Emotion.emotions.indexOf(e)),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -233,7 +236,7 @@ class _TimelineEntry extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'Jour non rempli',
+                          AppLocalizations.of(context)!.dayNotFilled,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
@@ -412,7 +415,7 @@ class _VictoryTag extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            victory.text,
+            getVictoryText(context, victory.id),
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,

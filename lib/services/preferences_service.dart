@@ -18,6 +18,7 @@ class PreferencesService {
   static const String _todayVictoriesKey = 'today_victories';
   static const String _treeStateKey = 'tree_state';
   static const String _lastTreeUpdateDateKey = 'last_tree_update_date';
+  static const String _localeKey = 'locale';
 
   // Thème
   static Future<AppTheme> getTheme() async {
@@ -300,6 +301,21 @@ class PreferencesService {
   static Future<void> setLastTreeUpdateDate(DateTime date) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_lastTreeUpdateDateKey, date.toIso8601String());
+  }
+
+  // Locale preference
+  static Future<String?> getLocale() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_localeKey);
+  }
+
+  static Future<void> setLocale(String? localeCode) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (localeCode == null) {
+      await prefs.remove(_localeKey);
+    } else {
+      await prefs.setString(_localeKey, localeCode);
+    }
   }
 }
 

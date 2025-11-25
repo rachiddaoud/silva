@@ -9,6 +9,11 @@ import '../app_navigator.dart';
 import '../screens/day_completion_screen.dart';
 import '../models/emotion.dart';
 import '../utils/quotes_data.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/app_localizations_en.dart';
+import '../l10n/app_localizations_fr.dart';
+import 'package:flutter/widgets.dart';
+import '../utils/localization_utils.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notifications =
@@ -27,16 +32,29 @@ class NotificationService {
   static const String _actionCompleteNow = 'action_complete_now';
   static const String _actionMarkDone = 'action_mark_done';
 
-  // Citations du jour
-  // Citations du jour
-  static const List<String> _dailyQuotes = dailyQuotes;
+  // Get current locale code from preferences
+  static Future<String> _getLocaleCode() async {
+    final localeCode = await PreferencesService.getLocale();
+    return localeCode ?? 'fr'; // Default to French
+  }
 
-  // Obtenir la citation du jour
-  static String _getCurrentQuote() {
+  // Create appropriate AppLocalizations instance
+  static AppLocalizations _getLocalizations(String localeCode) {
+    final locale = Locale(localeCode);
+    if (localeCode == 'en') {
+      return AppLocalizationsEn();
+    }
+    return AppLocalizationsFr();
+  }
+
+  // Get current quote in the appropriate language
+  static Future<String> _getCurrentQuote() async {
+    final localeCode = await _getLocaleCode();
+    final quotes = getDailyQuotes(localeCode);
     final dayOfYear = DateTime.now().difference(
       DateTime(DateTime.now().year, 1, 1),
     ).inDays;
-    return _dailyQuotes[dayOfYear % _dailyQuotes.length];
+    return quotes[dayOfYear % quotes.length];
   }
 
   static Future<void> initialize() async {
@@ -198,13 +216,17 @@ class NotificationService {
       return;
     }
 
-    // Récupérer le nom de l'utilisateur
-    final userName = await PreferencesService.getUserName();
-    final name = userName ?? 'vous';
+    // Get locale and localizations
+    final localeCode = await _getLocaleCode();
+    final l10n = _getLocalizations(localeCode);
     
-    // Formater le message avec le nom de l'utilisateur
-    final title = 'Terminer votre journée';
-    final body = '$name, n\'oubliez pas de terminer votre journée et de noter votre humeur !';
+    // Get user name
+    final userName = await PreferencesService.getUserName();
+    final name = userName ?? (localeCode == 'en' ? 'you' : 'vous');
+    
+    // Format message
+    final title = l10n.notifFinishDay;
+    final body = l10n.notifFinishDayBody(name);
 
     await _notifications.zonedSchedule(
       0,
@@ -213,20 +235,20 @@ class NotificationService {
       _nextInstanceOf22PM(),
       NotificationDetails(
         android: AndroidNotificationDetails(
-          'daily_reminder',
-          'Rappel quotidien',
-          channelDescription: 'Rappel pour terminer la journée à 22h',
+         'daily_reminder',
+          localeCode == 'en' ? 'Daily reminder' : 'Rappel quotidien',
+          channelDescription: localeCode == 'en' ? 'Reminder to finish the day at 10 PM' : 'Rappel pour terminer la journée à 22h',
           importance: Importance.high,
           priority: Priority.high,
           actions: [
-            const AndroidNotificationAction(
+            AndroidNotificationAction(
               _actionCompleteNow,
-              'Terminer maintenant',
+              l10n.notifFinishNow,
               showsUserInterface: true,
             ),
           ],
         ),
-        iOS: DarwinNotificationDetails(
+        iOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
@@ -270,31 +292,35 @@ class NotificationService {
       return;
     }
 
-    // Récupérer le nom de l'utilisateur
+    // Get locale and localizations
+    final localeCode = await _getLocaleCode();
+    final l10n = _getLocalizations(localeCode);
+    
+    // Get user name
     final userName = await PreferencesService.getUserName();
-    final name = userName ?? 'vous';
+    final name = userName ?? (localeCode == 'en' ? 'you' : 'vous');
     
-    // Récupérer la citation du jour
-    final quote = _getCurrentQuote();
+    // Get quote of the day
+    final quote = await _getCurrentQuote();
     
-    // Formater le message avec le nom de l'utilisateur
-    final title = 'Bonjour $name !';
-    final body = 'Votre citation du jour : $quote';
+    // Format message
+    final title = l10n.notifGoodMorning(name);
+    final body = l10n.notifQuoteOfDay(quote);
 
     await _notifications.zonedSchedule(
-      1, // ID différent de la notification du soir (0)
+      1, // Different ID from evening notification (0)
       title,
       body,
       _nextInstanceOf9AM(),
       NotificationDetails(
         android: AndroidNotificationDetails(
           'morning_quote',
-          'Citation du matin',
-          channelDescription: 'Citation du jour à 9h du matin',
+          localeCode == 'en' ? 'Morning quote' : 'Citation du matin',
+          channelDescription: localeCode == 'en' ? 'Quote of the day at 9 AM' : 'Citation du jour à 9h du matin',
           importance: Importance.high,
           priority: Priority.high,
         ),
-        iOS: DarwinNotificationDetails(
+        iOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
@@ -303,8 +329,6 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      // Ne pas utiliser matchDateTimeComponents car on reprogramme chaque jour
-      // pour mettre à jour la citation
       payload: _morningNotificationType,
     );
   }
@@ -338,11 +362,15 @@ class NotificationService {
       return;
     }
 
-    // Récupérer les victoires du jour
+    // Get locale and localizations
+    final localeCode = await _getLocaleCode();
+    final l10n = _getLocalizations(localeCode);
+    
+    // Get today's victories
     final victories = await PreferencesService.getTodayVictories();
     final unaccomplishedVictories = victories.where((v) => !v.isAccomplished).toList();
     
-    // Si toutes les victoires sont accomplies, ne pas programmer de rappel
+    // If all victories are accomplished, don't schedule reminders
     if (unaccomplishedVictories.isEmpty) {
       await cancelDayReminders();
       return;
@@ -350,31 +378,33 @@ class NotificationService {
 
     final random = Random();
     final userName = await PreferencesService.getUserName();
-    final name = userName ?? 'vous';
+    final name = userName ?? (localeCode == 'en' ? 'you' : 'vous');
 
-    // Première notification à 12h
+    // First notification at 12 PM
     final selectedVictory1 = unaccomplishedVictories[random.nextInt(unaccomplishedVictories.length)];
+    final victoryText1 = getVictoryTextByLocale(localeCode, selectedVictory1.id);
+    
     await _notifications.zonedSchedule(
       2,
-      'Petit rappel 💚',
-      '$name, n\'oubliez pas : ${selectedVictory1.text}',
+      l10n.notifReminder,
+      l10n.notifReminderBody(name, victoryText1),
       _nextInstanceOf12PM(),
       NotificationDetails(
         android: AndroidNotificationDetails(
           'day_reminder',
-          'Rappel de la journée',
-          channelDescription: 'Rappels pour les actions de la journée',
+          localeCode == 'en' ? 'Day reminder' : 'Rappel de la journée',
+          channelDescription: localeCode == 'en' ? 'Reminders for daily actions' : 'Rappels pour les actions de la journée',
           importance: Importance.high,
           priority: Priority.high,
           actions: [
             AndroidNotificationAction(
               _actionMarkDone,
-              'J\'ai fait cette action',
+              l10n.notifActionDone,
               showsUserInterface: true,
             ),
           ],
         ),
-        iOS: DarwinNotificationDetails(
+        iOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
@@ -388,36 +418,36 @@ class NotificationService {
       payload: '$_dayReminderNotificationType|${selectedVictory1.id}',
     );
 
-    // Deuxième notification à 17h
-    // Filtrer à nouveau pour exclure la victoire déjà sélectionnée si possible
+    // Second notification at 5 PM
     final remainingVictories = unaccomplishedVictories
         .where((v) => v.id != selectedVictory1.id)
         .toList();
     final selectedVictory2 = remainingVictories.isNotEmpty
         ? remainingVictories[random.nextInt(remainingVictories.length)]
         : unaccomplishedVictories[random.nextInt(unaccomplishedVictories.length)];
+    final victoryText2 = getVictoryTextByLocale(localeCode, selectedVictory2.id);
 
     await _notifications.zonedSchedule(
       3,
-      'Petit rappel 💚',
-      '$name, n\'oubliez pas : ${selectedVictory2.text}',
+      l10n.notifReminder,
+      l10n.notifReminderBody(name, victoryText2),
       _nextInstanceOf5PM(),
       NotificationDetails(
         android: AndroidNotificationDetails(
           'day_reminder',
-          'Rappel de la journée',
-          channelDescription: 'Rappels pour les actions de la journée',
+          localeCode == 'en' ? 'Day reminder' : 'Rappel de la journée',
+          channelDescription: localeCode == 'en' ? 'Reminders for daily actions' : 'Rappels pour les actions de la journée',
           importance: Importance.high,
           priority: Priority.high,
           actions: [
             AndroidNotificationAction(
               _actionMarkDone,
-              'J\'ai fait cette action',
+              l10n.notifActionDone,
               showsUserInterface: true,
             ),
           ],
         ),
-        iOS: DarwinNotificationDetails(
+        iOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,

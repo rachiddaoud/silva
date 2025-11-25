@@ -37,6 +37,15 @@
   "victoryNo": "I said \"No\"",
   "victorySmile": "I smiled",
   "victorySun": "I saw the sun for 5 min",
+  "victoryReminderWater": "drink a big glass of water",
+  "victoryReminderShower": "take a shower",
+  "victoryReminderHelp": "ask for help",
+  "victoryReminderMeal": "eat a hot meal",
+  "victoryReminderBreathe": "breathe for 1 minute",
+  "victoryReminderBaby": "put the baby down for 5 min",
+  "victoryReminderNo": "say \"No\"",
+  "victoryReminderSmile": "smile",
+  "victoryReminderSun": "see the sun for 5 min",
   "today": "Today",
   "yesterday": "Yesterday",
   "dayNotFilled": "Day not filled",
@@ -127,7 +136,7 @@
     }
   },
   "notifReminder": "Little reminder 💚",
-  "notifReminderBody": "{name}, don't forget: {victory}",
+  "notifReminderBody": "{name}, don't forget to {victory}",
   "@notifReminderBody": {
     "placeholders": {
       "name": {"type": "String"},

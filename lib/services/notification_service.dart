@@ -382,7 +382,7 @@ class NotificationService {
 
     // First notification at 12 PM
     final selectedVictory1 = unaccomplishedVictories[random.nextInt(unaccomplishedVictories.length)];
-    final victoryText1 = getVictoryTextByLocale(localeCode, selectedVictory1.id);
+    final victoryText1 = getVictoryReminderTextByLocale(localeCode, selectedVictory1.id);
     
     await _notifications.zonedSchedule(
       2,
@@ -425,7 +425,7 @@ class NotificationService {
     final selectedVictory2 = remainingVictories.isNotEmpty
         ? remainingVictories[random.nextInt(remainingVictories.length)]
         : unaccomplishedVictories[random.nextInt(unaccomplishedVictories.length)];
-    final victoryText2 = getVictoryTextByLocale(localeCode, selectedVictory2.id);
+    final victoryText2 = getVictoryReminderTextByLocale(localeCode, selectedVictory2.id);
 
     await _notifications.zonedSchedule(
       3,
@@ -527,7 +527,7 @@ class NotificationService {
     
     // Select two different victories for reminders
     final selectedVictory1 = availableVictories[random.nextInt(availableVictories.length)];
-    final victoryText1 = getVictoryTextByLocale(localeCode, selectedVictory1.id);
+    final victoryText1 = getVictoryReminderTextByLocale(localeCode, selectedVictory1.id);
     
     final remainingVictories = availableVictories
         .where((v) => v.id != selectedVictory1.id)
@@ -535,7 +535,7 @@ class NotificationService {
     final selectedVictory2 = remainingVictories.isNotEmpty
         ? remainingVictories[random.nextInt(remainingVictories.length)]
         : selectedVictory1;
-    final victoryText2 = getVictoryTextByLocale(localeCode, selectedVictory2.id);
+    final victoryText2 = getVictoryReminderTextByLocale(localeCode, selectedVictory2.id);
     
     // 1. Morning notification (quote of the day)
     await _notifications.show(

@@ -266,6 +266,60 @@ abstract class AppLocalizations {
   /// **'J\'ai vu le soleil 5 min'**
   String get victorySun;
 
+  /// No description provided for @victoryReminderWater.
+  ///
+  /// In fr, this message translates to:
+  /// **'boire un grand verre d\'eau'**
+  String get victoryReminderWater;
+
+  /// No description provided for @victoryReminderShower.
+  ///
+  /// In fr, this message translates to:
+  /// **'prendre votre douche'**
+  String get victoryReminderShower;
+
+  /// No description provided for @victoryReminderHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'demander de l\'aide'**
+  String get victoryReminderHelp;
+
+  /// No description provided for @victoryReminderMeal.
+  ///
+  /// In fr, this message translates to:
+  /// **'manger un repas chaud'**
+  String get victoryReminderMeal;
+
+  /// No description provided for @victoryReminderBreathe.
+  ///
+  /// In fr, this message translates to:
+  /// **'respirer 1 minute'**
+  String get victoryReminderBreathe;
+
+  /// No description provided for @victoryReminderBaby.
+  ///
+  /// In fr, this message translates to:
+  /// **'poser le bébé 5 min'**
+  String get victoryReminderBaby;
+
+  /// No description provided for @victoryReminderNo.
+  ///
+  /// In fr, this message translates to:
+  /// **'dire \"Non\"'**
+  String get victoryReminderNo;
+
+  /// No description provided for @victoryReminderSmile.
+  ///
+  /// In fr, this message translates to:
+  /// **'sourire'**
+  String get victoryReminderSmile;
+
+  /// No description provided for @victoryReminderSun.
+  ///
+  /// In fr, this message translates to:
+  /// **'voir le soleil 5 min'**
+  String get victoryReminderSun;
+
   /// No description provided for @today.
   ///
   /// In fr, this message translates to:
@@ -491,7 +545,7 @@ abstract class AppLocalizations {
   /// No description provided for @notifReminderBody.
   ///
   /// In fr, this message translates to:
-  /// **'{name}, n\'oubliez pas : {victory}'**
+  /// **'{name}, n\'oubliez pas de {victory}'**
   String notifReminderBody(String name, String victory);
 
   /// No description provided for @notifActionDone.

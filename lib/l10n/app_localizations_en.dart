@@ -96,6 +96,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get victorySun => 'I saw the sun for 5 min';
 
   @override
+  String get victoryReminderWater => 'drink a big glass of water';
+
+  @override
+  String get victoryReminderShower => 'take a shower';
+
+  @override
+  String get victoryReminderHelp => 'ask for help';
+
+  @override
+  String get victoryReminderMeal => 'eat a hot meal';
+
+  @override
+  String get victoryReminderBreathe => 'breathe for 1 minute';
+
+  @override
+  String get victoryReminderBaby => 'put the baby down for 5 min';
+
+  @override
+  String get victoryReminderNo => 'say \"No\"';
+
+  @override
+  String get victoryReminderSmile => 'smile';
+
+  @override
+  String get victoryReminderSun => 'see the sun for 5 min';
+
+  @override
   String get today => 'Today';
 
   @override
@@ -225,7 +252,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String notifReminderBody(String name, String victory) {
-    return '$name, don\'t forget: $victory';
+    return '$name, don\'t forget to $victory';
   }
 
   @override

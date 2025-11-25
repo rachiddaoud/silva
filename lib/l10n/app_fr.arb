@@ -37,6 +37,15 @@
   "victoryNo": "J'ai dit \"Non\"",
   "victorySmile": "J'ai souri",
   "victorySun": "J'ai vu le soleil 5 min",
+  "victoryReminderWater": "boire un grand verre d'eau",
+  "victoryReminderShower": "prendre votre douche",
+  "victoryReminderHelp": "demander de l'aide",
+  "victoryReminderMeal": "manger un repas chaud",
+  "victoryReminderBreathe": "respirer 1 minute",
+  "victoryReminderBaby": "poser le bébé 5 min",
+  "victoryReminderNo": "dire \"Non\"",
+  "victoryReminderSmile": "sourire",
+  "victoryReminderSun": "voir le soleil 5 min",
   "today": "Aujourd'hui",
   "yesterday": "Hier",
   "dayNotFilled": "Jour non rempli",
@@ -127,7 +136,7 @@
     }
   },
   "notifReminder": "Petit rappel 💚",
-  "notifReminderBody": "{name}, n'oubliez pas : {victory}",
+  "notifReminderBody": "{name}, n'oubliez pas de {victory}",
   "@notifReminderBody": {
     "placeholders": {
       "name": {"type": "String"},

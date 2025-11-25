@@ -96,6 +96,33 @@ class AppLocalizationsFr extends AppLocalizations {
   String get victorySun => 'J\'ai vu le soleil 5 min';
 
   @override
+  String get victoryReminderWater => 'boire un grand verre d\'eau';
+
+  @override
+  String get victoryReminderShower => 'prendre votre douche';
+
+  @override
+  String get victoryReminderHelp => 'demander de l\'aide';
+
+  @override
+  String get victoryReminderMeal => 'manger un repas chaud';
+
+  @override
+  String get victoryReminderBreathe => 'respirer 1 minute';
+
+  @override
+  String get victoryReminderBaby => 'poser le bébé 5 min';
+
+  @override
+  String get victoryReminderNo => 'dire \"Non\"';
+
+  @override
+  String get victoryReminderSmile => 'sourire';
+
+  @override
+  String get victoryReminderSun => 'voir le soleil 5 min';
+
+  @override
   String get today => 'Aujourd\'hui';
 
   @override
@@ -226,7 +253,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String notifReminderBody(String name, String victory) {
-    return '$name, n\'oubliez pas : $victory';
+    return '$name, n\'oubliez pas de $victory';
   }
 
   @override

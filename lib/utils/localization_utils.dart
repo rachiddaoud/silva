@@ -81,3 +81,38 @@ String getVictoryTextByLocale(String localeCode, int victoryId) {
       return '';
   }
 }
+
+// Static helper for reminder notifications (without BuildContext)
+// Returns the infinitive form of the victory text (e.g., "boire de l'eau" instead of "J'ai bu de l'eau")
+String getVictoryReminderTextByLocale(String localeCode, int victoryId) {
+  final AppLocalizations l10n;
+  if (localeCode == 'en') {
+    l10n = AppLocalizationsEn();
+  } else {
+    l10n = AppLocalizationsFr();
+  }
+  
+  switch (victoryId) {
+    case 0:
+      return l10n.victoryReminderWater;
+    case 1:
+      return l10n.victoryReminderShower;
+    case 2:
+      return l10n.victoryReminderHelp;
+    case 3:
+      return l10n.victoryReminderMeal;
+    case 4:
+      return l10n.victoryReminderBreathe;
+    case 5:
+      return l10n.victoryReminderBaby;
+    case 6:
+      return l10n.victoryReminderNo;
+    case 7:
+      return l10n.victoryReminderSmile;
+    case 8:
+      return l10n.victoryReminderSun;
+    default:
+      return '';
+  }
+}
+

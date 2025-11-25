@@ -10,6 +10,9 @@ enum AppTheme {
   summer,
   autumn,
   winter,
+  beach,
+  night,
+  eclipse,
 }
 
 class ThemeConfig {
@@ -168,21 +171,78 @@ class ThemeConfig {
       scaffoldBackground: Color(0xFFF8FBFF),
       backgroundPath: 'assets/backgrounds/winter_bg.png',
     ),
+    AppTheme.beach: ThemeConfig(
+      name: 'Plage',
+      primary: Color(0xFF00A8CC), // Turquoise
+      secondary: Color(0xFFE8C547), // Sandy yellow
+      tertiary: Color(0xFF0077B6), // Deep ocean blue
+      surface: Color(0xFFFFFBF5),
+      error: Color(0xFFFF6B6B),
+      onPrimary: Colors.white,
+      onSecondary: Color(0xFF2C3E50), // Dark text on sandy color
+      onTertiary: Colors.white,
+      onSurface: Color(0xFF2C3E50), // Dark text
+      scaffoldBackground: Color(0xFFFFFBF5), // Light sandy background
+      backgroundPath: 'assets/backgrounds/beach_bg.png',
+    ),
+    AppTheme.night: ThemeConfig(
+      name: 'Nuit',
+      primary: Color(0xFF6B9AC4), // Soft blue for primary elements
+      secondary: Color(0xFF9B86BD), // Soft purple for secondary elements
+      tertiary: Color(0xFF4A90A4), // Teal accent
+      surface: Color(0xFF1E1E2E), // Dark surface
+      error: Color(0xFFFF6B6B), // Soft red for errors
+      onPrimary: Color(0xFF0D1117), // Dark text on primary
+      onSecondary: Color(0xFF0D1117), // Dark text on secondary
+      onTertiary: Colors.white, // Light text on tertiary
+      onSurface: Color(0xFFE0E0E0), // Light text on dark surface
+      scaffoldBackground: Color(0xFF0D1117), // Deep dark background (GitHub dark)
+      backgroundPath: 'assets/backgrounds/night_bg.png',
+    ),
+    AppTheme.eclipse: ThemeConfig(
+      name: 'Éclipse',
+      primary: Color(0xFFD4AF37), // Golden for primary elements
+      secondary: Color(0xFF9B59B6), // Deep purple for secondary elements
+      tertiary: Color(0xFFE67E22), // Orange accent
+      surface: Color(0xFF1A1A2E), // Dark surface
+      error: Color(0xFFFF6B6B), // Soft red for errors
+      onPrimary: Color(0xFF0A0A0F), // Dark text on primary
+      onSecondary: Colors.white, // Light text on secondary
+      onTertiary: Colors.white, // Light text on tertiary
+      onSurface: Color(0xFFE0E0E0), // Light text on dark surface
+      scaffoldBackground: Color(0xFF0A0A0F), // Very dark background
+      backgroundPath: 'assets/backgrounds/eclipse_bg.png',
+    ),
   };
 
   ThemeData toThemeData() {
+    // Determine if this is a dark theme based on scaffold background luminance
+    final isDark = scaffoldBackground.computeLuminance() < 0.5;
+    
     return ThemeData(
-      colorScheme: ColorScheme.light(
-        primary: primary,
-        secondary: secondary,
-        tertiary: tertiary,
-        surface: surface,
-        error: error,
-        onPrimary: onPrimary,
-        onSecondary: onSecondary,
-        onTertiary: onTertiary,
-        onSurface: onSurface,
-      ),
+      colorScheme: isDark
+          ? ColorScheme.dark(
+              primary: primary,
+              secondary: secondary,
+              tertiary: tertiary,
+              surface: surface,
+              error: error,
+              onPrimary: onPrimary,
+              onSecondary: onSecondary,
+              onTertiary: onTertiary,
+              onSurface: onSurface,
+            )
+          : ColorScheme.light(
+              primary: primary,
+              secondary: secondary,
+              tertiary: tertiary,
+              surface: surface,
+              error: error,
+              onPrimary: onPrimary,
+              onSecondary: onSecondary,
+              onTertiary: onTertiary,
+              onSurface: onSurface,
+            ),
       scaffoldBackgroundColor: scaffoldBackground,
       textTheme: TextTheme(
         bodyLarge: TextStyle(
@@ -215,7 +275,7 @@ class ThemeConfig {
           borderRadius: BorderRadius.circular(20),
         ),
         elevation: 0,
-        color: Colors.white,
+        color: isDark ? surface : Colors.white,
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primary,

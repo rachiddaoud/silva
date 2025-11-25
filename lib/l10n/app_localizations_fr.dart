@@ -32,6 +32,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get seasons => 'Saisons';
 
   @override
+  String get dark => 'Sombre';
+
+  @override
   String get notifications => 'Notifications';
 
   @override

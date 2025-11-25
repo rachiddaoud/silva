@@ -140,6 +140,12 @@ abstract class AppLocalizations {
   /// **'Saisons'**
   String get seasons;
 
+  /// No description provided for @dark.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sombre'**
+  String get dark;
+
   /// No description provided for @notifications.
   ///
   /// In fr, this message translates to:

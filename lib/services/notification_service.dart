@@ -504,46 +504,53 @@ class NotificationService {
   }
 
   static Future<void> showTestNotification() async {
-    // Récupérer le nom de l'utilisateur
+    // Get locale and localizations
+    final localeCode = await _getLocaleCode();
+    final l10n = _getLocalizations(localeCode);
+    
+    // Get user name
     final userName = await PreferencesService.getUserName();
-    final name = userName ?? 'vous';
+    final name = userName ?? (localeCode == 'en' ? 'you' : 'vous');
     
-    // Récupérer la citation du jour
-    final quote = _getCurrentQuote();
+    // Get quote of the day
+    final quote = await _getCurrentQuote();
     
-    // Récupérer les victoires du jour pour les rappels
+    // Get today's victories for reminders
     final victories = await PreferencesService.getTodayVictories();
     final unaccomplishedVictories = victories.where((v) => !v.isAccomplished).toList();
     final random = Random();
     
-    // Si toutes les victoires sont accomplies, utiliser toutes les victoires
+    // If all victories are accomplished, use all victories
     final availableVictories = unaccomplishedVictories.isNotEmpty 
         ? unaccomplishedVictories 
         : victories;
     
-    // Sélectionner deux victoires différentes pour les rappels
+    // Select two different victories for reminders
     final selectedVictory1 = availableVictories[random.nextInt(availableVictories.length)];
+    final victoryText1 = getVictoryTextByLocale(localeCode, selectedVictory1.id);
+    
     final remainingVictories = availableVictories
         .where((v) => v.id != selectedVictory1.id)
         .toList();
     final selectedVictory2 = remainingVictories.isNotEmpty
         ? remainingVictories[random.nextInt(remainingVictories.length)]
         : selectedVictory1;
+    final victoryText2 = getVictoryTextByLocale(localeCode, selectedVictory2.id);
     
-    // 1. Notification du matin (citation du jour)
+    // 1. Morning notification (quote of the day)
     await _notifications.show(
-      998, // ID différent pour ne pas interférer avec les notifications programmées
-      'Bonjour $name !',
-      'Votre citation du jour : $quote',
+      998, // Different ID to not interfere with scheduled notifications
+      l10n.notifGoodMorning(name),
+      l10n.notifQuoteOfDay(quote),
       NotificationDetails(
         android: AndroidNotificationDetails(
           'morning_quote',
-          'Citation du matin',
-          channelDescription: 'Citation du jour à 9h du matin',
+          localeCode == 'en' ? 'Morning quote' : 'Citation du matin',
+          channelDescription: localeCode == 'en' ? 'Quote of the day at 9 AM' : 'Citation du jour à 9h du matin',
           importance: Importance.high,
           priority: Priority.high,
         ),
-        iOS: DarwinNotificationDetails(
+        iOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
@@ -552,30 +559,30 @@ class NotificationService {
       payload: _morningNotificationType,
     );
     
-    // Attendre un peu avant d'afficher la notification suivante
+    // Wait a bit before showing the next notification
     await Future.delayed(const Duration(milliseconds: 500));
     
-    // 2. Notification de rappel à 12h
+    // 2. Day reminder at 12 PM
     await _notifications.show(
-      997, // ID différent pour ne pas interférer avec les notifications programmées
-      'Petit rappel 💚',
-      '$name, n\'oubliez pas : ${selectedVictory1.text}',
+      997, // Different ID to not interfere with scheduled notifications
+      l10n.notifReminder,
+      l10n.notifReminderBody(name, victoryText1),
       NotificationDetails(
         android: AndroidNotificationDetails(
           'day_reminder',
-          'Rappel de la journée',
-          channelDescription: 'Rappels pour les actions de la journée',
+          localeCode == 'en' ? 'Day reminder' : 'Rappel de la journée',
+          channelDescription: localeCode == 'en' ? 'Reminders for daily actions' : 'Rappels pour les actions de la journée',
           importance: Importance.high,
           priority: Priority.high,
           actions: [
             AndroidNotificationAction(
               _actionMarkDone,
-              'J\'ai fait cette action',
+              l10n.notifActionDone,
               showsUserInterface: true,
             ),
           ],
         ),
-        iOS: DarwinNotificationDetails(
+        iOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
@@ -585,30 +592,30 @@ class NotificationService {
       payload: '$_dayReminderNotificationType|${selectedVictory1.id}',
     );
     
-    // Attendre un peu avant d'afficher la notification suivante
+    // Wait a bit before showing the next notification
     await Future.delayed(const Duration(milliseconds: 500));
     
-    // 3. Notification de rappel à 17h
+    // 3. Day reminder at 5 PM
     await _notifications.show(
-      996, // ID différent pour ne pas interférer avec les notifications programmées
-      'Petit rappel 💚',
-      '$name, n\'oubliez pas : ${selectedVictory2.text}',
+      996, // Different ID to not interfere with scheduled notifications
+      l10n.notifReminder,
+      l10n.notifReminderBody(name, victoryText2),
       NotificationDetails(
         android: AndroidNotificationDetails(
           'day_reminder',
-          'Rappel de la journée',
-          channelDescription: 'Rappels pour les actions de la journée',
+          localeCode == 'en' ? 'Day reminder' : 'Rappel de la journée',
+          channelDescription: localeCode == 'en' ? 'Reminders for daily actions' : 'Rappels pour les actions de la journée',
           importance: Importance.high,
           priority: Priority.high,
           actions: [
             AndroidNotificationAction(
               _actionMarkDone,
-              'J\'ai fait cette action',
+              l10n.notifActionDone,
               showsUserInterface: true,
             ),
           ],
         ),
-        iOS: DarwinNotificationDetails(
+        iOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
@@ -618,30 +625,30 @@ class NotificationService {
       payload: '$_dayReminderNotificationType|${selectedVictory2.id}',
     );
     
-    // Attendre un peu avant d'afficher la notification suivante
+    // Wait a bit before showing the next notification
     await Future.delayed(const Duration(milliseconds: 500));
     
-    // 4. Notification du soir (rappel quotidien)
+    // 4. Evening notification (daily reminder)
     await _notifications.show(
-      999, // ID différent pour ne pas interférer avec les notifications programmées
-      'Terminer votre journée',
-      '$name, n\'oubliez pas de terminer votre journée et de noter votre humeur !',
+      999, // Different ID to not interfere with scheduled notifications
+      l10n.notifFinishDay,
+      l10n.notifFinishDayBody(name),
       NotificationDetails(
         android: AndroidNotificationDetails(
           'daily_reminder',
-          'Rappel quotidien',
-          channelDescription: 'Rappel pour terminer la journée à 22h',
+          localeCode == 'en' ? 'Daily reminder' : 'Rappel quotidien',
+          channelDescription: localeCode == 'en' ? 'Reminder to finish the day at 10 PM' : 'Rappel pour terminer la journée à 22h',
           importance: Importance.high,
           priority: Priority.high,
           actions: [
-            const AndroidNotificationAction(
+            AndroidNotificationAction(
               _actionCompleteNow,
-              'Terminer maintenant',
+              l10n.notifFinishNow,
               showsUserInterface: true,
             ),
           ],
         ),
-        iOS: DarwinNotificationDetails(
+        iOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,

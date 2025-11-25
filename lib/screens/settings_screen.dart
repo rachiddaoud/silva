@@ -110,6 +110,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       AppTheme.summer,
       AppTheme.autumn,
       AppTheme.winter,
+      AppTheme.beach,
+    ];
+    
+    final darkThemes = [
+      AppTheme.night,
+      AppTheme.eclipse,
     ];
     
     showModalBottomSheet(
@@ -178,6 +184,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: seasonalThemes.map((theme) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: _buildThemeButton(theme),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 32),
+            // Dark themes section
+            Text(
+              AppLocalizations.of(context)!.dark,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: darkThemes.map((theme) {
                   return Padding(
                     padding: const EdgeInsets.only(right: 16),
                     child: _buildThemeButton(theme),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/victory_card.dart';
 import '../utils/sprite_utils.dart';
 import '../utils/localization_utils.dart';
+import '../services/audio_service.dart';
+import '../services/haptic_service.dart';
 
 class VictoryCardWidget extends StatelessWidget {
   final VictoryCard card;
@@ -20,7 +22,16 @@ class VictoryCardWidget extends StatelessWidget {
     final isSelected = card.isAccomplished;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: () async {
+        // Play haptic feedback
+        await HapticService().light();
+        
+        // Play sound effect
+        await AudioService().playVictorySelect();
+        
+        // Call the original onTap callback
+        onTap();
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOutCubic,

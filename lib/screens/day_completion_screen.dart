@@ -8,6 +8,8 @@ import '../utils/sprite_utils.dart';
 import 'package:intl/intl.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/localization_utils.dart';
+import '../services/audio_service.dart';
+import '../services/haptic_service.dart';
 
 class DayCompletionScreen extends StatefulWidget {
   final List<VictoryCard> victories;
@@ -210,7 +212,7 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
     return DateFormat.yMMMd(locale).format(date);
   }
 
-  void _validateDay() {
+  void _validateDay() async {
     if (selectedEmotion == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -220,6 +222,10 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
       );
       return;
     }
+
+    // Play success sound and haptic
+    await HapticService().medium();
+    await AudioService().playSuccess();
 
     widget.onComplete(
       selectedEmotion!,
@@ -314,7 +320,11 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
                 imagePath: emotion.imagePath,
                 isSelected: selectedEmotion == emotion,
                 moodColor: emotion.moodColor,
-                onTap: () {
+                onTap: () async {
+                  // Play selection feedback
+                  await HapticService().selection();
+                  await AudioService().playEmotionSelect();
+                  
                   setState(() {
                     selectedEmotion = emotion;
                   });

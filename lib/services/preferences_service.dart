@@ -19,6 +19,9 @@ class PreferencesService {
   static const String _treeStateKey = 'tree_state';
   static const String _lastTreeUpdateDateKey = 'last_tree_update_date';
   static const String _localeKey = 'locale';
+  static const String _soundEnabledKey = 'sound_enabled';
+  static const String _hapticEnabledKey = 'haptic_enabled';
+  static const String _soundVolumeKey = 'sound_volume';
 
   // Thème
   static Future<AppTheme> getTheme() async {
@@ -316,6 +319,38 @@ class PreferencesService {
     } else {
       await prefs.setString(_localeKey, localeCode);
     }
+  }
+
+  // Sound settings
+  static Future<bool> getSoundEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_soundEnabledKey) ?? true;
+  }
+
+  static Future<void> setSoundEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_soundEnabledKey, enabled);
+  }
+
+  static Future<double> getSoundVolume() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_soundVolumeKey) ?? 0.7;
+  }
+
+  static Future<void> setSoundVolume(double volume) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_soundVolumeKey, volume);
+  }
+
+  // Haptic settings
+  static Future<bool> getHapticEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_hapticEnabledKey) ?? true;
+  }
+
+  static Future<void> setHapticEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_hapticEnabledKey, enabled);
   }
 }
 

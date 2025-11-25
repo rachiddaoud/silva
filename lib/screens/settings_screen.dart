@@ -28,6 +28,9 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
+  bool _soundEnabled = true;
+  bool _hapticEnabled = true;
+  double _soundVolume = 0.7;
   String? _userName;
   String? _photoURL;
   DateTime? _dateOfBirth;
@@ -44,12 +47,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadData() async {
     final enabled = await PreferencesService.areNotificationsEnabled();
+    final soundEnabled = await PreferencesService.getSoundEnabled();
+    final hapticEnabled = await PreferencesService.getHapticEnabled();
+    final soundVolume = await PreferencesService.getSoundVolume();
     final user = FirebaseAuth.instance.currentUser;
     final name = user?.displayName ?? await PreferencesService.getUserName();
     final photoURL = user?.photoURL;
     final dob = await PreferencesService.getDateOfBirth();
     setState(() {
       _notificationsEnabled = enabled;
+      _soundEnabled = soundEnabled;
+      _hapticEnabled = hapticEnabled;
+      _soundVolume = soundVolume;
       _userName = name;
       _photoURL = photoURL;
       _dateOfBirth = dob;
@@ -550,6 +559,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   trailing: Switch.adaptive(
                     value: _notificationsEnabled,
                     onChanged: _toggleNotifications,
+                    activeColor: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildSettingsTile(
+                  icon: _soundEnabled ? Icons.volume_up : Icons.volume_off,
+                  title: 'Sound Effects',
+                  subtitle: _soundEnabled ? 'Enabled' : 'Disabled',
+                  color: theme.colorScheme.secondary,
+                  trailing: Switch.adaptive(
+                    value: _soundEnabled,
+                    onChanged: (value) async {
+                      setState(() {
+                        _soundEnabled = value;
+                      });
+                      await PreferencesService.setSoundEnabled(value);
+                    },
+                    activeColor: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildSettingsTile(
+                  icon: Icons.vibration,
+                  title: 'Haptic Feedback',
+                  subtitle: _hapticEnabled ? 'Enabled' : 'Disabled',
+                  color: theme.colorScheme.tertiary,
+                  trailing: Switch.adaptive(
+                    value: _hapticEnabled,
+                    onChanged: (value) async {
+                      setState(() {
+                        _hapticEnabled = value;
+                      });
+                      await PreferencesService.setHapticEnabled(value);
+                    },
                     activeColor: theme.colorScheme.primary,
                   ),
                 ),

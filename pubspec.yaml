@@ -126,19 +126,19 @@ flutter_launcher_icons:
   ios: true
   web:
     generate: true
-    image_path: "assets/icons/icon.png"
+    image_path: "assets/icons/icon2.png"
     background_color: "#0175C2"
     theme_color: "#0175C2"
   macos:
     generate: true
-    image_path: "assets/icons/icon.png"
+    image_path: "assets/icons/icon2.png"
   windows:
     generate: true
-    image_path: "assets/icons/icon.png"
+    image_path: "assets/icons/icon2.png"
   linux:
     generate: true
-    image_path: "assets/icons/icon.png"
-  image_path: "assets/icons/icon.png"  # Path to your icon image (1024x1024 recommended)
+    image_path: "assets/icons/icon2.png"
+  image_path: "assets/icons/icon2.png"  # Path to your icon image (1024x1024 recommended)
   # Optional: You can specify different icons for different platforms
   # android: "assets/icon/android_icon.png"
   # ios: "assets/icon/ios_icon.png"

@@ -353,19 +353,19 @@ abstract class AppLocalizations {
   /// No description provided for @welcomeTitle.
   ///
   /// In fr, this message translates to:
-  /// **'Bienvenue sur\nSilva'**
+  /// **'Bienvenue'**
   String get welcomeTitle;
 
   /// No description provided for @welcomeSubtitle.
   ///
   /// In fr, this message translates to:
-  /// **'Votre espace de sérénité et de victoires quotidiennes.'**
+  /// **'Votre espace de sérénité'**
   String get welcomeSubtitle;
 
   /// No description provided for @continueWithGoogle.
   ///
   /// In fr, this message translates to:
-  /// **'Continuer avec Google'**
+  /// **'Commencer avec Google'**
   String get continueWithGoogle;
 
   /// No description provided for @finishDayTitle.

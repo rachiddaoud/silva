@@ -28,7 +28,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  AppTheme _currentTheme = AppTheme.babyBlue;
+  AppTheme _currentTheme = AppTheme.modernPastel;
   bool _isOnboardingComplete = false;
   bool _isLoading = true;
   Locale? _locale; // null means use system default

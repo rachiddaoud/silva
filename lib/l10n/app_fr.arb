@@ -58,9 +58,9 @@
       }
     }
   },
-  "welcomeTitle": "Bienvenue sur\nSilva",
-  "welcomeSubtitle": "Votre espace de sérénité et de victoires quotidiennes.",
-  "continueWithGoogle": "Continuer avec Google",
+  "welcomeTitle": "Bienvenue",
+  "welcomeSubtitle": "Votre espace de sérénité",
+  "continueWithGoogle": "Commencer avec Google",
   "finishDayTitle": "Terminer {date}",
   "@finishDayTitle": {
     "placeholders": {

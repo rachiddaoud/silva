@@ -58,9 +58,9 @@
       }
     }
   },
-  "welcomeTitle": "Welcome to\nSilva",
-  "welcomeSubtitle": "Your space for serenity and daily victories.",
-  "continueWithGoogle": "Continue with Google",
+  "welcomeTitle": "Welcome to\nYour Bubble",
+  "welcomeSubtitle": "Your space for serenity and well-being",
+  "continueWithGoogle": "Start with Google",
   "finishDayTitle": "Finish {date}",
   "@finishDayTitle": {
     "placeholders": {

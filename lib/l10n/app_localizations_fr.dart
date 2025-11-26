@@ -140,14 +140,13 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get welcomeTitle => 'Bienvenue sur\nSilva';
+  String get welcomeTitle => 'Bienvenue';
 
   @override
-  String get welcomeSubtitle =>
-      'Votre espace de sérénité et de victoires quotidiennes.';
+  String get welcomeSubtitle => 'Votre espace de sérénité';
 
   @override
-  String get continueWithGoogle => 'Continuer avec Google';
+  String get continueWithGoogle => 'Commencer avec Google';
 
   @override
   String finishDayTitle(String date) {

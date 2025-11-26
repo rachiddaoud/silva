@@ -13,6 +13,7 @@ enum AppTheme {
   beach,
   night,
   eclipse,
+  modernPastel,
 }
 
 class ThemeConfig {
@@ -212,6 +213,20 @@ class ThemeConfig {
       onSurface: Color(0xFFE0E0E0), // Light text on dark surface
       scaffoldBackground: Color(0xFF0A0A0F), // Very dark background
       backgroundPath: 'assets/backgrounds/eclipse_bg.png',
+    ),
+    AppTheme.modernPastel: ThemeConfig(
+      name: 'Pastel Moderne',
+      primary: Color(0xFF8ECAE6), // Soft Blue
+      secondary: Color(0xFFFFB7B2), // Soft Salmon/Pink
+      tertiary: Color(0xFFB5EAD7), // Soft Mint
+      surface: Color(0xFFFFFFFF),
+      error: Color(0xFFFF9AA2),
+      onPrimary: Color(0xFF2D3436),
+      onSecondary: Color(0xFF2D3436),
+      onTertiary: Color(0xFF2D3436),
+      onSurface: Color(0xFF2D3436), // Dark Grey text
+      scaffoldBackground: Color(0xFFF7F9FC), // Very light blue-grey
+      backgroundPath: null, // Will use gradient in UI
     ),
   };
 

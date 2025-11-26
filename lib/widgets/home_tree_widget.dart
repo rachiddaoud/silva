@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:silva/services/database_service.dart';
@@ -6,6 +7,8 @@ import 'package:silva/models/tree/tree_parameters.dart';
 import 'package:silva/services/preferences_service.dart';
 import 'package:silva/services/tree_service.dart';
 import 'package:silva/widgets/procedural_tree_widget.dart';
+import 'package:silva/models/tree_resources.dart';
+import 'package:silva/widgets/sparkle_animation.dart';
 
 class HomeTreeWidget extends StatefulWidget {
   const HomeTreeWidget({super.key});
@@ -17,12 +20,29 @@ class HomeTreeWidget extends StatefulWidget {
 class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   late TreeParameters _treeParameters;
   final TreeController _treeController = TreeController();
+  TreeResources _resources = TreeResources.initial();
+  Timer? _resourceUpdateTimer;
+  final List<SparkleData> _sparkles = [];
 
   @override
   void initState() {
     super.initState();
     _treeParameters = const TreeParameters(seed: 12345);
     _loadTree();
+    _loadResources();
+    
+    // Update UI every minute to refresh cooldown states
+    _resourceUpdateTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _resourceUpdateTimer?.cancel();
+    super.dispose();
   }
 
   void _loadTree() async {
@@ -60,6 +80,15 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     }
   }
 
+  void _loadResources() async {
+    final resources = await PreferencesService.getTreeResources();
+    if (mounted) {
+      setState(() {
+        _resources = resources;
+      });
+    }
+  }
+
   void _saveTree() async {
     if (_treeController.tree != null) {
       // 1. Save locally
@@ -76,9 +105,13 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     }
   }
 
+  void _saveResources() async {
+    await PreferencesService.saveTreeResources(_resources);
+  }
+
   bool _isProcessing = false;
 
-  Future<void> _handleDebugAction(Future<void> Function() action) async {
+  Future<void> _handleAction(Future<void> Function() action) async {
     if (_isProcessing) return;
     
     setState(() {
@@ -87,12 +120,174 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     
     await action();
     _saveTree();
+    _saveResources();
     
     if (mounted) {
       setState(() {
         _isProcessing = false;
       });
     }
+  }
+
+  void _addSparkle(Offset position, Color color) {
+    setState(() {
+      _sparkles.add(SparkleData(
+        position: position,
+        color: color,
+        timestamp: DateTime.now(),
+      ));
+    });
+
+    // Remove sparkle after animation completes
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        setState(() {
+          _sparkles.removeWhere((s) => 
+            DateTime.now().difference(s.timestamp).inMilliseconds > 1000
+          );
+        });
+      }
+    });
+  }
+
+  void _handleLeafButton() {
+    // Debug mode: always allow
+    final canUse = _resources.leafCount > 0;
+    
+    if (!canUse) {
+      // Show toast for debug mode
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('🐛 Debug: Leaf count is 0 but still adding'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+
+    _handleAction(() async {
+      _treeController.addLeaf();
+      
+      // Get actual position of the added leaf
+      final leafPos = _treeController.getLastLeafPosition(250.0);
+      if (leafPos != null) {
+        _addSparkle(leafPos, Colors.green);
+      }
+      
+      // Decrement leaf count (can go negative in debug)
+      setState(() {
+        _resources = _resources.copyWith(leafCount: _resources.leafCount - 1);
+      });
+    });
+  }
+
+  void _handleWaterButton() {
+    final canWater = _resources.canWater();
+    
+    if (!canWater) {
+      final remaining = _resources.getWaterCooldownRemaining();
+      final hours = remaining.inHours;
+      final minutes = remaining.inMinutes % 60;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '💧 ${hours > 0 ? "$hours hour${hours > 1 ? 's' : ''} " : ""}$minutes minute${minutes != 1 ? 's' : ''} remaining',
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      
+      // Debug mode: still allow
+      debugPrint('🐛 Debug: Water on cooldown but still allowing');
+    }
+
+    _handleAction(() async {
+      _treeController.grow(); // Add +1 day of life
+      
+      setState(() {
+        _resources = _resources.copyWith(lastWatered: DateTime.now());
+      });
+    });
+  }
+
+  void _handleFlowerButton() {
+    final canUse = _resources.canUseFlower();
+    
+    if (!canUse) {
+      if (_resources.flowerCount <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🐛 Debug: Flower count is 0 but still adding'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        final remaining = _resources.getFlowerCooldownRemaining();
+        final minutes = remaining.inMinutes;
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🌸 $minutes minute${minutes != 1 ? 's' : ''} remaining'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+
+    _handleAction(() async {
+      _treeController.addFlower();
+      
+      // Get actual position of the added flower
+      final flowerPos = _treeController.getLastFlowerPosition(250.0);
+      if (flowerPos != null) {
+        _addSparkle(flowerPos, Colors.pink);
+      }
+      
+      // Decrement flower count and update cooldown
+      setState(() {
+        _resources = _resources.copyWith(
+          flowerCount: _resources.flowerCount - 1,
+          lastFlowerUsed: DateTime.now(),
+        );
+      });
+    });
+  }
+
+  void _handleResetTree() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Tree'),
+        content: const Text('Reset tree to age 5 with no leaves or flowers?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _handleAction(() async {
+                _treeController.updateTree(
+                  growthLevel: 0.05,
+                  size: 250.0,
+                  parameters: const TreeParameters(),
+                  resetAge: false,
+                  forceRegenerate: true,
+                );
+                // Manually set age to 5
+                if (_treeController.tree != null) {
+                  _treeController.setTree(
+                    _treeController.tree!.copyWith(age: 5),
+                  );
+                }
+              });
+            },
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -103,6 +298,9 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
         child: Center(child: CircularProgressIndicator()),
       );
     }
+
+    // Get current flower count (handles time-based regeneration)
+    final currentFlowerCount = _resources.getCurrentFlowerCount();
 
     return SizedBox(
       height: 250,
@@ -118,6 +316,11 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
               controller: _treeController,
             ),
           ),
+          // Sparkle animations
+          ..._sparkles.map((sparkle) => SparkleAnimation(
+            position: sparkle.position,
+            color: sparkle.color,
+          )),
           Positioned(
             top: 0,
             right: 0,
@@ -127,70 +330,45 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
               tooltip: 'Infos arbre',
             ),
           ),
-          // Debug buttons
+          // Resource buttons
           Positioned(
             right: 16,
             top: 40,
             child: Column(
               children: [
-                _buildDebugButton(
-                  icon: Icons.add,
-                  label: "Leaf",
+                _buildResourceButton(
+                  icon: Icons.eco,
+                  label: 'Leaf',
+                  count: _resources.leafCount,
                   color: Colors.green,
-                  onTap: () => _handleDebugAction(() async {
-                    _treeController.addLeaf();
-                  }),
+                  isAvailable: _resources.leafCount > 0,
+                  onTap: _handleLeafButton,
                 ),
                 const SizedBox(height: 6),
-                _buildDebugButton(
+                _buildResourceButton(
+                  icon: Icons.water_drop,
+                  label: 'Water',
+                  count: null, // No counter for water
+                  color: Colors.blue,
+                  isAvailable: _resources.canWater(),
+                  onTap: _handleWaterButton,
+                ),
+                const SizedBox(height: 6),
+                _buildResourceButton(
                   icon: Icons.local_florist,
-                  label: "Flower",
+                  label: 'Flower',
+                  count: currentFlowerCount,
                   color: Colors.pink,
-                  onTap: () => _handleDebugAction(() async {
-                    _treeController.addFlower();
-                  }),
+                  isAvailable: _resources.canUseFlower(),
+                  onTap: _handleFlowerButton,
                 ),
-                const SizedBox(height: 6),
-                _buildDebugButton(
-                  icon: Icons.delete_outline,
-                  label: "Kill",
-                  color: Colors.brown,
-                  onTap: () => _handleDebugAction(() async {
-                    _treeController.decayLeaf();
-                  }),
-                ),
-                const SizedBox(height: 6),
-                _buildDebugButton(
-                  icon: Icons.wb_sunny,
-                  label: "+1 Day",
-                  color: Colors.orange,
-                  onTap: () => _handleDebugAction(() async {
-                    _treeController.grow();
-                  }),
-                ),
-                const SizedBox(height: 6),
-                _buildDebugButton(
-                  icon: Icons.history,
-                  label: "Replay",
-                  color: Colors.purple,
-                  onTap: () => _handleDebugAction(() async {
-                    await _regenerateFromHistory();
-                  }),
-                ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 12),
+                // Reset button
                 _buildDebugButton(
                   icon: Icons.refresh,
-                  label: "Reset",
+                  label: 'Reset',
                   color: Colors.red,
-                  onTap: () => _handleDebugAction(() async {
-                    _treeController.updateTree(
-                      growthLevel: 0.0,
-                      size: 250.0,
-                      parameters: const TreeParameters(),
-                      resetAge: true,
-                      forceRegenerate: true,
-                    );
-                  }),
+                  onTap: _handleResetTree,
                 ),
               ],
             ),
@@ -200,66 +378,104 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     );
   }
 
-  Future<void> _regenerateFromHistory() async {
-    debugPrint('🔄 Regenerating tree from history...');
-    
-    // 1. Fetch history
-    List<dynamic> history = [];
-    
-    // Try Firebase first if logged in
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      history = await DatabaseService().getHistory(user.uid);
-    } 
-    
-    // If no Firebase history (or not logged in), try local
-    if (history.isEmpty) {
-      history = await PreferencesService.getHistory();
-    }
-    
-    if (history.isEmpty) {
-      debugPrint('⚠️ No history found to replay.');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Aucun historique trouvé pour régénérer l\'arbre.')),
-        );
-      }
-      return;
-    }
-    
-    // 2. Sort history by date (oldest first)
-    history.sort((a, b) => a.date.compareTo(b.date));
-    
-    // 3. Reset tree
-    _treeController.updateTree(
-      growthLevel: 0.0,
-      size: 250.0,
-      parameters: const TreeParameters(),
-      resetAge: true,
-      forceRegenerate: true,
+  Widget _buildResourceButton({
+    required IconData icon,
+    required String label,
+    required int? count,
+    required Color color,
+    required bool isAvailable,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: isAvailable 
+                ? Colors.white.withValues(alpha: 0.9) 
+                : Colors.grey.withValues(alpha: 0.5),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Center(
+                child: Icon(
+                  icon,
+                  color: isAvailable ? color : Colors.grey,
+                  size: 24,
+                ),
+              ),
+              if (count != null)
+                Positioned(
+                  right: 2,
+                  top: 2,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      count.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
-    
-    // 4. Replay each day
-    int daysProcessed = 0;
-    for (final entry in history) {
-      final stats = _treeController.simulateDay(entry, notify: false);
-      daysProcessed++;
-      
-      final dateStr = "${entry.date.year}-${entry.date.month.toString().padLeft(2, '0')}-${entry.date.day.toString().padLeft(2, '0')}";
-      debugPrint('📅 $dateStr: +${stats['leavesAdded']} leaves, +${stats['flowersAdded']} flowers, +${stats['deadLeavesAdded']} dead leaves');
-    }
-    
-    // 5. Finalize
-    if (_treeController.tree != null) {
-      _treeController.setTree(_treeController.tree!);
-    }
-    
-    debugPrint('✅ Tree regenerated from $daysProcessed days of history.');
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.treeRegenerated(daysProcessed))),
-      );
-    }
+  }
+
+  Widget _buildDebugButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.9),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: 20,
+          ),
+        ),
+      ),
+    );
   }
 
   void _showTreeInfo() {
@@ -299,39 +515,16 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
       },
     );
   }
+}
 
-  Widget _buildDebugButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Tooltip(
-      message: label,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.9),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Icon(
-            icon,
-            color: color,
-            size: 20,
-          ),
-        ),
-      ),
-    );
-  }
+class SparkleData {
+  final Offset position;
+  final Color color;
+  final DateTime timestamp;
+
+  SparkleData({
+    required this.position,
+    required this.color,
+    required this.timestamp,
+  });
 }

@@ -6,6 +6,7 @@ import '../models/day_entry.dart';
 import '../models/emotion.dart';
 import '../models/victory_card.dart';
 import '../models/tree/tree_state.dart';
+import '../models/tree_resources.dart';
 
 class PreferencesService {
   static const String _themeKey = 'selected_theme';
@@ -22,6 +23,7 @@ class PreferencesService {
   static const String _soundEnabledKey = 'sound_enabled';
   static const String _hapticEnabledKey = 'haptic_enabled';
   static const String _soundVolumeKey = 'sound_volume';
+  static const String _treeResourcesKey = 'tree_resources';
 
   // Thème
   static Future<AppTheme> getTheme() async {
@@ -351,6 +353,44 @@ class PreferencesService {
   static Future<void> setHapticEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_hapticEnabledKey, enabled);
+  }
+
+  // Tree Resources
+  static Future<TreeResources> getTreeResources() async {
+    final prefs = await SharedPreferences.getInstance();
+    final resourcesJson = prefs.getString(_treeResourcesKey);
+    
+    if (resourcesJson == null) {
+      return TreeResources.initial();
+    }
+    
+    try {
+      final Map<String, dynamic> json = jsonDecode(resourcesJson);
+      var resources = TreeResources.fromJson(json);
+      
+      // Check if daily reset is needed
+      if (resources.shouldResetDailyFlowers()) {
+        resources = TreeResources(
+          leafCount: resources.leafCount,
+          flowerCount: 5,
+          lastWatered: resources.lastWatered,
+          lastFlowerUsed: null, // Reset flower cooldown
+          lastDailyReset: DateTime.now(),
+        );
+        // Save the reset resources
+        await saveTreeResources(resources);
+      }
+      
+      return resources;
+    } catch (e) {
+      return TreeResources.initial();
+    }
+  }
+
+  static Future<void> saveTreeResources(TreeResources resources) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = resources.toJson();
+    await prefs.setString(_treeResourcesKey, jsonEncode(json));
   }
 }
 

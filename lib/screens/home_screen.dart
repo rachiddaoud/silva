@@ -4,6 +4,7 @@ import '../models/victory_card.dart';
 import '../models/emotion.dart';
 import '../models/theme_config.dart';
 import '../models/day_entry.dart';
+
 import '../widgets/victory_card_widget.dart';
 import 'day_completion_screen.dart';
 import '../widgets/today_history_toggle.dart';
@@ -296,10 +297,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _toggleVictory(int index) async {
+
+    
     setState(() {
       _victories[index].isAccomplished =
           !_victories[index].isAccomplished;
     });
+    
+    // Update leaf counter in tree resources
+    final resources = await PreferencesService.getTreeResources();
+    final newLeafCount = _victories[index].isAccomplished 
+        ? resources.leafCount + 1  // Toggled ON: add leaf
+        : resources.leafCount - 1; // Toggled OFF: remove leaf
+    
+    await PreferencesService.saveTreeResources(
+      resources.copyWith(leafCount: newLeafCount),
+    );
+    
     // Sauvegarder les victoires mises à jour
     await PreferencesService.saveTodayVictories(_victories);
     

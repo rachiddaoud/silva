@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show Offset;
 import 'package:silva/models/day_entry.dart';
 import 'package:silva/models/tree/tree_parameters.dart';
 import 'package:silva/models/tree/tree_state.dart';
@@ -10,7 +11,13 @@ class TreeController extends ChangeNotifier {
   TreeState? _tree;
   TreeState? get tree => _tree;
   TreeParameters _parameters = const TreeParameters(); // Store parameters
+  
+  // Track last added items for animations
+  String? _lastAddedLeafId;
+  String? _lastAddedFlowerId;
 
+  String? get lastAddedLeafId => _lastAddedLeafId;
+  String? get lastAddedFlowerId => _lastAddedFlowerId;
 
   void setTree(TreeState tree) {
     _tree = tree;
@@ -232,6 +239,7 @@ class TreeController extends ChangeNotifier {
       );
 
       _tree = _addLeafToBranch(_tree!, branchId, newLeaf);
+      _lastAddedLeafId = leafId; // Track for animations
       if (notify) notifyListeners();
       return true;
     } else {
@@ -294,6 +302,7 @@ class TreeController extends ChangeNotifier {
       );
 
       _tree = _addFlowerToBranch(_tree!, branchId, newFlower);
+      _lastAddedFlowerId = flowerId; // Track for animations
       if (notify) notifyListeners();
       return true;
     } else {
@@ -399,5 +408,87 @@ class TreeController extends ChangeNotifier {
     
     final newChildren = branch.children.map((c) => _addFlowerToBranchRecursive(c, branchId, flower)).toList();
     return branch.copyWith(children: newChildren);
+  }
+
+  /// Calculate the screen position of a leaf or flower for animations
+  /// This uses the same logic as TreePainter but simplified for position only
+  Offset? calculateItemPosition(String itemId, double treeSize) {
+    if (_tree == null) return null;
+
+    // Find the leaf or flower
+    LeafState? leaf;
+    FlowerState? flower;
+    BranchState? branch;
+
+    // Check if it's a leaf or flower based on ID format
+    final isFlower = itemId.startsWith('flower_');
+
+    // Find the item and its branch
+    for (final b in _tree!.getAllBranches()) {
+      if (isFlower) {
+        flower = b.flowers.firstWhere((f) => f.id == itemId, orElse: () => const FlowerState(id: '', tOnBranch: 0, side: 0, sizeFactor: 0, flowerType: 0));
+        if (flower.id.isNotEmpty) {
+          branch = b;
+          break;
+        }
+      } else {
+        leaf = b.leaves.firstWhere((l) => l.id == itemId, orElse: () => const LeafState(id: '', tOnBranch: 0, side: 0, maxAge: 0, randomSizeFactor: 0));
+        if (leaf.id.isNotEmpty) {
+          branch = b;
+          break;
+        }
+      }
+    }
+
+    if (branch == null || (leaf == null && flower == null)) return null;
+
+    // Calculate position on branch using Bezier curve
+    // Simplified version without wind effects for sparkle positioning
+    final t = isFlower ? flower!.tOnBranch : leaf!.tOnBranch;
+    final side = isFlower ? flower!.side : leaf!.side;
+
+    // Bezier point calculation (same as TreePainter)
+    final p0 = branch.start;
+    final p1 = branch.controlPoint;
+    final p2 = branch.end;
+
+    final oneMinusT = 1.0 - t;
+    final point = Offset(
+      oneMinusT * oneMinusT * p0.dx + 2 * oneMinusT * t * p1.dx + t * t * p2.dx,
+      oneMinusT * oneMinusT * p0.dy + 2 * oneMinusT * t * p1.dy + t * t * p2.dy,
+    );
+
+    // Calculate tangent for perpendicular offset
+    final tangent = Offset(
+      2 * oneMinusT * (p1.dx - p0.dx) + 2 * t * (p2.dx - p1.dx),
+      2 * oneMinusT * (p1.dy - p0.dy) + 2 * t * (p2.dy - p1.dy),
+    );
+    
+    final branchAngle = math.atan2(tangent.dy, tangent.dx);
+    final perpAngle = branchAngle + math.pi / 2;
+
+    // Calculate thickness at this point
+    final thicknessAtPoint = branch.thickness * (1.0 - t * 0.3);
+    final branchRadius = thicknessAtPoint / 2;
+
+    // Calculate item position offset from branch
+    final itemPos = Offset(
+      point.dx + math.cos(perpAngle) * branchRadius * side,
+      point.dy + math.sin(perpAngle) * branchRadius * side,
+    );
+
+    return itemPos;
+  }
+
+  /// Get position of last added leaf
+  Offset? getLastLeafPosition(double treeSize) {
+    if (_lastAddedLeafId == null) return null;
+    return calculateItemPosition(_lastAddedLeafId!, treeSize);
+  }
+
+  /// Get position of last added flower  
+  Offset? getLastFlowerPosition(double treeSize) {
+    if (_lastAddedFlowerId == null) return null;
+    return calculateItemPosition(_lastAddedFlowerId!, treeSize);
   }
 }

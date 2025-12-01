@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In fr, this message translates to:
-  /// **'Mes Petits Pas'**
+  /// **'Silva'**
   String get appTitle;
 
   /// No description provided for @victoriesTitle.
@@ -353,7 +353,7 @@ abstract class AppLocalizations {
   /// No description provided for @welcomeTitle.
   ///
   /// In fr, this message translates to:
-  /// **'Bienvenue'**
+  /// **'Bienvenue sur\nSilva'**
   String get welcomeTitle;
 
   /// No description provided for @welcomeSubtitle.

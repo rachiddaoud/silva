@@ -42,6 +42,9 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
   late Animation<double> _windAnimation;
   
   TreeState? get tree => widget.controller.tree;
+  
+  /// Get the current wind phase for position calculations
+  double get currentWindPhase => _windAnimation.value;
 
   @override
   void initState() {

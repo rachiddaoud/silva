@@ -36,27 +36,27 @@ class TreeResources {
     );
   }
 
-  /// Check if water is available (5 seconds cooldown)
+  /// Check if water is available (0.5 seconds cooldown)
   bool canWater() {
     if (lastWatered == null) return true;
     final now = DateTime.now();
-    return now.difference(lastWatered!).inMilliseconds >= 5000;
+    return now.difference(lastWatered!).inMilliseconds >= 500;
   }
 
-  /// Check if flower can be used (5 seconds cooldown)
+  /// Check if flower can be used (0.5 seconds cooldown)
   bool canUseFlower() {
     if (flowerCount <= 0) return false;
     if (lastFlowerUsed == null) return true;
     final now = DateTime.now();
-    return now.difference(lastFlowerUsed!).inMilliseconds >= 5000;
+    return now.difference(lastFlowerUsed!).inMilliseconds >= 500;
   }
 
-  /// Check if leaf can be used (5 seconds cooldown)
+  /// Check if leaf can be used (0.5 seconds cooldown)
   bool canUseLeaf() {
     if (leafCount <= 0) return false;
     if (lastLeafUsed == null) return true;
     final now = DateTime.now();
-    return now.difference(lastLeafUsed!).inMilliseconds >= 5000;
+    return now.difference(lastLeafUsed!).inMilliseconds >= 500;
   }
 
   /// Get remaining cooldown for water
@@ -64,7 +64,7 @@ class TreeResources {
     if (lastWatered == null) return Duration.zero;
     final now = DateTime.now();
     final elapsed = now.difference(lastWatered!);
-    final remaining = const Duration(seconds: 5) - elapsed;
+    final remaining = const Duration(milliseconds: 500) - elapsed;
     return remaining.isNegative ? Duration.zero : remaining;
   }
 
@@ -73,7 +73,7 @@ class TreeResources {
     if (lastFlowerUsed == null) return Duration.zero;
     final now = DateTime.now();
     final elapsed = now.difference(lastFlowerUsed!);
-    final remaining = const Duration(seconds: 5) - elapsed;
+    final remaining = const Duration(milliseconds: 500) - elapsed;
     return remaining.isNegative ? Duration.zero : remaining;
   }
 
@@ -82,7 +82,7 @@ class TreeResources {
     if (lastLeafUsed == null) return Duration.zero;
     final now = DateTime.now();
     final elapsed = now.difference(lastLeafUsed!);
-    final remaining = const Duration(seconds: 5) - elapsed;
+    final remaining = const Duration(milliseconds: 500) - elapsed;
     return remaining.isNegative ? Duration.zero : remaining;
   }
 

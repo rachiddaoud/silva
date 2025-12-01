@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'dart:async';
 import '../l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,6 +10,7 @@ import 'package:silva/services/tree_service.dart';
 import 'package:silva/widgets/procedural_tree_widget.dart';
 import 'package:silva/models/tree_resources.dart';
 import 'package:silva/widgets/sparkle_animation.dart';
+import 'package:silva/models/tree/tree_state.dart';
 
 class HomeTreeWidget extends StatefulWidget {
   const HomeTreeWidget({super.key});
@@ -23,6 +25,9 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   TreeResources _resources = TreeResources.initial();
   // Removed global timer: _resourceUpdateTimer
   final List<SparkleData> _sparkles = [];
+  final GlobalKey<ProceduralTreeWidgetState> _treeWidgetKey = GlobalKey<ProceduralTreeWidgetState>();
+  final GlobalKey _treeContainerKey = GlobalKey();
+  final GlobalKey _stackKey = GlobalKey();
 
   @override
   void initState() {
@@ -159,10 +164,32 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
       _treeController.addLeaf();
       debugPrint('✅ Leaf added to tree');
       
-      // Get actual position of the added leaf
-      final leafPos = _treeController.getLastLeafPosition(250.0);
-      if (leafPos != null) {
-        _addSparkle(leafPos, Colors.green);
+      // Get actual position of the added leaf with current wind phase
+      final windPhase = _treeWidgetKey.currentState?.currentWindPhase ?? 0.0;
+      final leafPos = _treeController.getLastLeafPosition(250.0, windPhase: windPhase);
+      if (leafPos != null && mounted) {
+        // Convert tree coordinates to Stack coordinates using render box
+        final stackBox = _stackKey.currentContext?.findRenderObject() as RenderBox?;
+        final treeWidgetBox = _treeWidgetKey.currentContext?.findRenderObject() as RenderBox?;
+        if (stackBox != null && treeWidgetBox != null) {
+          // Get the tree widget's position relative to the Stack
+          final treeWidgetGlobalPos = treeWidgetBox.localToGlobal(Offset.zero);
+          final stackGlobalPos = stackBox.localToGlobal(Offset.zero);
+          final treeOffset = treeWidgetGlobalPos - stackGlobalPos;
+          
+          // Convert tree coordinates (relative to tree widget) to Stack coordinates
+          final stackPos = treeOffset + leafPos;
+          _addSparkle(stackPos, Colors.green);
+        } else {
+          // Fallback to manual calculation
+          final screenWidth = MediaQuery.of(context).size.width;
+          final treeSize = 250.0;
+          final stackPos = Offset(
+            screenWidth / 2 - treeSize / 2 + leafPos.dx,
+            leafPos.dy,
+          );
+          _addSparkle(stackPos, Colors.green);
+        }
       }
       
       // Decrement leaf count and update cooldown
@@ -188,6 +215,15 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
       _treeController.grow(); // Add +1 day of life
       debugPrint('✅ Tree watered (Day added)');
       
+      // Add sparkle at the base of the trunk (lower side)
+      if (mounted) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final treeSize = 250.0;
+        // Trunk base is at treeSize * 0.75 = 187.5, centered horizontally
+        final trunkBaseY = treeSize * 0.75;
+        _addSparkle(Offset(screenWidth / 2, trunkBaseY), Colors.blue);
+      }
+      
       setState(() {
         _resources = _resources.copyWith(lastWatered: DateTime.now());
       });
@@ -207,10 +243,32 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
       _treeController.addFlower();
       debugPrint('✅ Flower added to tree');
       
-      // Get actual position of the added flower
-      final flowerPos = _treeController.getLastFlowerPosition(250.0);
-      if (flowerPos != null) {
-        _addSparkle(flowerPos, Colors.pink);
+      // Get actual position of the added flower with current wind phase
+      final windPhase = _treeWidgetKey.currentState?.currentWindPhase ?? 0.0;
+      final flowerPos = _treeController.getLastFlowerPosition(250.0, windPhase: windPhase);
+      if (flowerPos != null && mounted) {
+        // Convert tree coordinates to Stack coordinates using render box
+        final stackBox = _stackKey.currentContext?.findRenderObject() as RenderBox?;
+        final treeWidgetBox = _treeWidgetKey.currentContext?.findRenderObject() as RenderBox?;
+        if (stackBox != null && treeWidgetBox != null) {
+          // Get the tree widget's position relative to the Stack
+          final treeWidgetGlobalPos = treeWidgetBox.localToGlobal(Offset.zero);
+          final stackGlobalPos = stackBox.localToGlobal(Offset.zero);
+          final treeOffset = treeWidgetGlobalPos - stackGlobalPos;
+          
+          // Convert tree coordinates (relative to tree widget) to Stack coordinates
+          final stackPos = treeOffset + flowerPos;
+          _addSparkle(stackPos, Colors.pink);
+        } else {
+          // Fallback to manual calculation
+          final screenWidth = MediaQuery.of(context).size.width;
+          final treeSize = 250.0;
+          final stackPos = Offset(
+            screenWidth / 2 - treeSize / 2 + flowerPos.dx,
+            flowerPos.dy,
+          );
+          _addSparkle(stackPos, Colors.pink);
+        }
       }
       
       // Decrement flower count and update cooldown
@@ -228,7 +286,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Reset Tree'),
-        content: const Text('Reset tree to age 5 with no leaves or flowers?'),
+        content: const Text('Reset tree to age 10 with no leaves or flowers?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -238,25 +296,54 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
             onPressed: () {
               Navigator.pop(context);
               _handleAction(() async {
+                // Reset tree to age 10 with no leaves or flowers
+                // Use forceRegenerate to get a fresh tree, then set age to 10
                 _treeController.updateTree(
-                  growthLevel: 0.05,
+                  growthLevel: 0.10, // Growth level for age 10
                   size: 250.0,
                   parameters: const TreeParameters(),
-                  resetAge: false,
-                  forceRegenerate: true,
+                  resetAge: false, // We'll set age manually
+                  forceRegenerate: true, // This creates a fresh tree without leaves/flowers
                 );
-                // Manually set age to 5
+                // Manually set age to 10 and ensure all leaves and flowers are cleared
                 if (_treeController.tree != null) {
+                  final clearedTree = _clearAllLeavesAndFlowers(_treeController.tree!);
                   _treeController.setTree(
-                    _treeController.tree!.copyWith(age: 5),
+                    clearedTree.copyWith(age: 10),
                   );
                 }
+                // Reset resources to 0 leaves and 0 flowers
+                setState(() {
+                  _resources = _resources.copyWith(
+                    leafCount: 0,
+                    flowerCount: 0,
+                  );
+                });
               });
             },
             child: const Text('Reset'),
           ),
         ],
       ),
+    );
+  }
+
+  /// Helper method to recursively clear all leaves and flowers from the tree
+  TreeState _clearAllLeavesAndFlowers(TreeState tree) {
+    return tree.copyWith(
+      trunk: _clearBranchLeavesAndFlowers(tree.trunk),
+    );
+  }
+
+  BranchState _clearBranchLeavesAndFlowers(BranchState branch) {
+    final clearedChildren = branch.children
+        .map((child) => _clearBranchLeavesAndFlowers(child))
+        .toList();
+    
+    return branch.copyWith(
+      leaves: const [],
+      flowers: const [],
+      children: clearedChildren,
     );
   }
 
@@ -286,6 +373,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     final currentFlowerCount = _resources.getCurrentFlowerCount();
 
     return SizedBox(
+      key: _stackKey,
       height: 280, // Reduced height to remove gap
       width: double.infinity,
       child: Stack(
@@ -293,12 +381,14 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
         children: [
           // Tree centered
           Positioned(
+            key: _treeContainerKey,
             top: 0,
             left: 0,
             right: 0,
             height: 250,
             child: Center(
               child: ProceduralTreeWidget(
+                key: _treeWidgetKey,
                 size: 250,
                 growthLevel: _treeController.tree?.getGrowthLevel() ?? 0.0,
                 parameters: _treeParameters,
@@ -346,7 +436,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
               color: Colors.green,
               isAvailable: _resources.canUseLeaf(),
               remainingCooldown: _resources.getLeafCooldownRemaining(),
-              totalCooldown: const Duration(seconds: 5),
+              totalCooldown: const Duration(milliseconds: 500),
               onTap: _handleLeafButton,
               onCooldownFinished: _onCooldownFinished,
             ),
@@ -363,7 +453,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
               color: Colors.pink,
               isAvailable: _resources.canUseFlower(),
               remainingCooldown: _resources.getFlowerCooldownRemaining(),
-              totalCooldown: const Duration(seconds: 5),
+              totalCooldown: const Duration(milliseconds: 500),
               onTap: _handleFlowerButton,
               onCooldownFinished: _onCooldownFinished,
             ),
@@ -371,7 +461,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
 
           // Water Button (Below Tree)
           Positioned(
-            bottom: 30, // Moved up to be on the grass
+            bottom: 50, // Moved up further
             left: 0,
             right: 0,
             child: Center(
@@ -382,7 +472,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
                 color: Colors.blue,
                 isAvailable: _resources.canWater(),
                 remainingCooldown: _resources.getWaterCooldownRemaining(),
-                totalCooldown: const Duration(seconds: 5),
+                totalCooldown: const Duration(milliseconds: 500),
                 onTap: _handleWaterButton,
                 onCooldownFinished: _onCooldownFinished,
               ),

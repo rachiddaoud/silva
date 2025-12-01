@@ -411,8 +411,8 @@ class TreeController extends ChangeNotifier {
   }
 
   /// Calculate the screen position of a leaf or flower for animations
-  /// This uses the same logic as TreePainter but simplified for position only
-  Offset? calculateItemPosition(String itemId, double treeSize) {
+  /// This uses the same logic as TreePainter including wind effects and deformed positions
+  Offset? calculateItemPosition(String itemId, double treeSize, {double windPhase = 0.0}) {
     if (_tree == null) return null;
 
     // Find the leaf or flower
@@ -442,30 +442,44 @@ class TreeController extends ChangeNotifier {
 
     if (branch == null || (leaf == null && flower == null)) return null;
 
-    // Calculate position on branch using Bezier curve
-    // Simplified version without wind effects for sparkle positioning
+    // Calculate deformed positions (same as TreePainter)
+    final deformedStart = _calculateDeformedStart(branch, windPhase, treeSize);
+    final deformedEnd = _calculateDeformedEnd(branch, deformedStart, windPhase, treeSize);
+    
+    // Approximate deformed control point (same logic as TreePainter)
+    final originalControl = branch.controlPoint;
+    final midPoint = Offset(
+      (deformedStart.dx + deformedEnd.dx) / 2,
+      (deformedStart.dy + deformedEnd.dy) / 2,
+    );
+    final deformedControl = Offset(
+      originalControl.dx + (midPoint.dx - (branch.start.dx + branch.end.dx) / 2) * 0.7,
+      originalControl.dy + (midPoint.dy - (branch.start.dy + branch.end.dy) / 2) * 0.7,
+    );
+
     final t = isFlower ? flower!.tOnBranch : leaf!.tOnBranch;
     final side = isFlower ? flower!.side : leaf!.side;
 
-    // Bezier point calculation (same as TreePainter)
-    final p0 = branch.start;
-    final p1 = branch.controlPoint;
-    final p2 = branch.end;
-
-    final oneMinusT = 1.0 - t;
-    final point = Offset(
-      oneMinusT * oneMinusT * p0.dx + 2 * oneMinusT * t * p1.dx + t * t * p2.dx,
-      oneMinusT * oneMinusT * p0.dy + 2 * oneMinusT * t * p1.dy + t * t * p2.dy,
-    );
-
-    // Calculate tangent for perpendicular offset
-    final tangent = Offset(
-      2 * oneMinusT * (p1.dx - p0.dx) + 2 * t * (p2.dx - p1.dx),
-      2 * oneMinusT * (p1.dy - p0.dy) + 2 * t * (p2.dy - p1.dy),
-    );
-    
+    // Calculate position on deformed branch using Bezier curve
+    final point = TreeGeometry.bezierPoint(deformedStart, deformedControl, deformedEnd, t);
+    final tangent = TreeGeometry.bezierTangent(deformedStart, deformedControl, deformedEnd, t);
     final branchAngle = math.atan2(tangent.dy, tangent.dx);
     final perpAngle = branchAngle + math.pi / 2;
+    
+    // Apply wind effect at this point (same as TreePainter)
+    final depthRatio = branch.depth / _parameters.maxDepth;
+    final heightFactor = (treeSize - branch.start.dy) / treeSize;
+    final flexibilityFactor = depthRatio;
+    final windIntensity = 0.4 * heightFactor * flexibilityFactor;
+    final branchPhase = windPhase + branch.start.dx * 0.005 + branch.start.dy * 0.005;
+    final windAtPoint = math.sin(branchPhase + t * 2.0) * windIntensity * t * t * 0.3;
+    final windOffsetX = math.cos(perpAngle) * windAtPoint * treeSize * 0.05;
+    final windOffsetY = math.sin(perpAngle) * windAtPoint * treeSize * 0.05;
+    
+    final deformedPoint = Offset(
+      point.dx + windOffsetX,
+      point.dy + windOffsetY,
+    );
 
     // Calculate thickness at this point
     final thicknessAtPoint = branch.thickness * (1.0 - t * 0.3);
@@ -473,22 +487,71 @@ class TreeController extends ChangeNotifier {
 
     // Calculate item position offset from branch
     final itemPos = Offset(
-      point.dx + math.cos(perpAngle) * branchRadius * side,
-      point.dy + math.sin(perpAngle) * branchRadius * side,
+      deformedPoint.dx + math.cos(perpAngle) * branchRadius * side,
+      deformedPoint.dy + math.sin(perpAngle) * branchRadius * side,
     );
 
     return itemPos;
   }
 
+  /// Calculate deformed start position for a branch (hierarchical, same as TreePainter)
+  Offset _calculateDeformedStart(BranchState branch, double windPhase, double treeSize) {
+    if (branch.depth == 0) {
+      return branch.start;
+    }
+    
+    // Find parent branch by ID structure
+    final lastUnderscore = branch.id.lastIndexOf('_');
+    final parentId = lastUnderscore != -1 ? branch.id.substring(0, lastUnderscore) : null;
+    
+    if (parentId != null) {
+      // Find parent branch
+      for (final b in _tree!.getAllBranches()) {
+        if (b.id == parentId) {
+          // Recursively calculate parent's deformed end
+          final parentDeformedStart = _calculateDeformedStart(b, windPhase, treeSize);
+          return _calculateDeformedEnd(b, parentDeformedStart, windPhase, treeSize);
+        }
+      }
+    }
+    
+    // Fallback to original start
+    return branch.start;
+  }
+
+  /// Calculate deformed end position for a branch (same as TreePainter)
+  Offset _calculateDeformedEnd(BranchState branch, Offset deformedStart, double windPhase, double treeSize) {
+    final depthRatio = branch.depth / _parameters.maxDepth;
+    final heightFactor = (treeSize - branch.start.dy) / treeSize;
+    final flexibilityFactor = depthRatio;
+    final windIntensity = 0.4 * heightFactor * flexibilityFactor;
+    final branchPhase = windPhase + branch.start.dx * 0.005 + branch.start.dy * 0.005;
+    
+    final originalDirection = branch.end - branch.start;
+    final originalAngle = math.atan2(originalDirection.dy, originalDirection.dx);
+    
+    final t = 1.0;
+    final windAtEnd = math.sin(branchPhase + t * 2.0) * windIntensity * t * t;
+    
+    final perpAngle = originalAngle + math.pi / 2;
+    final windOffsetX = math.cos(perpAngle) * windAtEnd * treeSize * 0.05;
+    final windOffsetY = math.sin(perpAngle) * windAtEnd * treeSize * 0.05;
+    
+    return Offset(
+      deformedStart.dx + originalDirection.dx + windOffsetX,
+      deformedStart.dy + originalDirection.dy + windOffsetY,
+    );
+  }
+
   /// Get position of last added leaf
-  Offset? getLastLeafPosition(double treeSize) {
+  Offset? getLastLeafPosition(double treeSize, {double windPhase = 0.0}) {
     if (_lastAddedLeafId == null) return null;
-    return calculateItemPosition(_lastAddedLeafId!, treeSize);
+    return calculateItemPosition(_lastAddedLeafId!, treeSize, windPhase: windPhase);
   }
 
   /// Get position of last added flower  
-  Offset? getLastFlowerPosition(double treeSize) {
+  Offset? getLastFlowerPosition(double treeSize, {double windPhase = 0.0}) {
     if (_lastAddedFlowerId == null) return null;
-    return calculateItemPosition(_lastAddedFlowerId!, treeSize);
+    return calculateItemPosition(_lastAddedFlowerId!, treeSize, windPhase: windPhase);
   }
 }

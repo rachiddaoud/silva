@@ -231,10 +231,10 @@ class TreeController extends ChangeNotifier {
         id: leafId,
         tOnBranch: t,
         side: side,
-        age: 2, // Start at age 1
+        age: 4.0, // Start at age 4 (was 2, added 2 days for visibility)
         maxAge: maxAge,
         randomSizeFactor: 0.8 + math.Random().nextDouble() * 0.4,
-        currentGrowth: 1.0 / maxAge, // Start at size corresponding to age 1
+        currentGrowth: 4.0 / maxAge, // Start at size corresponding to age 4
         healthState: LeafHealthState.alive,
       );
 

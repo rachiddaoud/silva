@@ -146,13 +146,18 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   }
 
   void _handleLeafButton() {
+    debugPrint('🍃 Leaf button clicked');
     // Debug mode: always allow
     final canUse = _resources.canUseLeaf();
     
-    if (!canUse) return;
+    if (!canUse) {
+      debugPrint('❌ Leaf button disabled (cooldown or no resources)');
+      return;
+    }
 
     _handleAction(() async {
       _treeController.addLeaf();
+      debugPrint('✅ Leaf added to tree');
       
       // Get actual position of the added leaf
       final leafPos = _treeController.getLastLeafPosition(250.0);
@@ -171,12 +176,17 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   }
 
   void _handleWaterButton() {
+    debugPrint('💧 Water button clicked');
     final canWater = _resources.canWater();
     
-    if (!canWater) return;
+    if (!canWater) {
+      debugPrint('❌ Water button disabled (cooldown)');
+      return;
+    }
 
     _handleAction(() async {
       _treeController.grow(); // Add +1 day of life
+      debugPrint('✅ Tree watered (Day added)');
       
       setState(() {
         _resources = _resources.copyWith(lastWatered: DateTime.now());
@@ -185,12 +195,17 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   }
 
   void _handleFlowerButton() {
+    debugPrint('🌸 Flower button clicked');
     final canUse = _resources.canUseFlower();
     
-    if (!canUse) return;
+    if (!canUse) {
+      debugPrint('❌ Flower button disabled (cooldown or no resources)');
+      return;
+    }
 
     _handleAction(() async {
       _treeController.addFlower();
+      debugPrint('✅ Flower added to tree');
       
       // Get actual position of the added flower
       final flowerPos = _treeController.getLastFlowerPosition(250.0);
@@ -247,11 +262,15 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
 
   /// Callback when a button cooldown finishes
   void _onCooldownFinished() {
-    if (mounted) {
-      setState(() {
-        // Just rebuild to refresh the 'isAvailable' state
-      });
-    }
+    // Add a small delay to ensure the cooldown time has definitely passed
+    // relative to the initial timestamp check.
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (mounted) {
+        setState(() {
+          // Just rebuild to refresh the 'isAvailable' state
+        });
+      }
+    });
   }
 
   @override
@@ -267,7 +286,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     final currentFlowerCount = _resources.getCurrentFlowerCount();
 
     return SizedBox(
-      height: 350, // Increased height to accommodate bottom button
+      height: 280, // Reduced height to remove gap
       width: double.infinity,
       child: Stack(
         clipBehavior: Clip.none,
@@ -318,10 +337,10 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
 
           // Leaf Button (Left of Tree)
           Positioned(
-            bottom: 80,
+            top: 100,
             left: 20,
             child: CooldownButton(
-              imagePath: 'assets/tree/leaf.png',
+              emoji: '🍃',
               label: 'Leaf',
               count: _resources.leafCount,
               color: Colors.green,
@@ -335,10 +354,10 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
 
           // Flower Button (Right of Tree)
           Positioned(
-            bottom: 80,
+            top: 100,
             right: 20,
             child: CooldownButton(
-              imagePath: 'assets/tree/flower.png',
+              emoji: '🌸',
               label: 'Flower',
               count: currentFlowerCount,
               color: Colors.pink,
@@ -352,13 +371,12 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
 
           // Water Button (Below Tree)
           Positioned(
-            bottom: 10,
+            bottom: 30, // Moved up to be on the grass
             left: 0,
             right: 0,
             child: Center(
               child: CooldownButton(
-                imagePath: null, // Use icon for water
-                icon: Icons.water_drop,
+                emoji: '💧',
                 label: 'Water',
                 count: null,
                 color: Colors.blue,
@@ -404,6 +422,22 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
           ),
           actions: [
             TextButton(
+              onPressed: () {
+                setState(() {
+                  _resources = _resources.copyWith(
+                    leafCount: _resources.leafCount + 10,
+                    flowerCount: _resources.flowerCount + 10,
+                  );
+                });
+                _saveResources();
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Added 10 leaves and 10 flowers (Debug)')),
+                );
+              },
+              child: const Text('+10 Resources (Debug)'),
+            ),
+            TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('OK'),
             ),
@@ -427,8 +461,7 @@ class SparkleData {
 }
 
 class CooldownButton extends StatelessWidget {
-  final String? imagePath;
-  final IconData? icon;
+  final String emoji;
   final String label;
   final int? count;
   final Color color;
@@ -440,8 +473,7 @@ class CooldownButton extends StatelessWidget {
 
   const CooldownButton({
     super.key,
-    this.imagePath,
-    this.icon,
+    required this.emoji,
     required this.label,
     required this.count,
     required this.color,
@@ -474,37 +506,45 @@ class CooldownButton extends StatelessWidget {
   }
 
   Widget _buildButtonContent(double progress) {
-    const double buttonSize = 50.0;
-    const double imageSize = 40.0; // Larger image
+    const double buttonSize = 45.0;
+    const double emojiSize = 24.0;
 
     return Stack(
-      clipBehavior: Clip.none, // Allow overflowing image and badge
+      clipBehavior: Clip.none,
       alignment: Alignment.center,
       children: [
-        // Main Button Background (Circle)
+        // Main Button Background (Flat Circle)
         Tooltip(
           message: label,
           child: Material(
-            color: Colors.black.withValues(alpha: 0.3), // Dark transparent interior
-            shape: CircleBorder(
-              side: BorderSide(
-                color: color.withValues(alpha: 0.5), // Subtle border
-                width: 1,
-              ),
-            ),
+            color: Colors.white,
+            elevation: 2,
+            shape: const CircleBorder(),
             child: InkWell(
-              onTap: isAvailable ? onTap : null,
+              onTap: isAvailable ? () {
+                debugPrint('🔘 CooldownButton tapped: $label');
+                onTap();
+              } : () {
+                debugPrint('🚫 CooldownButton tapped but disabled: $label');
+              },
               customBorder: const CircleBorder(),
               child: SizedBox(
                 width: buttonSize,
                 height: buttonSize,
                 child: Stack(
+                  alignment: Alignment.center,
                   children: [
+                    // Emoji
+                    Text(
+                      emoji,
+                      style: TextStyle(fontSize: emojiSize),
+                    ),
+                    
                     // Radial sweep overlay (only when on cooldown)
                     if (!isAvailable)
                       CustomPaint(
-                        size: const Size(buttonSize, buttonSize),
-                        painter: CooldownSweepPainter(progress: progress),
+                        size: Size(buttonSize, buttonSize),
+                        painter: CooldownSweepPainter(progress: progress, color: color),
                       ),
                   ],
                 ),
@@ -512,36 +552,12 @@ class CooldownButton extends StatelessWidget {
             ),
           ),
         ),
-        
-        // Overflowing Image/Icon (Placed on top, ignoring hits if needed, but we want it to look part of button)
-        // Since it's on top of InkWell, we should wrap it in IgnorePointer so clicks go through to InkWell?
-        // Or wrap InkWell around everything?
-        // If we wrap InkWell around everything, the ripple will be square or large.
-        // Let's keep InkWell on the circle, and put Image on top. 
-        // If Image is larger, clicks on the overflowing part won't trigger InkWell unless we expand InkWell.
-        // For now, let's assume user clicks the circle.
-        IgnorePointer(
-          child: Center(
-            child: imagePath != null
-                ? Image.asset(
-                    imagePath!,
-                    width: imageSize, 
-                    height: imageSize,
-                    fit: BoxFit.contain,
-                  )
-                : Icon(
-                    icon ?? Icons.help,
-                    color: color, // Use button color for icon
-                    size: 30,
-                  ),
-          ),
-        ),
 
         // Count badge (Bottom Right)
         if (count != null)
           Positioned(
-            bottom: -5,
-            right: -5,
+            bottom: 0,
+            right: 0,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               constraints: const BoxConstraints(minWidth: 18),
@@ -577,8 +593,9 @@ class CooldownButton extends StatelessWidget {
 /// Custom painter for RPG-style radial sweep cooldown overlay
 class CooldownSweepPainter extends CustomPainter {
   final double progress; // 0.0 = full cooldown, 1.0 = ready
+  final Color color;
 
-  CooldownSweepPainter({required this.progress});
+  CooldownSweepPainter({required this.progress, required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -587,7 +604,7 @@ class CooldownSweepPainter extends CustomPainter {
 
     if (sweepAngle > 0) {
       final paint = Paint()
-        ..color = Colors.black.withValues(alpha: 0.6) // Semi-transparent dark overlay
+        ..color = Colors.white.withValues(alpha: 0.8) // Semi-transparent white overlay to "grey out"
         ..style = PaintingStyle.fill;
 
       final center = Offset(size.width / 2, size.height / 2);
@@ -609,6 +626,6 @@ class CooldownSweepPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CooldownSweepPainter oldDelegate) {
-    return oldDelegate.progress != progress;
+    return oldDelegate.progress != progress || oldDelegate.color != color;
   }
 }

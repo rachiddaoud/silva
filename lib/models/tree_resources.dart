@@ -40,7 +40,7 @@ class TreeResources {
   bool canWater() {
     if (lastWatered == null) return true;
     final now = DateTime.now();
-    return now.difference(lastWatered!).inSeconds >= 5;
+    return now.difference(lastWatered!).inMilliseconds >= 5000;
   }
 
   /// Check if flower can be used (5 seconds cooldown)
@@ -48,7 +48,7 @@ class TreeResources {
     if (flowerCount <= 0) return false;
     if (lastFlowerUsed == null) return true;
     final now = DateTime.now();
-    return now.difference(lastFlowerUsed!).inSeconds >= 5;
+    return now.difference(lastFlowerUsed!).inMilliseconds >= 5000;
   }
 
   /// Check if leaf can be used (5 seconds cooldown)
@@ -56,7 +56,7 @@ class TreeResources {
     if (leafCount <= 0) return false;
     if (lastLeafUsed == null) return true;
     final now = DateTime.now();
-    return now.difference(lastLeafUsed!).inSeconds >= 5;
+    return now.difference(lastLeafUsed!).inMilliseconds >= 5000;
   }
 
   /// Get remaining cooldown for water

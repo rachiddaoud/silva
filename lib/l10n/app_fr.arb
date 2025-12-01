@@ -1,5 +1,5 @@
 {
-  "appTitle": "Mes Petits Pas",
+  "appTitle": "Silva",
   "victoriesTitle": "Victoires",
   "congratulationsMessage": "Bravo ! Vous avez terminé {count} victoire{pluralSuffix} aujourd'hui.",
   "@congratulationsMessage": {
@@ -58,7 +58,7 @@
       }
     }
   },
-  "welcomeTitle": "Bienvenue",
+  "welcomeTitle": "Bienvenue sur\nSilva",
   "welcomeSubtitle": "Votre espace de sérénité",
   "continueWithGoogle": "Commencer avec Google",
   "finishDayTitle": "Terminer {date}",

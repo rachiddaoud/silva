@@ -15,46 +15,9 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = AuthService();
   bool _isLoading = false;
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-      ),
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.1),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
-      ),
-    );
-
-    _animationController.forward();
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
 
   Future<void> _handleGoogleSignIn() async {
     setState(() {
@@ -94,14 +57,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
   }
 
-  Widget _buildDot({required bool active}) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      width: active ? 24 : 8,
-      height: 8,
-      decoration: BoxDecoration(
-        color: active ? const Color(0xFFFFD54F) : const Color(0xFFE0E0E0), // Yellow for active, Grey for inactive
-        borderRadius: BorderRadius.circular(4),
+  void _handleAppleSignIn() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Apple Sign-In coming soon!'),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -115,111 +75,116 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 20),
-                    // Welcome Text
-                    Text(
-                      AppLocalizations.of(context)!.welcomeTitle,
-                      style: theme.textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF2D3436),
-                        letterSpacing: -0.5,
-                        height: 1.2,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      AppLocalizations.of(context)!.welcomeSubtitle,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: const Color(0xFF636E72),
-                        height: 1.5,
-                        fontSize: 16,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 40),
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 40),
+                // Welcome Text
+                Text(
+                  AppLocalizations.of(context)!.welcomeTitle,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF2D3436),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  AppLocalizations.of(context)!.welcomeSubtitle,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: const Color(0xFF636E72),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 48),
 
-                    // App Doodle
-                    Container(
-                      height: 250,
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Image.asset(
-                        'assets/doodles/login_doodle.png',
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) => Icon(
-                          Icons.image_not_supported_rounded,
-                          size: 64,
-                          color: theme.colorScheme.primary.withOpacity(0.5),
+                // Main Image
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 300),
+                  child: Image.asset(
+                    'assets/doodles/login.jpg',
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => Icon(
+                      Icons.image_not_supported_rounded,
+                      size: 64,
+                      color: theme.colorScheme.primary.withOpacity(0.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 48),
+                
+                // Buttons
+                if (_isLoading)
+                  const Center(child: CircularProgressIndicator())
+                else ...[
+                  // Google Button
+                  SizedBox(
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: _handleGoogleSignIn,
+                      icon: Image.network(
+                        'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1200px-Google_%22G%22_logo.svg.png',
+                        height: 24,
+                        errorBuilder: (context, error, stackTrace) => 
+                            const Icon(Icons.login),
+                      ),
+                      label: Text(
+                        AppLocalizations.of(context)!.continueWithGoogle,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF1F2F6),
+                        foregroundColor: const Color(0xFF2D3436),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 30),
-
-                    // Pagination Dots
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildDot(active: false),
-                        _buildDot(active: true),
-                        _buildDot(active: false),
-                        _buildDot(active: false),
-                      ],
-                    ),
-                    const SizedBox(height: 50),
-                    
-                    // Login Button
-                    _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : SizedBox(
-                            width: double.infinity,
-                            height: 56,
-                            child: ElevatedButton.icon(
-                              onPressed: _handleGoogleSignIn,
-                              icon: Image.network(
-                                'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1200px-Google_%22G%22_logo.svg.png',
-                                height: 24,
-                                errorBuilder: (context, error, stackTrace) => 
-                                    const Icon(Icons.login),
-                              ),
-                              label: Text(
-                                AppLocalizations.of(context)!.continueWithGoogle,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFF1F2F6), // Light grey background
-                                foregroundColor: const Color(0xFF2D3436),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30), // Fully rounded
-                                ),
-                              ),
-                            ),
-                          ),
-                    const SizedBox(height: 24),
-                    Text(
-                      "En continuant, vous acceptez nos conditions d'utilisation",
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFFB2BEC3),
-                        fontSize: 12,
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Apple Button (Placeholder)
+                  SizedBox(
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: _handleAppleSignIn,
+                      icon: const Icon(Icons.apple, size: 28, color: Colors.white),
+                      label: const Text(
+                        'Continue with Apple',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
                     ),
-                  ],
+                  ),
+                ],
+                
+                const SizedBox(height: 24),
+                Text(
+                  "En continuant, vous acceptez nos conditions d'utilisation",
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFFB2BEC3),
+                    fontSize: 12,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
+                const SizedBox(height: 20),
+              ],
             ),
           ),
         ),
@@ -227,3 +192,4 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 }
+

@@ -1,5 +1,5 @@
 {
-  "appTitle": "My Little Steps",
+  "appTitle": "Silva",
   "victoriesTitle": "Victories",
   "congratulationsMessage": "Well done! You completed {count} victor{pluralSuffix} today.",
   "@congratulationsMessage": {
@@ -58,7 +58,7 @@
       }
     }
   },
-  "welcomeTitle": "Welcome to\nYour Bubble",
+  "welcomeTitle": "Welcome to\nSilva",
   "welcomeSubtitle": "Your space for serenity and well-being",
   "continueWithGoogle": "Start with Google",
   "finishDayTitle": "Finish {date}",

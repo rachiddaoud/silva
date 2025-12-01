@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'My Little Steps';
+  String get appTitle => 'Silva';
 
   @override
   String get victoriesTitle => 'Victories';
@@ -140,7 +140,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get welcomeTitle => 'Welcome to\nYour Bubble';
+  String get welcomeTitle => 'Welcome to\nSilva';
 
   @override
   String get welcomeSubtitle => 'Your space for serenity and well-being';

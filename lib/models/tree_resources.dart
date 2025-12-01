@@ -6,6 +6,7 @@ class TreeResources {
   final int flowerCount;         // 5 per day, +1 every 5 minutes
   final DateTime? lastWatered;    // Track last water time
   final DateTime? lastFlowerUsed; // Track last flower use
+  final DateTime? lastLeafUsed;   // Track last leaf use
   final DateTime lastDailyReset;  // Track daily flower reset
 
   const TreeResources({
@@ -13,6 +14,7 @@ class TreeResources {
     this.flowerCount = 5,
     this.lastWatered,
     this.lastFlowerUsed,
+    this.lastLeafUsed,
     required this.lastDailyReset,
   });
 
@@ -21,6 +23,7 @@ class TreeResources {
     int? flowerCount,
     DateTime? lastWatered,
     DateTime? lastFlowerUsed,
+    DateTime? lastLeafUsed,
     DateTime? lastDailyReset,
   }) {
     return TreeResources(
@@ -28,23 +31,32 @@ class TreeResources {
       flowerCount: flowerCount ?? this.flowerCount,
       lastWatered: lastWatered ?? this.lastWatered,
       lastFlowerUsed: lastFlowerUsed ?? this.lastFlowerUsed,
+      lastLeafUsed: lastLeafUsed ?? this.lastLeafUsed,
       lastDailyReset: lastDailyReset ?? this.lastDailyReset,
     );
   }
 
-  /// Check if water is available (1 hour cooldown)
+  /// Check if water is available (5 seconds cooldown)
   bool canWater() {
     if (lastWatered == null) return true;
     final now = DateTime.now();
-    return now.difference(lastWatered!).inHours >= 1;
+    return now.difference(lastWatered!).inSeconds >= 5;
   }
 
-  /// Check if flower can be used (5 minute cooldown)
+  /// Check if flower can be used (5 seconds cooldown)
   bool canUseFlower() {
     if (flowerCount <= 0) return false;
     if (lastFlowerUsed == null) return true;
     final now = DateTime.now();
-    return now.difference(lastFlowerUsed!).inMinutes >= 5;
+    return now.difference(lastFlowerUsed!).inSeconds >= 5;
+  }
+
+  /// Check if leaf can be used (5 seconds cooldown)
+  bool canUseLeaf() {
+    if (leafCount <= 0) return false;
+    if (lastLeafUsed == null) return true;
+    final now = DateTime.now();
+    return now.difference(lastLeafUsed!).inSeconds >= 5;
   }
 
   /// Get remaining cooldown for water
@@ -52,7 +64,7 @@ class TreeResources {
     if (lastWatered == null) return Duration.zero;
     final now = DateTime.now();
     final elapsed = now.difference(lastWatered!);
-    final remaining = const Duration(hours: 1) - elapsed;
+    final remaining = const Duration(seconds: 5) - elapsed;
     return remaining.isNegative ? Duration.zero : remaining;
   }
 
@@ -61,7 +73,16 @@ class TreeResources {
     if (lastFlowerUsed == null) return Duration.zero;
     final now = DateTime.now();
     final elapsed = now.difference(lastFlowerUsed!);
-    final remaining = const Duration(minutes: 5) - elapsed;
+    final remaining = const Duration(seconds: 5) - elapsed;
+    return remaining.isNegative ? Duration.zero : remaining;
+  }
+
+  /// Get remaining cooldown for leaf
+  Duration getLeafCooldownRemaining() {
+    if (lastLeafUsed == null) return Duration.zero;
+    final now = DateTime.now();
+    final elapsed = now.difference(lastLeafUsed!);
+    final remaining = const Duration(seconds: 5) - elapsed;
     return remaining.isNegative ? Duration.zero : remaining;
   }
 
@@ -79,20 +100,15 @@ class TreeResources {
   /// Calculate current flower count with time-based increments
   /// Each 5 minutes adds 1 flower, up to 5 max per day
   int getCurrentFlowerCount() {
-    final now = DateTime.now();
+    // final now = DateTime.now(); // Unused for now
     
     // If we should reset daily, return 5
     if (shouldResetDailyFlowers()) {
       return 5;
     }
     
-    // Calculate time-based increments
-    final minutesSinceReset = now.difference(lastDailyReset).inMinutes;
-    final timeBasedFlowers = (minutesSinceReset ~/ 5).clamp(0, 5);
-    
-    // Return the max of stored count and time-based count
-    // This handles both manual usage and time-based regeneration
-    return flowerCount.clamp(0, timeBasedFlowers);
+    // Temporary fix: just return flowerCount to avoid clamping to 0
+    return flowerCount;
   }
 
   Map<String, dynamic> toJson() {
@@ -101,6 +117,7 @@ class TreeResources {
       'flowerCount': flowerCount,
       'lastWatered': lastWatered?.toIso8601String(),
       'lastFlowerUsed': lastFlowerUsed?.toIso8601String(),
+      'lastLeafUsed': lastLeafUsed?.toIso8601String(),
       'lastDailyReset': lastDailyReset.toIso8601String(),
     };
   }
@@ -115,6 +132,9 @@ class TreeResources {
       lastFlowerUsed: json['lastFlowerUsed'] != null
           ? DateTime.parse(json['lastFlowerUsed'] as String)
           : null,
+      lastLeafUsed: json['lastLeafUsed'] != null
+          ? DateTime.parse(json['lastLeafUsed'] as String)
+          : null,
       lastDailyReset: json['lastDailyReset'] != null
           ? DateTime.parse(json['lastDailyReset'] as String)
           : DateTime.now(),
@@ -128,6 +148,7 @@ class TreeResources {
       flowerCount: 5,
       lastWatered: null,
       lastFlowerUsed: null,
+      lastLeafUsed: null,
       lastDailyReset: DateTime.now(),
     );
   }
@@ -135,6 +156,6 @@ class TreeResources {
   @override
   String toString() {
     return 'TreeResources(leafs: $leafCount, flowers: $flowerCount, '
-           'canWater: ${canWater()}, canUseFlower: ${canUseFlower()})';
+           'canWater: ${canWater()}, canUseFlower: ${canUseFlower()}, canUseLeaf: ${canUseLeaf()})';
   }
 }

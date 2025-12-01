@@ -21,7 +21,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   late TreeParameters _treeParameters;
   final TreeController _treeController = TreeController();
   TreeResources _resources = TreeResources.initial();
-  Timer? _resourceUpdateTimer;
+  // Removed global timer: _resourceUpdateTimer
   final List<SparkleData> _sparkles = [];
 
   @override
@@ -30,18 +30,11 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     _treeParameters = const TreeParameters(seed: 12345);
     _loadTree();
     _loadResources();
-    
-    // Update UI every minute to refresh cooldown states
-    _resourceUpdateTimer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) {
-        setState(() {});
-      }
-    });
   }
 
   @override
   void dispose() {
-    _resourceUpdateTimer?.cancel();
+    // No timer to cancel
     super.dispose();
   }
 
@@ -118,14 +111,16 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
       _isProcessing = true;
     });
     
-    await action();
-    _saveTree();
-    _saveResources();
-    
-    if (mounted) {
-      setState(() {
-        _isProcessing = false;
-      });
+    try {
+      await action();
+      _saveTree();
+      _saveResources();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
     }
   }
 
@@ -152,17 +147,9 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
 
   void _handleLeafButton() {
     // Debug mode: always allow
-    final canUse = _resources.leafCount > 0;
+    final canUse = _resources.canUseLeaf();
     
-    if (!canUse) {
-      // Show toast for debug mode
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('🐛 Debug: Leaf count is 0 but still adding'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
+    if (!canUse) return;
 
     _handleAction(() async {
       _treeController.addLeaf();
@@ -173,9 +160,12 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
         _addSparkle(leafPos, Colors.green);
       }
       
-      // Decrement leaf count (can go negative in debug)
+      // Decrement leaf count and update cooldown
       setState(() {
-        _resources = _resources.copyWith(leafCount: _resources.leafCount - 1);
+        _resources = _resources.copyWith(
+          leafCount: _resources.leafCount - 1,
+          lastLeafUsed: DateTime.now(),
+        );
       });
     });
   }
@@ -183,23 +173,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   void _handleWaterButton() {
     final canWater = _resources.canWater();
     
-    if (!canWater) {
-      final remaining = _resources.getWaterCooldownRemaining();
-      final hours = remaining.inHours;
-      final minutes = remaining.inMinutes % 60;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '💧 ${hours > 0 ? "$hours hour${hours > 1 ? 's' : ''} " : ""}$minutes minute${minutes != 1 ? 's' : ''} remaining',
-          ),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-      
-      // Debug mode: still allow
-      debugPrint('🐛 Debug: Water on cooldown but still allowing');
-    }
+    if (!canWater) return;
 
     _handleAction(() async {
       _treeController.grow(); // Add +1 day of life
@@ -213,26 +187,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   void _handleFlowerButton() {
     final canUse = _resources.canUseFlower();
     
-    if (!canUse) {
-      if (_resources.flowerCount <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🐛 Debug: Flower count is 0 but still adding'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      } else {
-        final remaining = _resources.getFlowerCooldownRemaining();
-        final minutes = remaining.inMinutes;
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('🌸 $minutes minute${minutes != 1 ? 's' : ''} remaining'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
+    if (!canUse) return;
 
     _handleAction(() async {
       _treeController.addFlower();
@@ -290,6 +245,15 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     );
   }
 
+  /// Callback when a button cooldown finishes
+  void _onCooldownFinished() {
+    if (mounted) {
+      setState(() {
+        // Just rebuild to refresh the 'isAvailable' state
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_treeController.tree == null) {
@@ -303,24 +267,32 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     final currentFlowerCount = _resources.getCurrentFlowerCount();
 
     return SizedBox(
-      height: 250,
+      height: 350, // Increased height to accommodate bottom button
       width: double.infinity,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Center(
-            child: ProceduralTreeWidget(
-              size: 250,
-              growthLevel: _treeController.tree?.getGrowthLevel() ?? 0.0,
-              parameters: _treeParameters,
-              controller: _treeController,
+          // Tree centered
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 250,
+            child: Center(
+              child: ProceduralTreeWidget(
+                size: 250,
+                growthLevel: _treeController.tree?.getGrowthLevel() ?? 0.0,
+                parameters: _treeParameters,
+                controller: _treeController,
+              ),
             ),
           ),
-          // Sparkle animations
           ..._sparkles.map((sparkle) => SparkleAnimation(
             position: sparkle.position,
             color: sparkle.color,
           )),
+          
+          // Info Button (Top Right)
           Positioned(
             top: 0,
             right: 0,
@@ -330,150 +302,75 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
               tooltip: 'Infos arbre',
             ),
           ),
-          // Resource buttons
+          
+          // Reset Button (Top Left)
           Positioned(
-            right: 16,
-            top: 40,
-            child: Column(
-              children: [
-                _buildResourceButton(
-                  icon: Icons.eco,
-                  label: 'Leaf',
-                  count: _resources.leafCount,
-                  color: Colors.green,
-                  isAvailable: _resources.leafCount > 0,
-                  onTap: _handleLeafButton,
-                ),
-                const SizedBox(height: 6),
-                _buildResourceButton(
-                  icon: Icons.water_drop,
-                  label: 'Water',
-                  count: null, // No counter for water
-                  color: Colors.blue,
-                  isAvailable: _resources.canWater(),
-                  onTap: _handleWaterButton,
-                ),
-                const SizedBox(height: 6),
-                _buildResourceButton(
-                  icon: Icons.local_florist,
-                  label: 'Flower',
-                  count: currentFlowerCount,
-                  color: Colors.pink,
-                  isAvailable: _resources.canUseFlower(),
-                  onTap: _handleFlowerButton,
-                ),
-                const SizedBox(height: 12),
-                // Reset button
-                _buildDebugButton(
-                  icon: Icons.refresh,
-                  label: 'Reset',
-                  color: Colors.red,
-                  onTap: _handleResetTree,
-                ),
-              ],
+            top: 0,
+            left: 0,
+            child: IconButton(
+              icon: const Icon(Icons.refresh, size: 20, color: Colors.grey),
+              onPressed: _handleResetTree,
+              tooltip: 'Reset',
+            ),
+          ),
+
+          // --- Action Buttons ---
+
+          // Leaf Button (Left of Tree)
+          Positioned(
+            bottom: 80,
+            left: 20,
+            child: CooldownButton(
+              imagePath: 'assets/tree/leaf.png',
+              label: 'Leaf',
+              count: _resources.leafCount,
+              color: Colors.green,
+              isAvailable: _resources.canUseLeaf(),
+              remainingCooldown: _resources.getLeafCooldownRemaining(),
+              totalCooldown: const Duration(seconds: 5),
+              onTap: _handleLeafButton,
+              onCooldownFinished: _onCooldownFinished,
+            ),
+          ),
+
+          // Flower Button (Right of Tree)
+          Positioned(
+            bottom: 80,
+            right: 20,
+            child: CooldownButton(
+              imagePath: 'assets/tree/flower.png',
+              label: 'Flower',
+              count: currentFlowerCount,
+              color: Colors.pink,
+              isAvailable: _resources.canUseFlower(),
+              remainingCooldown: _resources.getFlowerCooldownRemaining(),
+              totalCooldown: const Duration(seconds: 5),
+              onTap: _handleFlowerButton,
+              onCooldownFinished: _onCooldownFinished,
+            ),
+          ),
+
+          // Water Button (Below Tree)
+          Positioned(
+            bottom: 10,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: CooldownButton(
+                imagePath: null, // Use icon for water
+                icon: Icons.water_drop,
+                label: 'Water',
+                count: null,
+                color: Colors.blue,
+                isAvailable: _resources.canWater(),
+                remainingCooldown: _resources.getWaterCooldownRemaining(),
+                totalCooldown: const Duration(seconds: 5),
+                onTap: _handleWaterButton,
+                onCooldownFinished: _onCooldownFinished,
+              ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildResourceButton({
-    required IconData icon,
-    required String label,
-    required int? count,
-    required Color color,
-    required bool isAvailable,
-    required VoidCallback onTap,
-  }) {
-    return Tooltip(
-      message: label,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: isAvailable 
-                ? Colors.white.withValues(alpha: 0.9) 
-                : Colors.grey.withValues(alpha: 0.5),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Center(
-                child: Icon(
-                  icon,
-                  color: isAvailable ? color : Colors.grey,
-                  size: 24,
-                ),
-              ),
-              if (count != null)
-                Positioned(
-                  right: 2,
-                  top: 2,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      count.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDebugButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Tooltip(
-      message: label,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.9),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Icon(
-            icon,
-            color: color,
-            size: 20,
-          ),
-        ),
       ),
     );
   }
@@ -527,4 +424,191 @@ class SparkleData {
     required this.color,
     required this.timestamp,
   });
+}
+
+class CooldownButton extends StatelessWidget {
+  final String? imagePath;
+  final IconData? icon;
+  final String label;
+  final int? count;
+  final Color color;
+  final bool isAvailable;
+  final Duration remainingCooldown;
+  final Duration totalCooldown;
+  final VoidCallback onTap;
+  final VoidCallback? onCooldownFinished;
+
+  const CooldownButton({
+    super.key,
+    this.imagePath,
+    this.icon,
+    required this.label,
+    required this.count,
+    required this.color,
+    required this.isAvailable,
+    required this.remainingCooldown,
+    required this.totalCooldown,
+    required this.onTap,
+    this.onCooldownFinished,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // If available, show static full button
+    if (isAvailable) {
+      return _buildButtonContent(1.0);
+    }
+
+    // If cooldown, animate from current progress to 1.0
+    final double initialProgress = 1.0 - (remainingCooldown.inMilliseconds / totalCooldown.inMilliseconds).clamp(0.0, 1.0);
+
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(isAvailable), // Force recreation when availability changes
+      tween: Tween(begin: initialProgress, end: 1.0),
+      duration: remainingCooldown,
+      onEnd: onCooldownFinished,
+      builder: (context, value, child) {
+        return _buildButtonContent(value);
+      },
+    );
+  }
+
+  Widget _buildButtonContent(double progress) {
+    const double buttonSize = 50.0;
+    const double imageSize = 40.0; // Larger image
+
+    return Stack(
+      clipBehavior: Clip.none, // Allow overflowing image and badge
+      alignment: Alignment.center,
+      children: [
+        // Main Button Background (Circle)
+        Tooltip(
+          message: label,
+          child: Material(
+            color: Colors.black.withValues(alpha: 0.3), // Dark transparent interior
+            shape: CircleBorder(
+              side: BorderSide(
+                color: color.withValues(alpha: 0.5), // Subtle border
+                width: 1,
+              ),
+            ),
+            child: InkWell(
+              onTap: isAvailable ? onTap : null,
+              customBorder: const CircleBorder(),
+              child: SizedBox(
+                width: buttonSize,
+                height: buttonSize,
+                child: Stack(
+                  children: [
+                    // Radial sweep overlay (only when on cooldown)
+                    if (!isAvailable)
+                      CustomPaint(
+                        size: const Size(buttonSize, buttonSize),
+                        painter: CooldownSweepPainter(progress: progress),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        
+        // Overflowing Image/Icon (Placed on top, ignoring hits if needed, but we want it to look part of button)
+        // Since it's on top of InkWell, we should wrap it in IgnorePointer so clicks go through to InkWell?
+        // Or wrap InkWell around everything?
+        // If we wrap InkWell around everything, the ripple will be square or large.
+        // Let's keep InkWell on the circle, and put Image on top. 
+        // If Image is larger, clicks on the overflowing part won't trigger InkWell unless we expand InkWell.
+        // For now, let's assume user clicks the circle.
+        IgnorePointer(
+          child: Center(
+            child: imagePath != null
+                ? Image.asset(
+                    imagePath!,
+                    width: imageSize, 
+                    height: imageSize,
+                    fit: BoxFit.contain,
+                  )
+                : Icon(
+                    icon ?? Icons.help,
+                    color: color, // Use button color for icon
+                    size: 30,
+                  ),
+          ),
+        ),
+
+        // Count badge (Bottom Right)
+        if (count != null)
+          Positioned(
+            bottom: -5,
+            right: -5,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              constraints: const BoxConstraints(minWidth: 18),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Text(
+                count.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  height: 1.0,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Custom painter for RPG-style radial sweep cooldown overlay
+class CooldownSweepPainter extends CustomPainter {
+  final double progress; // 0.0 = full cooldown, 1.0 = ready
+
+  CooldownSweepPainter({required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Calculate sweep angle (0 = ready, 2π = full cooldown)
+    final sweepAngle = (1.0 - progress) * 2 * 3.14159265359; // 2π radians
+
+    if (sweepAngle > 0) {
+      final paint = Paint()
+        ..color = Colors.black.withValues(alpha: 0.6) // Semi-transparent dark overlay
+        ..style = PaintingStyle.fill;
+
+      final center = Offset(size.width / 2, size.height / 2);
+      final radius = size.width / 2;
+
+      // Draw arc starting from the current progress point and sweeping to the top
+      // This creates a "wiper" effect that clears clockwise
+      
+      final startAngle = -3.14159265359 / 2 + (progress * 2 * 3.14159265359);
+       canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        sweepAngle, 
+        true,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(CooldownSweepPainter oldDelegate) {
+    return oldDelegate.progress != progress;
+  }
 }

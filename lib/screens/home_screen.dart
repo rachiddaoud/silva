@@ -318,6 +318,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       resources.copyWith(leafCount: newLeafCount),
     );
     
+    // Refresh the tree widget to show updated leaf count
+    // The widget will reload resources in didUpdateWidget when victoryCount changes
+    // But we also trigger a refresh here to ensure immediate update
+    if (mounted) {
+      setState(() {
+        // This will trigger a rebuild and didUpdateWidget will reload resources
+      });
+    }
+    
     // Sauvegarder les victoires mises à jour
     await PreferencesService.saveTodayVictories(_victories);
     
@@ -424,7 +433,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               DailyQuoteCard(quote: _currentQuote),
               
               // Arbre de croissance
-              const HomeTreeWidget(),
+              HomeTreeWidget(
+                victoryCount: _victories.where((v) => v.isAccomplished).length,
+              ),
 
               // Titre Victoires
               // Titre Victoires

@@ -293,6 +293,64 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get treeInfoTitle => 'My Tree';
+
+  @override
+  String get treeInfoSubtitle => 'Growth Information';
+
+  @override
+  String get treeInfoDescription =>
+      'This tree represents your personal growth. Every day you complete, every victory you accomplish, and every emotion you express contributes to making your unique tree grow.';
+
+  @override
+  String get treeInfoHowItWorks => 'How it works';
+
+  @override
+  String get treeInfoWateringTitle => 'Watering';
+
+  @override
+  String get treeInfoWateringDescription =>
+      'Water your tree once a day after completing 3 victories. This makes your tree grow and maintains your streak!';
+
+  @override
+  String get treeInfoLeavesTitle => 'Leaves';
+
+  @override
+  String get treeInfoLeavesDescription =>
+      'Earn leaves by completing your daily victories. Use them to decorate your tree!';
+
+  @override
+  String get treeInfoFlowersTitle => 'Flowers';
+
+  @override
+  String get treeInfoFlowersDescription =>
+      'Add a flower per day to beautify your tree. Flowers are earned through your daily streak!';
+
+  @override
+  String get treeInfoSpecialFlowersTitle => 'Special unique flowers';
+
+  @override
+  String get treeInfoSpecialFlowersDescription =>
+      'Maintain your streak to unlock rare and unique flowers! Special flowers appear at 3 days, 7 days (1 week), and 30 days of consecutive streak. Every milestone of your journey deserves to be celebrated!';
+
+  @override
+  String get treeInfoStats => 'Statistics';
+
+  @override
+  String treeInfoStreak(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'days',
+      one: 'day',
+    );
+    return 'Streak: $days $_temp0';
+  }
+
+  @override
+  String get treeInfoTip => 'Consistency is the key to growth!';
+
+  @override
   String get sendFeedback => 'Send Feedback';
 
   @override

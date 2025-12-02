@@ -18,7 +18,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class HomeTreeWidget extends StatefulWidget {
-  const HomeTreeWidget({super.key});
+  final int victoryCount;
+
+  const HomeTreeWidget({
+    super.key,
+    required this.victoryCount,
+  });
 
   @override
   State<HomeTreeWidget> createState() => _HomeTreeWidgetState();
@@ -48,6 +53,21 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   void dispose() {
     // No timer to cancel
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(HomeTreeWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reload resources when widget updates (e.g., when victory count changes)
+    // This ensures the leaf counter is updated when a victory is checked
+    if (oldWidget.victoryCount != widget.victoryCount) {
+      _loadResources();
+    }
+  }
+
+  /// Public method to refresh resources (can be called from parent)
+  void refreshResources() {
+    _loadResources();
   }
 
   void _loadTree() async {
@@ -211,16 +231,53 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
 
   void _handleWaterButton() {
     debugPrint('💧 Water button clicked');
-    final canWater = _resources.canWater();
     
-    if (!canWater) {
-      debugPrint('❌ Water button disabled (cooldown)');
+    // Check conditions
+    if (widget.victoryCount < 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Need 3 victories to water the tree!')),
+      );
       return;
     }
+    
+    if (_resources.isWateredToday()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Already watered today! Come back tomorrow.')),
+      );
+      return;
+    }
+
+    final canWater = _resources.canWater();
+    if (!canWater) return;
 
     _handleAction(() async {
       _treeController.grow(); // Add +1 day of life
       debugPrint('✅ Tree watered (Day added)');
+      
+      // Update Streak Logic
+      final now = DateTime.now();
+      int newStreak = _resources.streak;
+      final lastUpdate = _resources.lastStreakUpdate;
+      
+      if (lastUpdate == null) {
+        newStreak = 1;
+      } else {
+        // Check if consecutive day (yesterday)
+        final yesterday = now.subtract(const Duration(days: 1));
+        final wasYesterday = lastUpdate.year == yesterday.year && 
+                             lastUpdate.month == yesterday.month && 
+                             lastUpdate.day == yesterday.day;
+                             
+        if (wasYesterday) {
+          newStreak++;
+        } else if (now.year != lastUpdate.year || now.month != lastUpdate.month || now.day != lastUpdate.day) {
+          // If not today and not yesterday, reset streak
+          newStreak = 1;
+        }
+      }
+      
+      // Award flower for streak
+      final newFlowerCount = _resources.flowerCount + 1;
       
       // Add sparkle at the base of the trunk (lower side)
       if (mounted) {
@@ -229,20 +286,37 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
         // Trunk base is at treeSize * 0.75 = 187.5, centered horizontally
         final trunkBaseY = treeSize * 0.75;
         _addSparkle(Offset(screenWidth / 2, trunkBaseY), Colors.blue);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Watered! Streak: $newStreak days. +1 Flower!')),
+        );
       }
       
       setState(() {
-        _resources = _resources.copyWith(lastWatered: DateTime.now());
+        _resources = _resources.copyWith(
+          lastWatered: now,
+          streak: newStreak,
+          lastStreakUpdate: now,
+          flowerCount: newFlowerCount,
+        );
       });
     });
   }
 
   void _handleFlowerButton() {
     debugPrint('🌸 Flower button clicked');
+    
+    if (_resources.isFlowerUsedToday()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Already added a flower today! Come back tomorrow.')),
+      );
+      return;
+    }
+    
     final canUse = _resources.canUseFlower();
     
     if (!canUse) {
-      debugPrint('❌ Flower button disabled (cooldown or no resources)');
+      debugPrint('❌ Flower button disabled (cooldown)');
       return;
     }
 
@@ -278,10 +352,9 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
         }
       }
       
-      // Decrement flower count and update cooldown
+      // Update cooldown (don't decrement count, flower is once per day)
       setState(() {
         _resources = _resources.copyWith(
-          flowerCount: _resources.flowerCount - 1,
           lastFlowerUsed: DateTime.now(),
         );
       });
@@ -319,11 +392,12 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
                     clearedTree.copyWith(age: 10),
                   );
                 }
-                // Reset resources to 0 leaves and 0 flowers
+                // Reset resources to 0 leaves and 0 flowers, and reset flower usage
                 setState(() {
                   _resources = _resources.copyWith(
                     leafCount: 0,
                     flowerCount: 0,
+                    lastFlowerUsed: null,
                   );
                 });
               });
@@ -367,6 +441,67 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     });
   }
 
+  /// Get message for when leaf button will be available
+  String? _getLeafDisabledMessage() {
+    if (_resources.leafCount <= 0) {
+      return 'No leaves available. Complete victories to earn leaves!';
+    }
+    final remaining = _resources.getLeafCooldownRemaining();
+    if (remaining.inMilliseconds > 0) {
+      final seconds = (remaining.inMilliseconds / 1000).ceil();
+      return 'Leaf button available in $seconds second${seconds != 1 ? 's' : ''}';
+    }
+    return null;
+  }
+
+  /// Get message for when water button will be available
+  String? _getWaterDisabledMessage() {
+    if (widget.victoryCount < 3) {
+      final needed = 3 - widget.victoryCount;
+      return 'Need $needed more victory${needed != 1 ? 'ies' : 'y'} to water the tree!';
+    }
+    if (_resources.isWateredToday()) {
+      final now = DateTime.now();
+      final tomorrow = DateTime(now.year, now.month, now.day + 1);
+      final timeUntil = tomorrow.difference(now);
+      final hours = timeUntil.inHours;
+      final minutes = timeUntil.inMinutes % 60;
+      if (hours > 0) {
+        return 'Already watered today! Available again in $hours hour${hours != 1 ? 's' : ''} and $minutes minute${minutes != 1 ? 's' : ''}';
+      } else {
+        return 'Already watered today! Available again in $minutes minute${minutes != 1 ? 's' : ''}';
+      }
+    }
+    final remaining = _resources.getWaterCooldownRemaining();
+    if (remaining.inMilliseconds > 0) {
+      final seconds = (remaining.inMilliseconds / 1000).ceil();
+      return 'Water button available in $seconds second${seconds != 1 ? 's' : ''}';
+    }
+    return null;
+  }
+
+  /// Get message for when flower button will be available
+  String? _getFlowerDisabledMessage() {
+    if (_resources.isFlowerUsedToday()) {
+      final now = DateTime.now();
+      final tomorrow = DateTime(now.year, now.month, now.day + 1);
+      final timeUntil = tomorrow.difference(now);
+      final hours = timeUntil.inHours;
+      final minutes = timeUntil.inMinutes % 60;
+      if (hours > 0) {
+        return 'Already added a flower today! Available again in $hours hour${hours != 1 ? 's' : ''} and $minutes minute${minutes != 1 ? 's' : ''}';
+      } else {
+        return 'Already added a flower today! Available again in $minutes minute${minutes != 1 ? 's' : ''}';
+      }
+    }
+    final remaining = _resources.getFlowerCooldownRemaining();
+    if (remaining.inMilliseconds > 0) {
+      final seconds = (remaining.inMilliseconds / 1000).ceil();
+      return 'Flower button available in $seconds second${seconds != 1 ? 's' : ''}';
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_treeController.tree == null) {
@@ -376,12 +511,24 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
       );
     }
 
-    // Get current flower count (handles time-based regeneration)
-    final currentFlowerCount = _resources.getCurrentFlowerCount();
+    // Get theme colors
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
+    final secondaryColor = theme.colorScheme.secondary;
+    final tertiaryColor = theme.colorScheme.tertiary;
+
+    // Check water availability
+    final bool canWater = widget.victoryCount >= 3 && !_resources.isWateredToday();
+    final String waterLabel = _resources.isWateredToday() 
+        ? 'Done' 
+        : (widget.victoryCount >= 3 ? 'Water' : '${widget.victoryCount}/3');
+    
+    // Check flower availability (once per day)
+    final bool canUseFlower = _resources.canUseFlower();
 
     return SizedBox(
       key: _stackKey,
-      height: 280, // Reduced height to remove gap
+      height: 280, // Reduced height to reduce margin
       width: double.infinity,
       child: Stack(
         clipBehavior: Clip.none,
@@ -420,6 +567,39 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
               ),
             ),
           ),
+          
+          // Streak Display (Under Tree)
+          Positioned(
+            top: 200, // Moved up to avoid overlap with water button
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.local_fire_department, color: Colors.orange, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Streak: ${_resources.streak} days',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
           ..._sparkles.map((sparkle) => SparkleAnimation(
             position: sparkle.position,
             color: sparkle.color,
@@ -469,12 +649,31 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
               emoji: '🍃',
               label: 'Leaf',
               count: _resources.leafCount,
-              color: Colors.green,
+              color: _resources.canUseLeaf() ? tertiaryColor : Colors.grey,
               isAvailable: _resources.canUseLeaf(),
               remainingCooldown: _resources.getLeafCooldownRemaining(),
               totalCooldown: const Duration(milliseconds: 500),
               onTap: _handleLeafButton,
               onCooldownFinished: _onCooldownFinished,
+              disabledMessage: _resources.canUseLeaf() ? null : _getLeafDisabledMessage(),
+            ),
+          ),
+
+          // Water Button (Left of Tree, Below Leaf)
+          Positioned(
+            top: 160,
+            left: 20,
+            child: CooldownButton(
+              emoji: '💧',
+              label: waterLabel,
+              count: null,
+              color: canWater && _resources.canWater() ? primaryColor : Colors.grey,
+              isAvailable: canWater && _resources.canWater(),
+              remainingCooldown: _resources.getWaterCooldownRemaining(),
+              totalCooldown: const Duration(milliseconds: 500),
+              onTap: _handleWaterButton,
+              onCooldownFinished: _onCooldownFinished,
+              disabledMessage: (canWater && _resources.canWater()) ? null : _getWaterDisabledMessage(),
             ),
           ),
 
@@ -485,33 +684,14 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
             child: CooldownButton(
               emoji: '🌸',
               label: 'Flower',
-              count: currentFlowerCount,
-              color: Colors.pink,
-              isAvailable: _resources.canUseFlower(),
+              count: null, // No counter, once per day
+              color: canUseFlower ? secondaryColor : Colors.grey,
+              isAvailable: canUseFlower,
               remainingCooldown: _resources.getFlowerCooldownRemaining(),
               totalCooldown: const Duration(milliseconds: 500),
               onTap: _handleFlowerButton,
               onCooldownFinished: _onCooldownFinished,
-            ),
-          ),
-
-          // Water Button (Below Tree)
-          Positioned(
-            bottom: 50, // Moved up further
-            left: 0,
-            right: 0,
-            child: Center(
-              child: CooldownButton(
-                emoji: '💧',
-                label: 'Water',
-                count: null,
-                color: Colors.blue,
-                isAvailable: _resources.canWater(),
-                remainingCooldown: _resources.getWaterCooldownRemaining(),
-                totalCooldown: const Duration(milliseconds: 500),
-                onTap: _handleWaterButton,
-                onCooldownFinished: _onCooldownFinished,
-              ),
+              disabledMessage: canUseFlower ? null : _getFlowerDisabledMessage(),
             ),
           ),
         ],
@@ -587,49 +767,389 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
       context: context,
       builder: (context) {
         final l10n = AppLocalizations.of(context)!;
-        return AlertDialog(
-          title: const Text('🌳'),
-          content: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '${l10n.treeInfo1}\n'
-                '${l10n.treeInfo2}\n'
-                '${l10n.treeInfo3}\n'
-                '\n'
-                '${l10n.treeAge(tree.age)}\n'
-                '${l10n.treeBranches(tree.getAllBranches().length)}\n'
-                '${l10n.treeLeaves(tree.getAllLeaves().length)}\n'
-                '${l10n.treeFlowers(tree.getAllFlowers().length)}',
-                style: const TextStyle(fontSize: 14),
-              ),
-            ],
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+        
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _resources = _resources.copyWith(
-                    leafCount: _resources.leafCount + 10,
-                    flowerCount: _resources.flowerCount + 10,
-                  );
-                });
-                _saveResources();
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Added 10 leaves and 10 flowers (Debug)')),
-                );
-              },
-              child: const Text('+10 Resources (Debug)'),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Text(
+                          '🌳',
+                          style: TextStyle(fontSize: 32),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.treeInfoTitle,
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              l10n.treeInfoSubtitle,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: colorScheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Explanation
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: colorScheme.primary.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: colorScheme.primary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            l10n.treeInfoDescription,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: colorScheme.onSurface.withValues(alpha: 0.8),
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // How it works section
+                  Text(
+                    l10n.treeInfoHowItWorks,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  _buildInfoCard(
+                    context,
+                    '💧',
+                    l10n.treeInfoWateringTitle,
+                    l10n.treeInfoWateringDescription,
+                    colorScheme.primary,
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  _buildInfoCard(
+                    context,
+                    '🍃',
+                    l10n.treeInfoLeavesTitle,
+                    l10n.treeInfoLeavesDescription,
+                    Colors.green,
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  _buildInfoCard(
+                    context,
+                    '🌸',
+                    l10n.treeInfoFlowersTitle,
+                    l10n.treeInfoFlowersDescription,
+                    Colors.pink,
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Special flowers box
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.purple.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '✨',
+                          style: TextStyle(fontSize: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n.treeInfoSpecialFlowersTitle,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                l10n.treeInfoSpecialFlowersDescription,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: colorScheme.onSurface.withValues(alpha: 0.7),
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Stats Section (Compact Grid)
+                  Text(
+                    l10n.treeInfoStats,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Compact stats grid
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildCompactStatBadge(
+                        context,
+                        Icons.calendar_today,
+                        l10n.treeAge(tree.age),
+                        colorScheme.primary,
+                      ),
+                      _buildCompactStatBadge(
+                        context,
+                        Icons.eco,
+                        l10n.treeLeaves(tree.getAllLeaves().length),
+                        Colors.green,
+                      ),
+                      _buildCompactStatBadge(
+                        context,
+                        Icons.local_florist,
+                        l10n.treeFlowers(tree.getAllFlowers().length),
+                        Colors.pink,
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Footer message
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.secondary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.lightbulb_outline,
+                          color: colorScheme.secondary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            l10n.treeInfoTip,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontStyle: FontStyle.italic,
+                              color: colorScheme.onSurface.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Actions
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      // Debug button (only in debug mode)
+                      if (const bool.fromEnvironment('dart.vm.product') == false)
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _resources = _resources.copyWith(
+                                leafCount: _resources.leafCount + 10,
+                                flowerCount: _resources.flowerCount + 10,
+                              );
+                            });
+                            _saveResources();
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Added 10 leaves and 10 flowers (Debug)')),
+                            );
+                          },
+                          child: Text(
+                            'Debug',
+                            style: TextStyle(
+                              color: colorScheme.onSurface.withValues(alpha: 0.5),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(l10n.close),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-          ],
+          ),
         );
       },
+    );
+  }
+
+  Widget _buildCompactStatBadge(BuildContext context, IconData icon, String text, Color color) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(BuildContext context, String emoji, String title, String description, Color color) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            emoji,
+            style: const TextStyle(fontSize: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -656,6 +1176,7 @@ class CooldownButton extends StatelessWidget {
   final Duration totalCooldown;
   final VoidCallback onTap;
   final VoidCallback? onCooldownFinished;
+  final String? disabledMessage; // Message to show when disabled button is clicked
 
   const CooldownButton({
     super.key,
@@ -668,13 +1189,14 @@ class CooldownButton extends StatelessWidget {
     required this.totalCooldown,
     required this.onTap,
     this.onCooldownFinished,
+    this.disabledMessage,
   });
 
   @override
   Widget build(BuildContext context) {
     // If available, show static full button
     if (isAvailable) {
-      return _buildButtonContent(1.0);
+      return _buildButtonContent(context, 1.0);
     }
 
     // If cooldown, animate from current progress to 1.0
@@ -686,14 +1208,74 @@ class CooldownButton extends StatelessWidget {
       duration: remainingCooldown,
       onEnd: onCooldownFinished,
       builder: (context, value, child) {
-        return _buildButtonContent(value);
+        return _buildButtonContent(context, value);
       },
     );
   }
 
-  Widget _buildButtonContent(double progress) {
+  Widget _buildButtonContent(BuildContext context, double progress) {
     const double buttonSize = 45.0;
     const double emojiSize = 24.0;
+
+    Widget buttonContent = Material(
+      color: isAvailable ? Colors.white : Colors.grey.shade200,
+      elevation: isAvailable ? 2 : 1,
+      shape: const CircleBorder(),
+      child: SizedBox(
+        width: buttonSize,
+        height: buttonSize,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Emoji with opacity when disabled
+            Opacity(
+              opacity: isAvailable ? 1.0 : 0.5,
+              child: Text(
+                emoji,
+                style: TextStyle(fontSize: emojiSize),
+              ),
+            ),
+            
+            // Radial sweep overlay (only when on cooldown)
+            if (!isAvailable)
+              CustomPaint(
+                size: Size(buttonSize, buttonSize),
+                painter: CooldownSweepPainter(progress: progress, color: color),
+              ),
+          ],
+        ),
+      ),
+    );
+
+    // Wrap with InkWell only if available, otherwise use GestureDetector for disabled message
+    if (isAvailable) {
+      buttonContent = InkWell(
+        onTap: () {
+          debugPrint('🔘 CooldownButton tapped: $label');
+          onTap();
+        },
+        customBorder: const CircleBorder(),
+        child: buttonContent,
+      );
+    } else if (disabledMessage != null) {
+      buttonContent = GestureDetector(
+        onTap: () {
+          debugPrint('🚫 CooldownButton tapped but disabled: $label');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(disabledMessage!),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        },
+        child: buttonContent,
+      );
+    } else {
+      // If no disabled message, make it non-interactive
+      buttonContent = AbsorbPointer(
+        child: buttonContent,
+      );
+    }
 
     return Stack(
       clipBehavior: Clip.none,
@@ -702,45 +1284,11 @@ class CooldownButton extends StatelessWidget {
         // Main Button Background (Flat Circle)
         Tooltip(
           message: label,
-          child: Material(
-            color: Colors.white,
-            elevation: 2,
-            shape: const CircleBorder(),
-            child: InkWell(
-              onTap: isAvailable ? () {
-                debugPrint('🔘 CooldownButton tapped: $label');
-                onTap();
-              } : () {
-                debugPrint('🚫 CooldownButton tapped but disabled: $label');
-              },
-              customBorder: const CircleBorder(),
-              child: SizedBox(
-                width: buttonSize,
-                height: buttonSize,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Emoji
-                    Text(
-                      emoji,
-                      style: TextStyle(fontSize: emojiSize),
-                    ),
-                    
-                    // Radial sweep overlay (only when on cooldown)
-                    if (!isAvailable)
-                      CustomPaint(
-                        size: Size(buttonSize, buttonSize),
-                        painter: CooldownSweepPainter(progress: progress, color: color),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          child: buttonContent,
         ),
 
-        // Count badge (Bottom Right)
-        if (count != null)
+        // Count badge (Bottom Right) - only show if count is not null and button is available
+        if (count != null && isAvailable)
           Positioned(
             bottom: 0,
             right: 0,

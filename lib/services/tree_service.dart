@@ -348,6 +348,72 @@ class TreeController extends ChangeNotifier {
     return true;
   }
 
+  /// 5. REMOVE LEAF: Removes a leaf (last added or random)
+  bool removeLeaf({bool notify = true}) {
+    if (_tree == null) return false;
+
+    final allLeaves = _tree!.getAllLeaves();
+    if (allLeaves.isEmpty) return false;
+
+    String? leafIdToRemove;
+
+    // Try to remove the last added leaf first
+    if (_lastAddedLeafId != null) {
+      if (allLeaves.any((l) => l.id == _lastAddedLeafId)) {
+        leafIdToRemove = _lastAddedLeafId;
+      }
+    }
+
+    // If not found or not set, pick a random one (preferably alive)
+    if (leafIdToRemove == null) {
+      final aliveLeaves = allLeaves.where((l) => l.healthState == LeafHealthState.alive).toList();
+      if (aliveLeaves.isNotEmpty) {
+        leafIdToRemove = aliveLeaves.last.id; // Remove the most recent one (roughly)
+      } else {
+        leafIdToRemove = allLeaves.last.id;
+      }
+    }
+
+
+
+    _tree = _removeLeafFromTree(_tree!, leafIdToRemove);
+    if (_lastAddedLeafId == leafIdToRemove) {
+      _lastAddedLeafId = null;
+    }
+    if (notify) notifyListeners();
+    return true;
+  }
+
+  TreeState _removeLeafFromTree(TreeState tree, String leafId) {
+    return tree.copyWith(
+      trunk: _removeLeafFromBranch(tree.trunk, leafId),
+    );
+  }
+
+  BranchState _removeLeafFromBranch(BranchState branch, String leafId) {
+    // Check if leaf is here
+    final leafIndex = branch.leaves.indexWhere((l) => l.id == leafId);
+    if (leafIndex != -1) {
+      final newLeaves = List<LeafState>.from(branch.leaves)..removeAt(leafIndex);
+      return branch.copyWith(leaves: newLeaves);
+    }
+    
+    // Check children
+    final newChildren = <BranchState>[];
+    bool changed = false;
+    for (final child in branch.children) {
+      final newChild = _removeLeafFromBranch(child, leafId);
+      newChildren.add(newChild);
+      if (newChild != child) changed = true;
+    }
+    
+    if (changed) {
+      return branch.copyWith(children: newChildren);
+    }
+    
+    return branch;
+  }
+
   // Helper to update the tree structure immutably
   TreeState _updateTreeWithLeafChange(TreeState tree, String leafId, LeafState Function(LeafState) updater) {
     return tree.copyWith(

@@ -602,6 +602,96 @@ abstract class AppLocalizations {
   /// **'Fleurs: {count}'**
   String treeFlowers(int count);
 
+  /// No description provided for @treeInfoTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mon Arbre'**
+  String get treeInfoTitle;
+
+  /// No description provided for @treeInfoSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Informations de croissance'**
+  String get treeInfoSubtitle;
+
+  /// No description provided for @treeInfoDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cet arbre représente votre croissance personnelle. Chaque jour que vous complétez, chaque victoire que vous accomplissez, et chaque émotion que vous exprimez contribuent à faire grandir votre arbre unique.'**
+  String get treeInfoDescription;
+
+  /// No description provided for @treeInfoHowItWorks.
+  ///
+  /// In fr, this message translates to:
+  /// **'Comment ça fonctionne'**
+  String get treeInfoHowItWorks;
+
+  /// No description provided for @treeInfoWateringTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrosage'**
+  String get treeInfoWateringTitle;
+
+  /// No description provided for @treeInfoWateringDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrosez votre arbre une fois par jour après avoir complété 3 victoires. Cela fait grandir votre arbre et maintient votre streak !'**
+  String get treeInfoWateringDescription;
+
+  /// No description provided for @treeInfoLeavesTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Feuilles'**
+  String get treeInfoLeavesTitle;
+
+  /// No description provided for @treeInfoLeavesDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gagnez des feuilles en complétant vos victoires quotidiennes. Utilisez-les pour décorer votre arbre !'**
+  String get treeInfoLeavesDescription;
+
+  /// No description provided for @treeInfoFlowersTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fleurs'**
+  String get treeInfoFlowersTitle;
+
+  /// No description provided for @treeInfoFlowersDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoutez une fleur par jour pour embellir votre arbre. Les fleurs sont gagnées grâce à votre streak quotidien !'**
+  String get treeInfoFlowersDescription;
+
+  /// No description provided for @treeInfoSpecialFlowersTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fleurs uniques spéciales'**
+  String get treeInfoSpecialFlowersTitle;
+
+  /// No description provided for @treeInfoSpecialFlowersDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Maintenez votre streak pour débloquer des fleurs rares et uniques ! Des fleurs spéciales apparaissent à 3 jours, 7 jours (1 semaine) et 30 jours de streak consécutifs. Chaque étape de votre parcours mérite d\'être célébrée !'**
+  String get treeInfoSpecialFlowersDescription;
+
+  /// No description provided for @treeInfoStats.
+  ///
+  /// In fr, this message translates to:
+  /// **'Statistiques'**
+  String get treeInfoStats;
+
+  /// No description provided for @treeInfoStreak.
+  ///
+  /// In fr, this message translates to:
+  /// **'Streak: {days} {days, plural, =1 {jour} other {jours}}'**
+  String treeInfoStreak(int days);
+
+  /// No description provided for @treeInfoTip.
+  ///
+  /// In fr, this message translates to:
+  /// **'La régularité est la clé de la croissance !'**
+  String get treeInfoTip;
+
   /// No description provided for @sendFeedback.
   ///
   /// In fr, this message translates to:

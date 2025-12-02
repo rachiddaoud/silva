@@ -372,17 +372,9 @@ class PreferencesService {
       var resources = TreeResources.fromJson(json);
       
       // Check if daily reset is needed
-      if (resources.shouldResetDailyFlowers()) {
-        resources = TreeResources(
-          leafCount: resources.leafCount,
-          flowerCount: 5,
-          lastWatered: resources.lastWatered,
-          lastFlowerUsed: null, // Reset flower cooldown
-          lastDailyReset: DateTime.now(),
-        );
-        // Save the reset resources
-        await saveTreeResources(resources);
-      }
+      // No longer needed for flowers as they are earned by streaks
+      // But we might want to reset other things if needed.
+      // For now, just return resources.
       
       return resources;
     } catch (e) {

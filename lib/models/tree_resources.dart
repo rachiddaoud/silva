@@ -3,36 +3,44 @@
 /// Manages tree resources and cooldown timers
 class TreeResources {
   final int leafCount;           // From victories
-  final int flowerCount;         // 5 per day, +1 every 5 minutes
+  final int flowerCount;         // From streaks
+  final int streak;              // Current daily streak
   final DateTime? lastWatered;    // Track last water time
   final DateTime? lastFlowerUsed; // Track last flower use
   final DateTime? lastLeafUsed;   // Track last leaf use
-  final DateTime lastDailyReset;  // Track daily flower reset
+  final DateTime lastDailyReset;  // Track daily reset
+  final DateTime? lastStreakUpdate; // Track last streak increment
 
   const TreeResources({
     this.leafCount = 0,
-    this.flowerCount = 5,
+    this.flowerCount = 0,
+    this.streak = 0,
     this.lastWatered,
     this.lastFlowerUsed,
     this.lastLeafUsed,
     required this.lastDailyReset,
+    this.lastStreakUpdate,
   });
 
   TreeResources copyWith({
     int? leafCount,
     int? flowerCount,
+    int? streak,
     DateTime? lastWatered,
     DateTime? lastFlowerUsed,
     DateTime? lastLeafUsed,
     DateTime? lastDailyReset,
+    DateTime? lastStreakUpdate,
   }) {
     return TreeResources(
       leafCount: leafCount ?? this.leafCount,
       flowerCount: flowerCount ?? this.flowerCount,
+      streak: streak ?? this.streak,
       lastWatered: lastWatered ?? this.lastWatered,
       lastFlowerUsed: lastFlowerUsed ?? this.lastFlowerUsed,
       lastLeafUsed: lastLeafUsed ?? this.lastLeafUsed,
       lastDailyReset: lastDailyReset ?? this.lastDailyReset,
+      lastStreakUpdate: lastStreakUpdate ?? this.lastStreakUpdate,
     );
   }
 
@@ -43,9 +51,27 @@ class TreeResources {
     return now.difference(lastWatered!).inMilliseconds >= 500;
   }
 
-  /// Check if flower can be used (0.5 seconds cooldown)
+  /// Check if already watered today
+  bool isWateredToday() {
+    if (lastWatered == null) return false;
+    final now = DateTime.now();
+    return now.year == lastWatered!.year &&
+           now.month == lastWatered!.month &&
+           now.day == lastWatered!.day;
+  }
+
+  /// Check if flower was used today
+  bool isFlowerUsedToday() {
+    if (lastFlowerUsed == null) return false;
+    final now = DateTime.now();
+    return now.year == lastFlowerUsed!.year &&
+           now.month == lastFlowerUsed!.month &&
+           now.day == lastFlowerUsed!.day;
+  }
+
+  /// Check if flower can be used (once per day, 0.5 seconds cooldown)
   bool canUseFlower() {
-    if (flowerCount <= 0) return false;
+    if (isFlowerUsedToday()) return false; // Already used today
     if (lastFlowerUsed == null) return true;
     final now = DateTime.now();
     return now.difference(lastFlowerUsed!).inMilliseconds >= 500;
@@ -86,46 +112,24 @@ class TreeResources {
     return remaining.isNegative ? Duration.zero : remaining;
   }
 
-  /// Check if we should reset daily flowers
-  bool shouldResetDailyFlowers() {
-    final now = DateTime.now();
-    final lastReset = lastDailyReset;
-    
-    // Different day?
-    return now.year != lastReset.year ||
-           now.month != lastReset.month ||
-           now.day != lastReset.day;
-  }
-
-  /// Calculate current flower count with time-based increments
-  /// Each 5 minutes adds 1 flower, up to 5 max per day
-  int getCurrentFlowerCount() {
-    // final now = DateTime.now(); // Unused for now
-    
-    // If we should reset daily, return 5
-    if (shouldResetDailyFlowers()) {
-      return 5;
-    }
-    
-    // Temporary fix: just return flowerCount to avoid clamping to 0
-    return flowerCount;
-  }
-
   Map<String, dynamic> toJson() {
     return {
       'leafCount': leafCount,
       'flowerCount': flowerCount,
+      'streak': streak,
       'lastWatered': lastWatered?.toIso8601String(),
       'lastFlowerUsed': lastFlowerUsed?.toIso8601String(),
       'lastLeafUsed': lastLeafUsed?.toIso8601String(),
       'lastDailyReset': lastDailyReset.toIso8601String(),
+      'lastStreakUpdate': lastStreakUpdate?.toIso8601String(),
     };
   }
 
   factory TreeResources.fromJson(Map<String, dynamic> json) {
     return TreeResources(
       leafCount: json['leafCount'] as int? ?? 0,
-      flowerCount: json['flowerCount'] as int? ?? 5,
+      flowerCount: json['flowerCount'] as int? ?? 0,
+      streak: json['streak'] as int? ?? 0,
       lastWatered: json['lastWatered'] != null
           ? DateTime.parse(json['lastWatered'] as String)
           : null,
@@ -138,6 +142,9 @@ class TreeResources {
       lastDailyReset: json['lastDailyReset'] != null
           ? DateTime.parse(json['lastDailyReset'] as String)
           : DateTime.now(),
+      lastStreakUpdate: json['lastStreakUpdate'] != null
+          ? DateTime.parse(json['lastStreakUpdate'] as String)
+          : null,
     );
   }
 
@@ -145,17 +152,19 @@ class TreeResources {
   factory TreeResources.initial() {
     return TreeResources(
       leafCount: 0,
-      flowerCount: 5,
+      flowerCount: 0,
+      streak: 0,
       lastWatered: null,
       lastFlowerUsed: null,
       lastLeafUsed: null,
       lastDailyReset: DateTime.now(),
+      lastStreakUpdate: null,
     );
   }
 
   @override
   String toString() {
-    return 'TreeResources(leafs: $leafCount, flowers: $flowerCount, '
+    return 'TreeResources(leafs: $leafCount, flowers: $flowerCount, streak: $streak, '
            'canWater: ${canWater()}, canUseFlower: ${canUseFlower()}, canUseLeaf: ${canUseLeaf()})';
   }
 }

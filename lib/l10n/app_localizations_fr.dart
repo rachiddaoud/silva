@@ -294,6 +294,64 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get treeInfoTitle => 'Mon Arbre';
+
+  @override
+  String get treeInfoSubtitle => 'Informations de croissance';
+
+  @override
+  String get treeInfoDescription =>
+      'Cet arbre représente votre croissance personnelle. Chaque jour que vous complétez, chaque victoire que vous accomplissez, et chaque émotion que vous exprimez contribuent à faire grandir votre arbre unique.';
+
+  @override
+  String get treeInfoHowItWorks => 'Comment ça fonctionne';
+
+  @override
+  String get treeInfoWateringTitle => 'Arrosage';
+
+  @override
+  String get treeInfoWateringDescription =>
+      'Arrosez votre arbre une fois par jour après avoir complété 3 victoires. Cela fait grandir votre arbre et maintient votre streak !';
+
+  @override
+  String get treeInfoLeavesTitle => 'Feuilles';
+
+  @override
+  String get treeInfoLeavesDescription =>
+      'Gagnez des feuilles en complétant vos victoires quotidiennes. Utilisez-les pour décorer votre arbre !';
+
+  @override
+  String get treeInfoFlowersTitle => 'Fleurs';
+
+  @override
+  String get treeInfoFlowersDescription =>
+      'Ajoutez une fleur par jour pour embellir votre arbre. Les fleurs sont gagnées grâce à votre streak quotidien !';
+
+  @override
+  String get treeInfoSpecialFlowersTitle => 'Fleurs uniques spéciales';
+
+  @override
+  String get treeInfoSpecialFlowersDescription =>
+      'Maintenez votre streak pour débloquer des fleurs rares et uniques ! Des fleurs spéciales apparaissent à 3 jours, 7 jours (1 semaine) et 30 jours de streak consécutifs. Chaque étape de votre parcours mérite d\'être célébrée !';
+
+  @override
+  String get treeInfoStats => 'Statistiques';
+
+  @override
+  String treeInfoStreak(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'jours',
+      one: 'jour',
+    );
+    return 'Streak: $days $_temp0';
+  }
+
+  @override
+  String get treeInfoTip => 'La régularité est la clé de la croissance !';
+
+  @override
   String get sendFeedback => 'Envoyer un feedback';
 
   @override

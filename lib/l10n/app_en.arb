@@ -177,6 +177,26 @@
       "count": {"type": "int"}
     }
   },
+  "treeInfoTitle": "My Tree",
+  "treeInfoSubtitle": "Growth Information",
+  "treeInfoDescription": "This tree represents your personal growth. Every day you complete, every victory you accomplish, and every emotion you express contributes to making your unique tree grow.",
+  "treeInfoHowItWorks": "How it works",
+  "treeInfoWateringTitle": "Watering",
+  "treeInfoWateringDescription": "Water your tree once a day after completing 3 victories. This makes your tree grow and maintains your streak!",
+  "treeInfoLeavesTitle": "Leaves",
+  "treeInfoLeavesDescription": "Earn leaves by completing your daily victories. Use them to decorate your tree!",
+  "treeInfoFlowersTitle": "Flowers",
+  "treeInfoFlowersDescription": "Add a flower per day to beautify your tree. Flowers are earned through your daily streak!",
+  "treeInfoSpecialFlowersTitle": "Special unique flowers",
+  "treeInfoSpecialFlowersDescription": "Maintain your streak to unlock rare and unique flowers! Special flowers appear at 3 days, 7 days (1 week), and 30 days of consecutive streak. Every milestone of your journey deserves to be celebrated!",
+  "treeInfoStats": "Statistics",
+  "treeInfoStreak": "Streak: {days} {days, plural, =1 {day} other {days}}",
+  "@treeInfoStreak": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "treeInfoTip": "Consistency is the key to growth!",
   "sendFeedback": "Send Feedback",
   "sendFeedbackSubtitle": "Share your ideas and suggestions",
   "feedbackEmailSubject": "Silva Feedback",

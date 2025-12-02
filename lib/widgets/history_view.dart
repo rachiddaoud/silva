@@ -8,6 +8,8 @@ import '../utils/sprite_utils.dart';
 import 'package:intl/intl.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/localization_utils.dart';
+import '../services/tree_service.dart';
+import '../services/preferences_service.dart';
 
 class HistoryView extends StatefulWidget {
   const HistoryView({super.key});
@@ -239,6 +241,35 @@ class _HistoryViewState extends State<HistoryView> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       await DatabaseService().deleteVictoryFromEntry(user.uid, date, victoryId);
+      
+      // Also remove a leaf from the tree if it exists
+      // We need to load the tree, remove a leaf, and save it back
+      final treeState = await PreferencesService.getTreeState();
+      if (treeState != null) {
+        // Create a temporary controller to handle logic
+        final tempController = TreeController();
+        tempController.setTree(treeState);
+        
+        // Remove a leaf
+        if (tempController.removeLeaf(notify: false)) {
+          // Save updated tree
+          await PreferencesService.saveTreeState(tempController.tree!);
+          
+          // Also update leaf count in resources
+          final resources = await PreferencesService.getTreeResources();
+          if (resources.leafCount > 0) {
+             await PreferencesService.saveTreeResources(
+               resources.copyWith(leafCount: resources.leafCount - 1)
+             );
+          }
+          
+          // Sync to Firebase
+          DatabaseService().saveTreeState(user.uid, tempController.tree!).catchError((e) {
+            debugPrint('Error syncing tree after leaf removal: $e');
+          });
+        }
+      }
+
       // Reload history to reflect changes
       await _loadHistory();
     }

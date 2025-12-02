@@ -242,12 +242,14 @@ class PreferencesService {
       final List<dynamic> jsonList = jsonDecode(victoriesJson);
       return jsonList.map((json) {
         final map = json as Map<String, dynamic>;
+        final timestampString = map['timestamp'] as String?;
         return VictoryCard(
           id: map['id'] as int,
           text: map['text'] as String,
           emoji: map['emoji'] as String,
           spriteId: map['spriteId'] as int,
           isAccomplished: map['isAccomplished'] as bool? ?? false,
+          timestamp: timestampString != null ? DateTime.parse(timestampString) : null,
         );
       }).toList();
     } catch (e) {
@@ -263,6 +265,7 @@ class PreferencesService {
       'emoji': v.emoji,
       'spriteId': v.spriteId,
       'isAccomplished': v.isAccomplished,
+      'timestamp': v.timestamp?.toIso8601String(),
     }).toList();
     await prefs.setString(_todayVictoriesKey, jsonEncode(jsonList));
   }

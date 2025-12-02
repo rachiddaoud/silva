@@ -368,4 +368,26 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get victoryAlreadyCompleted =>
       'This victory is already completed. You can delete it from the History tab by swiping left or right.';
+
+  @override
+  String get statistics => 'Statistics';
+
+  @override
+  String get weekly => 'Weekly';
+
+  @override
+  String get monthly => 'Monthly';
+
+  @override
+  String get victoriesChart => 'Daily Victories';
+
+  @override
+  String get moodTrend => 'Mood Trend';
+
+  @override
+  String get noDataYet => 'No data yet';
+
+  @override
+  String get startAddingVictories =>
+      'Start adding victories to see your progress';
 }

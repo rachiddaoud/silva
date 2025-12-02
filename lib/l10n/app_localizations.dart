@@ -727,6 +727,48 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Cette victoire est déjà complétée. Vous pouvez la supprimer depuis l\'onglet Historique en glissant vers la gauche ou la droite.'**
   String get victoryAlreadyCompleted;
+
+  /// No description provided for @statistics.
+  ///
+  /// In fr, this message translates to:
+  /// **'Statistiques'**
+  String get statistics;
+
+  /// No description provided for @weekly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Hebdomadaire'**
+  String get weekly;
+
+  /// No description provided for @monthly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mensuel'**
+  String get monthly;
+
+  /// No description provided for @victoriesChart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Victoires quotidiennes'**
+  String get victoriesChart;
+
+  /// No description provided for @moodTrend.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tendance d\'humeur'**
+  String get moodTrend;
+
+  /// No description provided for @noDataYet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune donnée pour le moment'**
+  String get noDataYet;
+
+  /// No description provided for @startAddingVictories.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commencez à ajouter des victoires pour voir vos progrès'**
+  String get startAddingVictories;
 }
 
 class _AppLocalizationsDelegate

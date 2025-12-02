@@ -202,5 +202,12 @@
   "feedbackEmailSubject": "Silva Feedback",
   "feedbackEmailError": "Unable to open email client",
   "thoughtOfTheDay": "THOUGHT OF THE DAY",
-  "victoryAlreadyCompleted": "This victory is already completed. You can delete it from the History tab by swiping left or right."
+  "victoryAlreadyCompleted": "This victory is already completed. You can delete it from the History tab by swiping left or right.",
+  "statistics": "Statistics",
+  "weekly": "Weekly",
+  "monthly": "Monthly",
+  "victoriesChart": "Daily Victories",
+  "moodTrend": "Mood Trend",
+  "noDataYet": "No data yet",
+  "startAddingVictories": "Start adding victories to see your progress"
 }

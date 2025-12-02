@@ -13,6 +13,7 @@ import '../widgets/history_view.dart';
 import '../widgets/daily_quote_card.dart';
 import '../widgets/home_tree_widget.dart';
 import 'settings_screen.dart';
+import 'charts_screen.dart';
 import '../services/preferences_service.dart';
 import '../services/notification_service.dart';
 import '../services/database_service.dart';
@@ -588,6 +589,39 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                 ),
               ],
+            ),
+          ),
+          // Floating chart button
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            left: 16,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const ChartsScreen(),
+                  ),
+                );
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondary.withValues(alpha: 0.9),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.secondary.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(12),
+                child: Icon(
+                  Icons.insights_rounded,
+                  color: theme.colorScheme.onSecondary,
+                  size: 24,
+                ),
+              ),
             ),
           ),
           // Floating profile button

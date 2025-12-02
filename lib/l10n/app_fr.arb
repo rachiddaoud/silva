@@ -202,5 +202,12 @@
   "feedbackEmailSubject": "Feedback Silva",
   "feedbackEmailError": "Impossible d'ouvrir le client email",
   "thoughtOfTheDay": "PENSÉE DU JOUR",
-  "victoryAlreadyCompleted": "Cette victoire est déjà complétée. Vous pouvez la supprimer depuis l'onglet Historique en glissant vers la gauche ou la droite."
+  "victoryAlreadyCompleted": "Cette victoire est déjà complétée. Vous pouvez la supprimer depuis l'onglet Historique en glissant vers la gauche ou la droite.",
+  "statistics": "Statistiques",
+  "weekly": "Hebdomadaire",
+  "monthly": "Mensuel",
+  "victoriesChart": "Victoires quotidiennes",
+  "moodTrend": "Tendance d'humeur",
+  "noDataYet": "Aucune donnée pour le moment",
+  "startAddingVictories": "Commencez à ajouter des victoires pour voir vos progrès"
 }

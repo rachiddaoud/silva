@@ -114,25 +114,134 @@ class _HistoryViewState extends State<HistoryView> {
       );
     }
 
+    // Separate today's entries from past entries
+    final now = DateTime.now();
+    final todayEntries = _history.where((entry) {
+      return entry.date.year == now.year &&
+             entry.date.month == now.month &&
+             entry.date.day == now.day;
+    }).toList();
+    
+    final pastEntries = _history.where((entry) {
+      return !(entry.date.year == now.year &&
+               entry.date.month == now.month &&
+               entry.date.day == now.day);
+    }).toList();
+
     return RefreshIndicator(
       onRefresh: _loadHistory,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        itemCount: _history.length,
+        itemCount: (todayEntries.isNotEmpty ? 1 : 0) + // Today header
+                   todayEntries.length +
+                   (pastEntries.isNotEmpty && todayEntries.isNotEmpty ? 1 : 0) + // History header
+                   pastEntries.length,
         itemBuilder: (context, index) {
-          final entry = _history[index];
-          final isLast = index == _history.length - 1;
+          int adjustedIndex = index;
+          
+          // Today section header
+          if (todayEntries.isNotEmpty && adjustedIndex == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16, top: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.today_rounded,
+                    size: 20,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    AppLocalizations.of(context)!.today,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.primary,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+          if (todayEntries.isNotEmpty) {
+            adjustedIndex--;
+          }
+          
+          // Today entries
+          if (todayEntries.isNotEmpty && adjustedIndex >= 0 && adjustedIndex < todayEntries.length) {
+            final entry = todayEntries[adjustedIndex];
+            return _TimelineEntry(
+              date: entry.date,
+              emotion: entry.emotion,
+              comment: entry.comment,
+              victoryCards: entry.victoryCards,
+              isLast: false, // Not last in today section
+              onDeleteVictory: (victoryId) => _deleteVictory(entry.date, victoryId),
+            );
+          }
+          if (todayEntries.isNotEmpty) {
+            adjustedIndex -= todayEntries.length;
+          }
+          
+          // History section header
+          if (pastEntries.isNotEmpty && todayEntries.isNotEmpty && adjustedIndex == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16, top: 24),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.history_rounded,
+                    size: 20,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    AppLocalizations.of(context)!.history,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+          if (pastEntries.isNotEmpty && todayEntries.isNotEmpty) {
+            adjustedIndex--;
+          }
+          
+          // Past entries
+          if (adjustedIndex >= 0 && adjustedIndex < pastEntries.length) {
+            final entry = pastEntries[adjustedIndex];
+            final isLast = adjustedIndex == pastEntries.length - 1;
 
-          return _TimelineEntry(
-            date: entry.date,
-            emotion: entry.emotion,
-            comment: entry.comment,
-            victoryCards: entry.victoryCards,
-            isLast: isLast,
-          );
+            return _TimelineEntry(
+              date: entry.date,
+              emotion: entry.emotion,
+              comment: entry.comment,
+              victoryCards: entry.victoryCards,
+              isLast: isLast,
+              onDeleteVictory: (victoryId) => _deleteVictory(entry.date, victoryId),
+            );
+          }
+          
+          // Fallback - should never reach here
+          return const SizedBox.shrink();
         },
       ),
     );
+  }
+
+  Future<void> _deleteVictory(DateTime date, int victoryId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await DatabaseService().deleteVictoryFromEntry(user.uid, date, victoryId);
+      // Reload history to reflect changes
+      await _loadHistory();
+    }
   }
 }
 
@@ -143,6 +252,7 @@ class _TimelineEntry extends StatelessWidget {
   final String? comment;
   final List<VictoryCard> victoryCards;
   final bool isLast;
+  final Function(int victoryId) onDeleteVictory;
 
   const _TimelineEntry({
     required this.date,
@@ -150,6 +260,7 @@ class _TimelineEntry extends StatelessWidget {
     this.comment,
     required this.victoryCards,
     required this.isLast,
+    required this.onDeleteVictory,
   });
 
   String _formatDate(BuildContext context, DateTime date) {
@@ -274,19 +385,20 @@ class _TimelineEntry extends StatelessWidget {
                       },
                     ),
                   ],
-                  // Tags des victoires (seulement si jour rempli)
-                  if (emotion != null && victoryCards.isNotEmpty) ...[
+                  // Tags des victoires (toujours afficher si présentes)
+                  if (victoryCards.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Builder(
                       builder: (context) {
-                        final e = emotion!;
+                        final color = emotion?.moodColor ?? theme.colorScheme.primary;
                         return Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: victoryCards.map((victory) {
                             return _VictoryTag(
                               victory: victory,
-                              color: e.moodColor,
+                              color: color,
+                              onDelete: () => onDeleteVictory(victory.id),
                             );
                           }).toList(),
                         );
@@ -385,44 +497,116 @@ class _TimelineNode extends StatelessWidget {
 class _VictoryTag extends StatelessWidget {
   final VictoryCard victory;
   final Color color;
+  final VoidCallback onDelete;
 
   const _VictoryTag({
     required this.victory,
     required this.color,
+    required this.onDelete,
   });
+
+  String _formatTime(DateTime? timestamp) {
+    if (timestamp == null) return '';
+    final hour = timestamp.hour;
+    final minute = timestamp.minute.toString().padLeft(2, '0');
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+    return '$displayHour:$minute $period';
+  }
+
+  Future<bool> _confirmDelete(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer cette victoire ?'),
+        content: const Text('Cette action est irréversible.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 1,
+    return Dismissible(
+      key: ValueKey('victory_${victory.id}_${victory.timestamp?.millisecondsSinceEpoch}'),
+      direction: DismissDirection.horizontal,
+      confirmDismiss: (direction) => _confirmDelete(context),
+      onDismissed: (direction) => onDelete(),
+      background: Container(
+        margin: const EdgeInsets.only(right: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(20),
         ),
+        alignment: Alignment.centerLeft,
+        child: const Icon(Icons.delete, color: Colors.white, size: 18),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SpriteDisplay(
-            victoryId: victory.spriteId,
-            size: 20,
-            showBorder: false,
+      secondaryBackground: Container(
+        margin: const EdgeInsets.only(left: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        alignment: Alignment.centerRight,
+        child: const Icon(Icons.delete, color: Colors.white, size: 18),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: color.withValues(alpha: 0.3),
+            width: 1,
           ),
-          const SizedBox(width: 4),
-          Text(
-            getVictoryText(context, victory.id),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SpriteDisplay(
+              victoryId: victory.spriteId,
+              size: 20,
+              showBorder: false,
             ),
-          ),
-        ],
+            const SizedBox(width: 4),
+            Text(
+              getVictoryText(context, victory.id),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+            if (victory.timestamp != null) ...[
+              const SizedBox(width: 6),
+              Text(
+                '• ${_formatTime(victory.timestamp)}',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w400,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

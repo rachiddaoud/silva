@@ -27,6 +27,7 @@ class DayEntry {
       'victoryCardsData': victoryCards.map((v) => {
         'id': v.id,
         'isAccomplished': v.isAccomplished,
+        'timestamp': v.timestamp?.toIso8601String(),
       }).toList(),
       // Garder l'ancien format pour compatibilité descendante si nécessaire (optionnel)
       'victoryCardIds': victoryCards.map((v) => v.id).toList(),
@@ -53,12 +54,17 @@ class DayEntry {
         final map = data as Map<String, dynamic>;
         final id = map['id'] as int;
         final isAccomplished = map['isAccomplished'] as bool? ?? true;
+        final timestampString = map['timestamp'] as String?;
+        final timestamp = timestampString != null ? DateTime.parse(timestampString) : null;
         
         final defaultCard = defaultVictories.firstWhere(
           (v) => v.id == id,
           orElse: () => defaultVictories.first,
         );
-        return defaultCard.copyWith(isAccomplished: isAccomplished);
+        return defaultCard.copyWith(
+          isAccomplished: isAccomplished,
+          timestamp: timestamp,
+        );
       }).toList();
     } 
     // Fallback sur l'ancien format (IDs seulement)

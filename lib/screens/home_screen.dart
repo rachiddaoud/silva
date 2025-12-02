@@ -296,9 +296,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _toggleVictory(int index) async {
+    // Only allow checking victories, not unchecking
+    // Victories can only be removed via deletion from History page
+    if (_victories[index].isAccomplished) {
+      // Already accomplished, don't allow unchecking
+      return;
+    }
+    
     setState(() {
-      _victories[index].isAccomplished =
-          !_victories[index].isAccomplished;
+      _victories[index].isAccomplished = true;
+      _victories[index].timestamp = DateTime.now(); // Set timestamp when accomplished
     });
     // Sauvegarder les victoires mises à jour
     await PreferencesService.saveTodayVictories(_victories);

@@ -179,21 +179,35 @@ class DatabaseService {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
 
-  // Update victories for today if the entry exists
+  // Update victories for today - create or update entry
   Future<void> updateTodayVictories(String uid, List<VictoryCard> victories) async {
     final now = DateTime.now();
     final docId = _dateToDocId(now);
     final docRef = _daysCollection(uid).doc(docId);
 
     final doc = await docRef.get();
+    final accomplishedVictories = victories.where((v) => v.isAccomplished).toList();
+    
     if (doc.exists) {
-      // Only update if the day is already logged (completed)
-      // We only update the victory cards list
-      final accomplishedVictories = victories.where((v) => v.isAccomplished).toList();
-      
-      await docRef.update({
-        'victoryCardIds': accomplishedVictories.map((v) => v.id).toList(),
-      });
+      // Entry exists - update it while preserving emotion and comment
+      final existingEntry = DayEntry.fromJson(doc.data() as Map<String, dynamic>);
+      final updatedEntry = DayEntry(
+        date: now,
+        emotion: existingEntry.emotion, // Preserve existing emotion
+        comment: existingEntry.comment, // Preserve existing comment
+        victoryCards: accomplishedVictories,
+      );
+      await docRef.set(updatedEntry.toJson());
+    } else {
+      // Entry doesn't exist - create new entry with victories but no emotion yet
+      final newEntry = DayEntry(
+        date: now,
+        emotion: null, // No emotion until day is completed
+        comment: null,
+        victoryCards: accomplishedVictories,
+      );
+      await docRef.set(newEntry.toJson());
+      debugPrint('📝 Created new today entry with ${accomplishedVictories.length} victories');
     }
   }
 
@@ -231,6 +245,53 @@ class DatabaseService {
       return null;
     }
   }
+
+  // Delete a specific victory from a day entry (hard delete)
+  Future<void> deleteVictoryFromEntry(String uid, DateTime date, int victoryId) async {
+    try {
+      final docId = _dateToDocId(date);
+      final docRef = _daysCollection(uid).doc(docId);
+      final doc = await docRef.get();
+      
+      if (doc.exists) {
+        final entry = DayEntry.fromJson(doc.data() as Map<String, dynamic>);
+        // Remove the victory with the specified ID
+        final updatedVictories = entry.victoryCards.where((v) => v.id != victoryId).toList();
+        
+        if (updatedVictories.isEmpty) {
+          // If no victories left, delete the entire day entry
+          await docRef.delete();
+          debugPrint('🗑️ Deleted entire day entry for $docId (no victories left)');
+        } else {
+          // Update the entry with remaining victories
+          final updatedEntry = DayEntry(
+            date: entry.date,
+            emotion: entry.emotion,
+            comment: entry.comment,
+            victoryCards: updatedVictories,
+          );
+          await docRef.set(updatedEntry.toJson());
+          debugPrint('🗑️ Deleted victory $victoryId from $docId');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error deleting victory from entry: $e');
+      rethrow;
+    }
+  }
+
+  // Delete an entire day entry (hard delete)
+  Future<void> deleteDayEntry(String uid, DateTime date) async {
+    try {
+      final docId = _dateToDocId(date);
+      await _daysCollection(uid).doc(docId).delete();
+      debugPrint('🗑️ Deleted day entry for $docId');
+    } catch (e) {
+      debugPrint('Error deleting day entry: $e');
+      rethrow;
+    }
+  }
+
   // Tree Persistence
   Future<void> saveTreeState(String uid, TreeState tree) async {
     try {

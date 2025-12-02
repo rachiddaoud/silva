@@ -549,8 +549,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Positioned.fill(
               child: Image.asset(
                 backgroundPath,
-                fit: BoxFit.cover,
-                cacheWidth: 1080, // Optimization: Limit memory usage
+                fit: BoxFit.fill,
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
                     color: theme.scaffoldBackgroundColor,

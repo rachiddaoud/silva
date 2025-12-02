@@ -134,7 +134,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       AppTheme.summer,
       AppTheme.autumn,
       AppTheme.winter,
-      AppTheme.beach,
     ];
     
     final darkThemes = [

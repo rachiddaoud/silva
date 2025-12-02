@@ -10,7 +10,6 @@ enum AppTheme {
   summer,
   autumn,
   winter,
-  beach,
   night,
   eclipse,
   modernPastel,
@@ -171,20 +170,6 @@ class ThemeConfig {
       onSurface: Color(0xFF1A2A3B), // Darker text
       scaffoldBackground: Color(0xFFF8FBFF),
       backgroundPath: 'assets/backgrounds/winter_bg.png',
-    ),
-    AppTheme.beach: ThemeConfig(
-      name: 'Plage',
-      primary: Color(0xFF00A8CC), // Turquoise
-      secondary: Color(0xFFE8C547), // Sandy yellow
-      tertiary: Color(0xFF0077B6), // Deep ocean blue
-      surface: Color(0xFFFFFBF5),
-      error: Color(0xFFFF6B6B),
-      onPrimary: Colors.white,
-      onSecondary: Color(0xFF2C3E50), // Dark text on sandy color
-      onTertiary: Colors.white,
-      onSurface: Color(0xFF2C3E50), // Dark text
-      scaffoldBackground: Color(0xFFFFFBF5), // Light sandy background
-      backgroundPath: 'assets/backgrounds/beach_bg.png',
     ),
     AppTheme.night: ThemeConfig(
       name: 'Nuit',

@@ -365,4 +365,8 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get thoughtOfTheDay => 'PENSÉE DU JOUR';
+
+  @override
+  String get victoryAlreadyCompleted =>
+      'Cette victoire est déjà complétée. Vous pouvez la supprimer depuis l\'onglet Historique en glissant vers la gauche ou la droite.';
 }

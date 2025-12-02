@@ -364,4 +364,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get thoughtOfTheDay => 'THOUGHT OF THE DAY';
+
+  @override
+  String get victoryAlreadyCompleted =>
+      'This victory is already completed. You can delete it from the History tab by swiping left or right.';
 }

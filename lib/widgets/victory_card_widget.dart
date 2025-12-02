@@ -4,6 +4,7 @@ import '../utils/sprite_utils.dart';
 import '../utils/localization_utils.dart';
 import '../services/audio_service.dart';
 import '../services/haptic_service.dart';
+import '../l10n/app_localizations.dart';
 
 class VictoryCardWidget extends StatelessWidget {
   final VictoryCard card;
@@ -23,7 +24,31 @@ class VictoryCardWidget extends StatelessWidget {
 
     return GestureDetector(
       onTap: () async {
-        // Play haptic feedback
+        // If already accomplished, show message and return early
+        if (card.isAccomplished) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context)!.victoryAlreadyCompleted,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                  color: theme.colorScheme.onTertiary,
+                ),
+              ),
+              backgroundColor: theme.colorScheme.tertiary,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              duration: const Duration(seconds: 3),
+              elevation: 1,
+            ),
+          );
+          return;
+        }
+        
+        // Play haptic feedback only for new accomplishments
         await HapticService().light();
         
         // Play sound effect

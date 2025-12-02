@@ -721,6 +721,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'PENSÉE DU JOUR'**
   String get thoughtOfTheDay;
+
+  /// No description provided for @victoryAlreadyCompleted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette victoire est déjà complétée. Vous pouvez la supprimer depuis l\'onglet Historique en glissant vers la gauche ou la droite.'**
+  String get victoryAlreadyCompleted;
 }
 
 class _AppLocalizationsDelegate

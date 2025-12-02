@@ -201,5 +201,6 @@
   "sendFeedbackSubtitle": "Share your ideas and suggestions",
   "feedbackEmailSubject": "Silva Feedback",
   "feedbackEmailError": "Unable to open email client",
-  "thoughtOfTheDay": "THOUGHT OF THE DAY"
+  "thoughtOfTheDay": "THOUGHT OF THE DAY",
+  "victoryAlreadyCompleted": "This victory is already completed. You can delete it from the History tab by swiping left or right."
 }

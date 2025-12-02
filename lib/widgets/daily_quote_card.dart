@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../l10n/app_localizations.dart';
 
 class DailyQuoteCard extends StatefulWidget {
   final String quote;
@@ -196,7 +197,7 @@ class _QuoteContent extends StatelessWidget {
           const SizedBox(height: 12),
           // Label
           Text(
-            "PENSÉE DU JOUR",
+            AppLocalizations.of(context)!.thoughtOfTheDay,
             style: GoogleFonts.inter(
               fontSize: 10,
               letterSpacing: 2,

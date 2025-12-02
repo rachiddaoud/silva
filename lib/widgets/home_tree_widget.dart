@@ -58,16 +58,23 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   @override
   void didUpdateWidget(HomeTreeWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Reload resources when widget updates (e.g., when victory count changes)
-    // This ensures the leaf counter is updated when a victory is checked
+    // Reload resources and tree state when widget updates (e.g., when victory count changes)
+    // This ensures the leaf counter and tree state are updated when a victory is checked or deleted
     if (oldWidget.victoryCount != widget.victoryCount) {
       _loadResources();
+      // Also reload tree state in case leaves were removed
+      _loadTree();
     }
   }
 
   /// Public method to refresh resources (can be called from parent)
   void refreshResources() {
     _loadResources();
+  }
+
+  /// Public method to refresh tree state (can be called from parent)
+  void refreshTree() {
+    _loadTree();
   }
 
   void _loadTree() async {

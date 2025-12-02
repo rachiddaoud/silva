@@ -362,4 +362,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get feedbackEmailError => 'Impossible d\'ouvrir le client email';
+
+  @override
+  String get thoughtOfTheDay => 'PENSÉE DU JOUR';
 }

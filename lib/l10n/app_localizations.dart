@@ -715,6 +715,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Impossible d\'ouvrir le client email'**
   String get feedbackEmailError;
+
+  /// No description provided for @thoughtOfTheDay.
+  ///
+  /// In fr, this message translates to:
+  /// **'PENSÉE DU JOUR'**
+  String get thoughtOfTheDay;
 }
 
 class _AppLocalizationsDelegate

@@ -361,4 +361,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get feedbackEmailError => 'Unable to open email client';
+
+  @override
+  String get thoughtOfTheDay => 'THOUGHT OF THE DAY';
 }

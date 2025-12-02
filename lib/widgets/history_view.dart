@@ -12,7 +12,9 @@ import '../services/tree_service.dart';
 import '../services/preferences_service.dart';
 
 class HistoryView extends StatefulWidget {
-  const HistoryView({super.key});
+  final VoidCallback? onHistoryChanged;
+
+  const HistoryView({super.key, this.onHistoryChanged});
 
   @override
   State<HistoryView> createState() => _HistoryViewState();
@@ -240,7 +242,61 @@ class _HistoryViewState extends State<HistoryView> {
   Future<void> _deleteVictory(DateTime date, int victoryId) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      // Check if the deleted victory is from today
+      final now = DateTime.now();
+      final isToday = date.year == now.year &&
+                      date.month == now.month &&
+                      date.day == now.day;
+      
+      // Optimistically update the UI first (remove from local state)
+      setState(() {
+        final entryIndex = _history.indexWhere((e) =>
+          e.date.year == date.year &&
+          e.date.month == date.month &&
+          e.date.day == date.day
+        );
+        
+        if (entryIndex >= 0) {
+          final entry = _history[entryIndex];
+          final updatedVictories = entry.victoryCards.where((v) => v.id != victoryId).toList();
+          
+          if (updatedVictories.isEmpty) {
+            // Remove entire entry if no victories left
+            _history.removeAt(entryIndex);
+          } else {
+            // Update entry with remaining victories
+            _history[entryIndex] = DayEntry(
+              date: entry.date,
+              emotion: entry.emotion,
+              comment: entry.comment,
+              victoryCards: updatedVictories,
+            );
+          }
+        }
+      });
+      
+      // Then perform the actual deletion and other operations
       await DatabaseService().deleteVictoryFromEntry(user.uid, date, victoryId);
+      
+      // If the victory is from today, uncheck it in today's victories
+      if (isToday) {
+        final todayVictories = await PreferencesService.getTodayVictories();
+        final updatedVictories = todayVictories.map((v) {
+          if (v.id == victoryId) {
+            return v.copyWith(
+              isAccomplished: false,
+              timestamp: null,
+            );
+          }
+          return v;
+        }).toList();
+        
+        // Save updated victories locally
+        await PreferencesService.saveTodayVictories(updatedVictories);
+        
+        // Sync with Firestore
+        await DatabaseService().updateTodayVictories(user.uid, updatedVictories);
+      }
       
       // Also remove a leaf from the tree if it exists
       // We need to load the tree, remove a leaf, and save it back
@@ -270,8 +326,32 @@ class _HistoryViewState extends State<HistoryView> {
         }
       }
 
-      // Reload history to reflect changes
-      await _loadHistory();
+      // Silently reload history in the background to ensure sync (without showing loading)
+      _reloadHistorySilently();
+      
+      // Notify parent that history changed (so home screen can refresh)
+      if (widget.onHistoryChanged != null) {
+        widget.onHistoryChanged!();
+      }
+    }
+  }
+
+  /// Reload history without showing loading indicator
+  Future<void> _reloadHistorySilently() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return;
+    }
+
+    final history = await DatabaseService().getHistory(user.uid);
+    
+    // Trier par date décroissante (plus récent en premier)
+    history.sort((a, b) => b.date.compareTo(a.date));
+
+    if (mounted) {
+      setState(() {
+        _history = history;
+      });
     }
   }
 }

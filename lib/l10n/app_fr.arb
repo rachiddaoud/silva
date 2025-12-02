@@ -200,5 +200,6 @@
   "sendFeedback": "Envoyer un feedback",
   "sendFeedbackSubtitle": "Partagez vos idées et suggestions",
   "feedbackEmailSubject": "Feedback Silva",
-  "feedbackEmailError": "Impossible d'ouvrir le client email"
+  "feedbackEmailError": "Impossible d'ouvrir le client email",
+  "thoughtOfTheDay": "PENSÉE DU JOUR"
 }

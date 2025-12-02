@@ -276,6 +276,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() {
       if (index == 0) {
         _currentView = ViewMode.today;
+        // Reload victories when switching back to today view
+        // This ensures we see the latest state after deleting victories from history
+        _reloadVictories();
       } else if (index == 1) {
         _currentView = ViewMode.history;
       }
@@ -533,7 +536,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     onPageChanged: _onPageChanged,
                     children: [
                       _buildTodayView(),
-                      const HistoryView(),
+                      HistoryView(
+                        onHistoryChanged: () {
+                          // Reload victories when history changes (e.g., when a victory is deleted)
+                          // This will trigger a rebuild, and the tree widget will reload
+                          // its state and resources when victoryCount changes
+                          _reloadVictories();
+                        },
+                      ),
 
                     ],
                   ),

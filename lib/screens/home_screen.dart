@@ -297,18 +297,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _toggleVictory(int index) async {
-
+    // Only allow checking victories, not unchecking
+    // Victories can only be removed via deletion from History page
+    if (_victories[index].isAccomplished) {
+      // Already accomplished, don't allow unchecking
+      return;
+    }
     
     setState(() {
-      _victories[index].isAccomplished =
-          !_victories[index].isAccomplished;
+      _victories[index].isAccomplished = true;
+      _victories[index].timestamp = DateTime.now(); // Set timestamp when accomplished
     });
     
     // Update leaf counter in tree resources
     final resources = await PreferencesService.getTreeResources();
-    final newLeafCount = _victories[index].isAccomplished 
-        ? resources.leafCount + 1  // Toggled ON: add leaf
-        : resources.leafCount - 1; // Toggled OFF: remove leaf
+    // Since we only allow toggling ON, we always add a leaf
+    final newLeafCount = resources.leafCount + 1;
     
     await PreferencesService.saveTreeResources(
       resources.copyWith(leafCount: newLeafCount),

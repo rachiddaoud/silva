@@ -4,6 +4,7 @@ class VictoryCard {
   final String emoji;
   final int spriteId; // ID for sprite sheet extraction
   bool isAccomplished;
+  DateTime? timestamp; // When the victory was accomplished
 
   VictoryCard({
     required this.id,
@@ -11,6 +12,7 @@ class VictoryCard {
     required this.emoji,
     required this.spriteId,
     this.isAccomplished = false,
+    this.timestamp,
   });
 
   VictoryCard copyWith({
@@ -19,6 +21,7 @@ class VictoryCard {
     String? emoji,
     int? spriteId,
     bool? isAccomplished,
+    DateTime? timestamp,
   }) {
     return VictoryCard(
       id: id ?? this.id,
@@ -26,6 +29,7 @@ class VictoryCard {
       emoji: emoji ?? this.emoji,
       spriteId: spriteId ?? this.spriteId,
       isAccomplished: isAccomplished ?? this.isAccomplished,
+      timestamp: timestamp ?? this.timestamp,
     );
   }
 

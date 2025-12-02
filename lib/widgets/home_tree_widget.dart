@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui' as ui;
 import '../l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:silva/services/database_service.dart';
@@ -11,6 +13,9 @@ import 'package:silva/widgets/procedural_tree_widget.dart';
 import 'package:silva/models/tree_resources.dart';
 import 'package:silva/widgets/sparkle_animation.dart';
 import 'package:silva/models/tree/tree_state.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class HomeTreeWidget extends StatefulWidget {
   const HomeTreeWidget({super.key});
@@ -28,6 +33,8 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   final GlobalKey<ProceduralTreeWidgetState> _treeWidgetKey = GlobalKey<ProceduralTreeWidgetState>();
   final GlobalKey _treeContainerKey = GlobalKey();
   final GlobalKey _stackKey = GlobalKey();
+  final GlobalKey _shareableTreeKey = GlobalKey();
+  final GlobalKey _shareButtonKey = GlobalKey();
 
   @override
   void initState() {
@@ -379,6 +386,23 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
+          // Hidden shareable tree (with branding) - Positioned off-screen
+          Transform.translate(
+            offset: const Offset(-10000, -10000),
+            child: RepaintBoundary(
+              key: _shareableTreeKey,
+              child: _ShareableTreeContent(
+                treeWidget: ProceduralTreeWidget(
+                  key: ValueKey('shareable_${_treeWidgetKey}'),
+                  size: 250,
+                  growthLevel: _treeController.tree?.getGrowthLevel() ?? 0.0,
+                  parameters: _treeParameters,
+                  controller: _treeController,
+                ),
+              ),
+            ),
+          ),
+
           // Tree centered
           Positioned(
             key: _treeContainerKey,
@@ -401,9 +425,21 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
             color: sparkle.color,
           )),
           
-          // Info Button (Top Right)
+          // Share Button (Top Right)
           Positioned(
             top: 0,
+            right: 0,
+            child: IconButton(
+              key: _shareButtonKey,
+              icon: const Icon(Icons.share_rounded, size: 20, color: Colors.grey),
+              onPressed: _shareTree,
+              tooltip: 'Partager',
+            ),
+          ),
+          
+          // Info Button (Below Share Button)
+          Positioned(
+            top: 40,
             right: 0,
             child: IconButton(
               icon: const Icon(Icons.info_outline, size: 20, color: Colors.grey),
@@ -481,6 +517,66 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
         ],
       ),
     );
+  }
+
+  Future<void> _shareTree() async {
+    try {
+      // Ensure the widget is built and rendered
+      await Future.delayed(const Duration(milliseconds: 100));
+      
+      // Find the render boundary
+      final boundary = _shareableTreeKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        debugPrint('Share boundary not found');
+        return;
+      }
+
+      // Capture image
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        debugPrint('Failed to convert image to byte data');
+        return;
+      }
+
+      final pngBytes = byteData.buffer.asUint8List();
+
+      // Save to temporary file
+      final tempDir = await getTemporaryDirectory();
+      final file = await File('${tempDir.path}/tree.png').create();
+      await file.writeAsBytes(pngBytes);
+
+      // Get the share button position for iOS/macOS
+      final RenderBox? shareButtonBox = _shareButtonKey.currentContext?.findRenderObject() as RenderBox?;
+      Rect? sharePositionOrigin;
+      if (shareButtonBox != null) {
+        final sharePosition = shareButtonBox.localToGlobal(Offset.zero);
+        final shareSize = shareButtonBox.size;
+        sharePositionOrigin = Rect.fromLTWH(
+          sharePosition.dx,
+          sharePosition.dy,
+          shareSize.width,
+          shareSize.height,
+        );
+      }
+
+      // Share with Silva branding
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Mon arbre de croissance 🌳✨ #Silva',
+        sharePositionOrigin: sharePositionOrigin,
+      );
+    } catch (e) {
+      debugPrint('Error sharing tree: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors du partage: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
   }
 
   void _showTreeInfo() {
@@ -717,5 +813,72 @@ class CooldownSweepPainter extends CustomPainter {
   @override
   bool shouldRepaint(CooldownSweepPainter oldDelegate) {
     return oldDelegate.progress != progress || oldDelegate.color != color;
+  }
+}
+
+/// Widget for shareable tree with Silva branding
+class _ShareableTreeContent extends StatelessWidget {
+  final Widget treeWidget;
+
+  const _ShareableTreeContent({
+    required this.treeWidget,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    return Container(
+      width: 400,
+      height: 500,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Tree - reduced size to fit
+          Flexible(
+            child: SizedBox(
+              width: 280,
+              height: 280,
+              child: Center(child: treeWidget),
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Decorative Divider
+          Container(
+            width: 40,
+            height: 2,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Branding
+          Text(
+            "Silva",
+            style: GoogleFonts.greatVibes(
+              fontSize: 28,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            "Mon arbre de croissance",
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              letterSpacing: 1,
+              fontWeight: FontWeight.w500,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

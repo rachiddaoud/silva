@@ -14,6 +14,7 @@ import '../l10n/app_localizations_en.dart';
 import '../l10n/app_localizations_fr.dart';
 import 'package:flutter/widgets.dart';
 import '../utils/localization_utils.dart';
+import 'analytics_service.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notifications =
@@ -95,6 +96,14 @@ class NotificationService {
     final notificationType = response.payload ?? '';
     final notificationId = response.id ?? -1;
     final actionId = response.actionId;
+
+    // Track notification opened
+    await AnalyticsService.instance.logEvent(
+      name: AnalyticsEvents.notificationOpened,
+      parameters: {
+        AnalyticsParams.campaign: notificationType.isNotEmpty ? notificationType : 'unknown',
+      },
+    );
     
     // Gérer les actions des notifications de rappel de la journée
     final isDayReminder = notificationId == 2 || 

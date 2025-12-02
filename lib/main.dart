@@ -11,12 +11,15 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import '../l10n/app_localizations.dart';
+import 'services/analytics_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  // Initialize analytics service
+  await AnalyticsService.instance.init();
   runApp(const MyApp());
 }
 
@@ -73,6 +76,33 @@ class _MyAppState extends State<MyApp> {
     // Check if user is logged in via Firebase
     final currentUser = FirebaseAuth.instance.currentUser;
     final bool isLoggedIn = currentUser != null;
+
+    // Set analytics user ID and properties if logged in
+    if (currentUser != null) {
+      await AnalyticsService.instance.setUserId(currentUser.uid);
+      await AnalyticsService.instance.setUserProperties(
+        email: currentUser.email,
+        locale: localeCode,
+      );
+    }
+
+    // Track app open
+    await AnalyticsService.instance.logEvent(
+      name: AnalyticsEvents.appOpen,
+    );
+
+    // Listen to auth state changes for analytics
+    FirebaseAuth.instance.authStateChanges().listen((user) async {
+      if (user != null) {
+        await AnalyticsService.instance.setUserId(user.uid);
+        await AnalyticsService.instance.setUserProperties(
+          email: user.email,
+          locale: localeCode,
+        );
+      } else {
+        await AnalyticsService.instance.setUserId(null);
+      }
+    });
 
     if (mounted) {
       setState(() {

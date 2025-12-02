@@ -10,6 +10,7 @@ import '../l10n/app_localizations.dart';
 import '../utils/localization_utils.dart';
 import '../services/audio_service.dart';
 import '../services/haptic_service.dart';
+import '../services/analytics_service.dart';
 
 class DayCompletionScreen extends StatefulWidget {
   final List<VictoryCard> victories;
@@ -45,6 +46,14 @@ class _DayCompletionScreenState extends State<DayCompletionScreen> {
     // Démarrer l'animation après le premier frame pour éviter le flash
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startTypewriterAnimation();
+      // Track screen view and daily summary viewed
+      AnalyticsService.instance.logScreenView(screenName: 'day_completion');
+      AnalyticsService.instance.logEvent(
+        name: AnalyticsEvents.dailySummaryViewed,
+        parameters: {
+          AnalyticsParams.victoryCount: _accomplishedCount,
+        },
+      );
     });
   }
 
@@ -164,6 +173,16 @@ class _DayCompletionScreenState extends State<DayCompletionScreen> {
   void _shareDay() {
     if (selectedEmotion == null) return;
 
+    // Track share initiated
+    AnalyticsService.instance.logEvent(
+      name: AnalyticsEvents.shareInitiated,
+      parameters: {
+        AnalyticsParams.channel: 'native_share',
+        AnalyticsParams.victoryCount: _accomplishedCount,
+        AnalyticsParams.mood: selectedEmotion!.emoji,
+      },
+    );
+
     final victoriesText = _accomplishedVictories
         .map((v) => '${v.emoji} ${getVictoryText(context, v.id)}')
         .join('\n');
@@ -171,7 +190,6 @@ class _DayCompletionScreenState extends State<DayCompletionScreen> {
     final comment = _commentController.text.trim();
     final emotionText = getEmotionName(context, Emotion.emotions.indexOf(selectedEmotion!));
     final count = _accomplishedCount;
-    final plural = count > 1 ? 's' : '';
     final targetDate = widget.targetDate ?? DateTime.now();
     
     final l10n = AppLocalizations.of(context)!;
@@ -324,6 +342,14 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
                   // Play selection feedback
                   await HapticService().selection();
                   await AudioService().playEmotionSelect();
+                  
+                  // Track mood selection
+                  await AnalyticsService.instance.logEvent(
+                    name: AnalyticsEvents.moodSelected,
+                    parameters: {
+                      AnalyticsParams.mood: emotion.emoji,
+                    },
+                  );
                   
                   setState(() {
                     selectedEmotion = emotion;

@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart';
 import 'database_service.dart';
+import 'analytics_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -52,8 +53,16 @@ class AuthService {
   // Sign out
   Future<void> signOut() async {
     try {
+      // Track logout before signing out
+      await AnalyticsService.instance.logEvent(
+        name: AnalyticsEvents.logout,
+      );
+      
       await GoogleSignIn.instance.signOut();
       await _auth.signOut();
+      
+      // Clear analytics user ID
+      await AnalyticsService.instance.setUserId(null);
     } catch (e) {
       debugPrint('Error signing out: $e');
       rethrow;

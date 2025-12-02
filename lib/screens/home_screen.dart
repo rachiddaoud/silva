@@ -16,6 +16,7 @@ import 'settings_screen.dart';
 import '../services/preferences_service.dart';
 import '../services/notification_service.dart';
 import '../services/database_service.dart';
+import '../services/analytics_service.dart';
 import '../app_navigator.dart';
 import '../utils/quotes_data.dart';
 import '../l10n/app_localizations.dart';
@@ -56,6 +57,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _checkYesterdayEmotion(); // Check if yesterday needs emotion
     _setupNotificationCallback();
     _refreshMorningNotification();
+    // Track screen view
+    AnalyticsService.instance.logScreenView(screenName: 'home');
   }
 
   void _setupNotificationCallback() {
@@ -286,6 +289,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _navigateToSettings() {
+    // Track settings opened
+    AnalyticsService.instance.logEvent(
+      name: AnalyticsEvents.settingsOpened,
+    );
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -311,6 +319,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _victories[index].isAccomplished = true;
       _victories[index].timestamp = DateTime.now(); // Set timestamp when accomplished
     });
+    
+    // Track activity completion
+    await AnalyticsService.instance.logEvent(
+      name: AnalyticsEvents.activityCompleted,
+      parameters: {
+        AnalyticsParams.activityType: _victories[index].id,
+        AnalyticsParams.victoryCount: _victories.where((v) => v.isAccomplished).length,
+      },
+    );
     
     // Update leaf counter in tree resources
     final resources = await PreferencesService.getTreeResources();
@@ -344,6 +361,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _showEmotionCheckin() {
+    // Track mood selector opened
+    AnalyticsService.instance.logEvent(
+      name: AnalyticsEvents.moodSelectorOpened,
+    );
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => DayCompletionScreen(
@@ -368,6 +390,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       emotion: emotion,
       comment: comment.isEmpty ? null : comment,
       victoryCards: accomplishedVictories,
+    );
+
+    // Track mood selected
+    await AnalyticsService.instance.logEvent(
+      name: AnalyticsEvents.moodSelected,
+      parameters: {
+        AnalyticsParams.mood: emotion.emoji,
+        AnalyticsParams.victoryCount: accomplishedCount,
+      },
+    );
+
+    // Track daily goal completed
+    await AnalyticsService.instance.logEvent(
+      name: AnalyticsEvents.dailyGoalCompleted,
+      parameters: {
+        AnalyticsParams.victoryCount: accomplishedCount,
+        AnalyticsParams.mood: emotion.emoji,
+      },
     );
 
     // Sauvegarder l'entrée

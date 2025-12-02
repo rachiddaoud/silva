@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/theme_config.dart';
 import '../services/preferences_service.dart';
 import '../services/notification_service.dart';
+import '../services/analytics_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
@@ -45,6 +46,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _currentTheme = widget.currentTheme;
     _currentLocale = widget.currentLocale;
     _loadData();
+    // Track screen view and profile viewed
+    AnalyticsService.instance.logScreenView(screenName: 'settings');
+    AnalyticsService.instance.logEvent(name: AnalyticsEvents.profileViewed);
   }
 
   Future<void> _loadData() async {
@@ -79,6 +83,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _toggleNotifications(bool value) async {
+    // Track reminder toggled
+    await AnalyticsService.instance.logEvent(
+      name: AnalyticsEvents.reminderToggled,
+      parameters: {
+        AnalyticsParams.reminderType: 'all',
+        'enabled': value.toString(),
+      },
+    );
+
     setState(() {
       _notificationsEnabled = value;
     });
@@ -285,6 +298,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     
     return InkWell(
       onTap: () {
+        // Track language change
+        AnalyticsService.instance.logEvent(
+          name: AnalyticsEvents.languageChanged,
+          parameters: {
+            AnalyticsParams.language: locale?.languageCode ?? 'system',
+          },
+        );
+
         widget.onLocaleChanged(locale);
         setState(() {
           _currentLocale = locale;
@@ -339,6 +360,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     
     return GestureDetector(
       onTap: () {
+        // Track theme change
+        AnalyticsService.instance.logEvent(
+          name: AnalyticsEvents.profileUpdated,
+          parameters: {
+            AnalyticsParams.theme: appTheme.toString(),
+          },
+        );
+
         widget.onThemeChanged(appTheme);
         setState(() {
           _currentTheme = appTheme;
@@ -722,6 +751,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     );
 
                     if (confirm == true && mounted) {
+                      // Track logout
+                      await AnalyticsService.instance.logEvent(
+                        name: AnalyticsEvents.logout,
+                      );
+
                       await AuthService().signOut();
                       if (mounted) {
                         // Navigate to login screen and remove all previous routes

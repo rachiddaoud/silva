@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/preferences_service.dart';
+import '../services/analytics_service.dart';
 import '../l10n/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -20,6 +21,12 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
   Future<void> _handleGoogleSignIn() async {
+    // Track login attempt
+    await AnalyticsService.instance.logEvent(
+      name: AnalyticsEvents.loginAttempt,
+      parameters: {AnalyticsParams.provider: 'google'},
+    );
+
     setState(() {
       _isLoading = true;
     });
@@ -34,11 +41,26 @@ class _LoginScreenState extends State<LoginScreen> {
         }
         await PreferencesService.setOnboardingComplete(true);
         
+        // Track successful login
+        await AnalyticsService.instance.logEvent(
+          name: AnalyticsEvents.loginSuccess,
+          parameters: {AnalyticsParams.provider: 'google'},
+        );
+        
         if (mounted) {
           widget.onLoginSuccess();
         }
       }
     } catch (e) {
+      // Track login failure
+      await AnalyticsService.instance.logEvent(
+        name: AnalyticsEvents.loginFailure,
+        parameters: {
+          AnalyticsParams.provider: 'google',
+          AnalyticsParams.errorCode: e.toString(),
+        },
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -58,6 +80,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleAppleSignIn() {
+    // Track login attempt for Apple (even though not implemented yet)
+    AnalyticsService.instance.logEvent(
+      name: AnalyticsEvents.loginAttempt,
+      parameters: {AnalyticsParams.provider: 'apple'},
+    );
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Apple Sign-In coming soon!'),

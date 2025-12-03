@@ -688,12 +688,16 @@ class _VictoryTag extends StatelessWidget {
             showBorder: false,
           ),
           const SizedBox(width: 4),
-          Text(
-            getVictoryText(context, victory.id),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.95),
+          Flexible(
+            child: Text(
+              getVictoryText(context, victory.id),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.95),
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
           if (victory.timestamp != null) ...[

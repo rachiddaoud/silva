@@ -99,9 +99,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (value) {
       await NotificationService.scheduleDailyNotification();
       await NotificationService.scheduleMorningNotification();
+      await NotificationService.scheduleDayReminders();
     } else {
       await NotificationService.cancelDailyNotification();
       await NotificationService.cancelMorningNotification();
+      await NotificationService.cancelDayReminders();
     }
   }
 

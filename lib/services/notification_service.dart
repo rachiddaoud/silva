@@ -59,6 +59,7 @@ class NotificationService {
   }
 
   static Future<void> initialize() async {
+    debugPrint('🔔 Initializing notification service...');
     tz.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation('Europe/Paris'));
 
@@ -85,6 +86,8 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
+    debugPrint('✅ Notification service initialized');
+    
     // Les catégories d'actions iOS sont configurées nativement dans AppDelegate.swift
     // Pas besoin d'appel de méthode channel ici
   }
@@ -270,6 +273,8 @@ class NotificationService {
       matchDateTimeComponents: DateTimeComponents.time,
       payload: _eveningNotificationType,
     );
+    
+    debugPrint('✅ Scheduled daily notification for ${_nextInstanceOf22PM()}');
   }
 
   static tz.TZDateTime _nextInstanceOf22PM() {
@@ -338,8 +343,11 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
       payload: _morningNotificationType,
     );
+    
+    debugPrint('✅ Scheduled morning notification for ${_nextInstanceOf9AM()}');
   }
 
   static tz.TZDateTime _nextInstanceOf9AM() {
@@ -469,6 +477,8 @@ class NotificationService {
       matchDateTimeComponents: DateTimeComponents.time,
       payload: '$_dayReminderNotificationType|${selectedVictory2.id}',
     );
+    
+    debugPrint('✅ Scheduled day reminders: 12PM for victory ${selectedVictory1.id}, 5PM for victory ${selectedVictory2.id}');
   }
 
   static tz.TZDateTime _nextInstanceOf12PM() {
@@ -666,6 +676,21 @@ class NotificationService {
       ),
       payload: _eveningNotificationType,
     );
+  }
+  
+  /// Debug method to check pending notifications
+  static Future<void> debugPrintPendingNotifications() async {
+    final pendingNotifications = await _notifications.pendingNotificationRequests();
+    debugPrint('📋 Pending notifications (${pendingNotifications.length}):');
+    if (pendingNotifications.isEmpty) {
+      debugPrint('  ⚠️ No pending notifications scheduled!');
+    } else {
+      for (var notification in pendingNotifications) {
+        debugPrint('  • ID ${notification.id}: ${notification.title}');
+        debugPrint('    Body: ${notification.body}');
+        debugPrint('    Payload: ${notification.payload}');
+      }
+    }
   }
 }
 

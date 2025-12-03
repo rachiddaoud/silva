@@ -121,9 +121,15 @@ class _MyAppState extends State<MyApp> {
     await NotificationService.initialize();
     // Request permissions might show a dialog, so maybe do this later or check if already granted
     // For now, we keep the original flow but non-blocking for the main UI
-    await NotificationService.requestPermissions();
+    final permissionGranted = await NotificationService.requestPermissions();
+    debugPrint('🔔 Notification permissions granted: $permissionGranted');
+    
     await NotificationService.scheduleDailyNotification();
     await NotificationService.scheduleMorningNotification();
+    await NotificationService.scheduleDayReminders();
+    
+    // Debug: Print all pending notifications
+    await NotificationService.debugPrintPendingNotifications();
   }
 
   void _onThemeChanged(AppTheme theme) {

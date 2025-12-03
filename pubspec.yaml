@@ -91,7 +91,6 @@ flutter:
     - assets/tree/jasmin.png
     - assets/tree/blue.png
     - assets/tree/yellow.png
-    - assets/tree/terre.png
     - assets/tree/grass_foreground.png
     - assets/tree/grass_background.png
     - assets/tree/bark_texture.png

@@ -240,18 +240,7 @@ class _HistoryViewState extends State<HistoryView> {
           },
         ),
       ),
-      floatingActionButton: _history.isNotEmpty
-          ? FloatingActionButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const ChartsScreen(),
-                  ),
-                );
-              },
-              child: const Icon(Icons.bar_chart_rounded),
-            )
-          : null,
+      floatingActionButton: null,
     );
   }
 
@@ -683,10 +672,10 @@ class _VictoryTag extends StatelessWidget {
     final tagContent = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: color.withValues(alpha: 0.3),
+          color: color.withValues(alpha: 0.6),
           width: 1,
         ),
       ),
@@ -703,8 +692,8 @@ class _VictoryTag extends StatelessWidget {
             getVictoryText(context, victory.id),
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.95),
             ),
           ),
           if (victory.timestamp != null) ...[

@@ -150,21 +150,23 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
         return SizedBox(
           width: widget.size,
           height: widget.size,
-          child: CustomPaint(
-            key: ValueKey('${_leafImage != null}'),
-            painter: TreePainter(
-              tree: widget.controller.tree!,
-              parameters: widget.parameters,
-              leafImage: _leafImage,
-              leafDead1Image: _leafDead1Image,
-              leafDead2Image: _leafDead2Image,
-              leafDead3Image: _leafDead3Image,
-              flowerImage: _flowerImage,
-              jasminImage: _jasminImage,
-              grassBackgroundImage: _grassBackgroundImage,
-              grassForegroundImage: _grassForegroundImage,
-              barkImage: _barkImage,
-              windPhase: _windAnimation.value,
+          child: RepaintBoundary(
+            child: CustomPaint(
+              key: ValueKey('${_leafImage != null}'),
+              painter: TreePainter(
+                tree: widget.controller.tree!,
+                parameters: widget.parameters,
+                leafImage: _leafImage,
+                leafDead1Image: _leafDead1Image,
+                leafDead2Image: _leafDead2Image,
+                leafDead3Image: _leafDead3Image,
+                flowerImage: _flowerImage,
+                jasminImage: _jasminImage,
+                grassBackgroundImage: _grassBackgroundImage,
+                grassForegroundImage: _grassForegroundImage,
+                barkImage: _barkImage,
+                windPhase: _windAnimation.value,
+              ),
             ),
           ),
         );

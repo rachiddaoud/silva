@@ -683,8 +683,27 @@ class TreePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(TreePainter oldDelegate) {
-    return oldDelegate.tree != tree ||
-           oldDelegate.windPhase != windPhase ||
-           oldDelegate.parameters != parameters;
+    // Always repaint if wind phase changed (for animation)
+    if (oldDelegate.windPhase != windPhase) return true;
+    
+    // Repaint if tree structure changed
+    if (oldDelegate.tree.age != tree.age) return true;
+    if (oldDelegate.tree.treeSize != tree.treeSize) return true;
+    if (oldDelegate.tree.getTotalLeafCount() != tree.getTotalLeafCount()) return true;
+    if (oldDelegate.tree.getTotalFlowerCount() != tree.getTotalFlowerCount()) return true;
+    
+    // Repaint if parameters changed (TreeParameters has equality operator)
+    if (oldDelegate.parameters != parameters) return true;
+    
+    // Repaint if images changed (loaded/unloaded)
+    if (oldDelegate.leafImage != leafImage) return true;
+    if (oldDelegate.flowerImage != flowerImage) return true;
+    if (oldDelegate.jasminImage != jasminImage) return true;
+    if (oldDelegate.barkImage != barkImage) return true;
+    if (oldDelegate.grassBackgroundImage != grassBackgroundImage) return true;
+    if (oldDelegate.grassForegroundImage != grassForegroundImage) return true;
+    
+    // No changes detected
+    return false;
   }
 }

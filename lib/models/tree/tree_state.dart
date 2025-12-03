@@ -313,6 +313,12 @@ class TreeState {
     return (age * 0.01).clamp(0.0, 1.0);
   }
 
+  /// Get total count of leaves across all branches
+  int getTotalLeafCount() => getAllLeaves().length;
+
+  /// Get total count of flowers across all branches
+  int getTotalFlowerCount() => getAllFlowers().length;
+
   Map<String, dynamic> toJson() {
     return {
       'age': age,

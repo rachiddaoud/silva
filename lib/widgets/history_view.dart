@@ -10,7 +10,7 @@ import '../l10n/app_localizations.dart';
 import '../utils/localization_utils.dart';
 import '../services/tree_service.dart';
 import '../services/preferences_service.dart';
-import '../services/haptic_service.dart';
+import '../screens/charts_screen.dart';
 
 class HistoryView extends StatefulWidget {
   final VoidCallback? onHistoryChanged;
@@ -512,8 +512,8 @@ class _TimelineEntry extends StatelessWidget {
                   // Tags des victoires (toujours afficher si présentes)
                   if (victoryCards.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
+                    Builder(
+                      builder: (context) {
                         final color = emotion?.moodColor ?? theme.colorScheme.primary;
                         return Wrap(
                           spacing: 8,
@@ -524,7 +524,6 @@ class _TimelineEntry extends StatelessWidget {
                               color: color,
                               canDelete: canDelete,
                               onDelete: () => onDeleteVictory(victory.id),
-                              maxWidth: constraints.maxWidth,
                             );
                           }).toList(),
                         );
@@ -625,14 +624,12 @@ class _VictoryTag extends StatelessWidget {
   final Color color;
   final bool canDelete;
   final VoidCallback onDelete;
-  final double maxWidth;
 
   const _VictoryTag({
     required this.victory,
     required this.color,
     this.canDelete = false,
     required this.onDelete,
-    required this.maxWidth,
   });
 
   String _formatTime(DateTime? timestamp) {
@@ -672,52 +669,49 @@ class _VictoryTag extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
-    final tagContent = ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: maxWidth),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.25),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: color.withValues(alpha: 0.6),
-            width: 1,
+    final tagContent = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: color.withValues(alpha: 0.6),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SpriteDisplay(
+            victoryId: victory.spriteId,
+            size: 20,
+            showBorder: false,
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SpriteDisplay(
-              victoryId: victory.spriteId,
-              size: 20,
-              showBorder: false,
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              getVictoryText(context, victory.id),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.95),
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                getVictoryText(context, victory.id),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.95),
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
+          ),
+          if (victory.timestamp != null) ...[
+            const SizedBox(width: 6),
+            Text(
+              '• ${_formatTime(victory.timestamp)}',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w400,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
               ),
             ),
-            if (victory.timestamp != null) ...[
-              const SizedBox(width: 6),
-              Text(
-                '• ${_formatTime(victory.timestamp)}',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w400,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                ),
-              ),
-            ],
           ],
-        ),
+        ],
       ),
     );
 
@@ -729,11 +723,7 @@ class _VictoryTag extends StatelessWidget {
       key: ValueKey('victory_${victory.id}_${victory.timestamp?.millisecondsSinceEpoch}'),
       direction: DismissDirection.horizontal,
       confirmDismiss: (direction) => _confirmDelete(context),
-      onDismissed: (direction) async {
-        // Provide haptic feedback when deletion is confirmed
-        await HapticService().medium();
-        onDelete();
-      },
+      onDismissed: (direction) => onDelete(),
       background: Container(
         margin: const EdgeInsets.only(right: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12),

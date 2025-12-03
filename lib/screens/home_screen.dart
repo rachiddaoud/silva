@@ -605,11 +605,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               },
               child: Container(
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.secondary.withValues(alpha: 0.9),
+                  color: theme.colorScheme.primary,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: theme.colorScheme.secondary.withValues(alpha: 0.3),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -617,8 +617,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
                 padding: const EdgeInsets.all(12),
                 child: Icon(
-                  Icons.insights_rounded,
-                  color: theme.colorScheme.onSecondary,
+                  Icons.bar_chart_rounded,
+                  color: theme.colorScheme.onPrimary,
                   size: 24,
                 ),
               ),

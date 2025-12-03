@@ -114,9 +114,15 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
 
   void _loadResources() async {
     final resources = await PreferencesService.getTreeResources();
+    debugPrint('📖 LOADED RESOURCES: $resources');
     if (mounted) {
-      setState(() {
-        _resources = resources;
+      // Use addPostFrameCallback to avoid setState during build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _resources = resources;
+          });
+        }
       });
     }
   }
@@ -138,7 +144,9 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   }
 
   void _saveResources() async {
+    debugPrint('💾 SAVING RESOURCES: $_resources');
     await PreferencesService.saveTreeResources(_resources);
+    debugPrint('💾 RESOURCES SAVED');
   }
 
   bool _isProcessing = false;
@@ -266,25 +274,49 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
       int newStreak = _resources.streak;
       final lastUpdate = _resources.lastStreakUpdate;
       
+      debugPrint('🔍 STREAK DEBUG: Current streak = ${_resources.streak}');
+      debugPrint('🔍 STREAK DEBUG: Last update = $lastUpdate');
+      debugPrint('🔍 STREAK DEBUG: Now = $now');
+      
       if (lastUpdate == null) {
+        // First time watering
         newStreak = 1;
+        debugPrint('🔍 STREAK DEBUG: First time watering, setting streak to 1');
       } else {
-        // Check if consecutive day (yesterday)
+        // Check if last update was yesterday
         final yesterday = now.subtract(const Duration(days: 1));
         final wasYesterday = lastUpdate.year == yesterday.year && 
                              lastUpdate.month == yesterday.month && 
                              lastUpdate.day == yesterday.day;
-                             
-        if (wasYesterday) {
+        
+        // Check if last update was today (shouldn't happen due to isWateredToday guard)
+        final wasToday = lastUpdate.year == now.year &&
+                         lastUpdate.month == now.month &&
+                         lastUpdate.day == now.day;
+        
+        debugPrint('🔍 STREAK DEBUG: Was yesterday? $wasYesterday');
+        debugPrint('🔍 STREAK DEBUG: Was today? $wasToday');
+        
+        if (wasToday) {
+          // Already updated today, keep current streak (shouldn't reach here)
+          newStreak = _resources.streak;
+          debugPrint('🔍 STREAK DEBUG: Same day, keeping streak at $newStreak');
+        } else if (wasYesterday) {
+          // Consecutive day, increment streak
           newStreak++;
-        } else if (now.year != lastUpdate.year || now.month != lastUpdate.month || now.day != lastUpdate.day) {
-          // If not today and not yesterday, reset streak
+          debugPrint('🔍 STREAK DEBUG: Consecutive day, incrementing to $newStreak');
+        } else {
+          // Missed a day or more, reset streak
           newStreak = 1;
+          debugPrint('🔍 STREAK DEBUG: Missed day(s), resetting to 1');
         }
       }
       
       // Award flower for streak
       final newFlowerCount = _resources.flowerCount + 1;
+      
+      debugPrint('🔍 STREAK DEBUG: Final newStreak = $newStreak');
+      debugPrint('🔍 STREAK DEBUG: New flower count = $newFlowerCount');
       
       // Add sparkle at the base of the trunk (lower side)
       if (mounted) {
@@ -307,6 +339,9 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
           flowerCount: newFlowerCount,
         );
       });
+      
+      debugPrint('🔍 STREAK DEBUG: Resources updated in state');
+      debugPrint('🔍 STREAK DEBUG: New resources = $_resources');
     });
   }
 

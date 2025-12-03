@@ -544,4 +544,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get enabled => 'Enabled';
+
+  @override
+  String get specialFlowerUnlocked => 'You\'ve unlocked a special flower! 🌸';
 }

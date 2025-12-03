@@ -931,6 +931,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Activé'**
   String get enabled;
+
+  /// No description provided for @specialFlowerUnlocked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez débloqué une fleur spéciale ! 🌸'**
+  String get specialFlowerUnlocked;
 }
 
 class _AppLocalizationsDelegate

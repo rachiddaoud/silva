@@ -375,7 +375,7 @@ class TreePainter extends CustomPainter {
         if (imageToUse == null) continue;
 
         // --- Calculate Size and Rotation ---
-        final depthFactor = 1.5 - (branch.depth - 1) * 0.2;
+        final depthFactor = 1.5 - (branch.depth - 1) * 0.14; // Reduced reduction for deeper branches (was 0.2)
         final clampedDepthFactor = depthFactor.clamp(0.4, 1.5);
         final ageFactor = 0.5 + (branch.age / 20.0).clamp(0.0, 0.5);
         final maxSize = clampedDepthFactor * ageFactor * leaf.randomSizeFactor;

@@ -641,8 +641,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 16),
                 _buildSettingsTile(
                   icon: _soundEnabled ? Icons.volume_up : Icons.volume_off,
-                  title: 'Sound Effects',
-                  subtitle: _soundEnabled ? 'Enabled' : 'Disabled',
+                  title: AppLocalizations.of(context)!.soundEffects,
+                  subtitle: _soundEnabled ? AppLocalizations.of(context)!.enabled : AppLocalizations.of(context)!.inactive,
                   color: theme.colorScheme.secondary,
                   trailing: Switch.adaptive(
                     value: _soundEnabled,
@@ -658,8 +658,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 16),
                 _buildSettingsTile(
                   icon: Icons.vibration,
-                  title: 'Haptic Feedback',
-                  subtitle: _hapticEnabled ? 'Enabled' : 'Disabled',
+                  title: AppLocalizations.of(context)!.hapticFeedback,
+                  subtitle: _hapticEnabled ? AppLocalizations.of(context)!.enabled : AppLocalizations.of(context)!.inactive,
                   color: theme.colorScheme.tertiary,
                   trailing: Switch.adaptive(
                     value: _hapticEnabled,
@@ -683,7 +683,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: const Text('Notifications de test envoyées !'),
+                          content: Text(AppLocalizations.of(context)!.testNotificationsSent),
                           backgroundColor: theme.colorScheme.secondary,
                           behavior: SnackBarBehavior.floating,
                           duration: const Duration(seconds: 2),

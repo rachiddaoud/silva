@@ -136,11 +136,15 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
         oldWidget.parameters.seed != widget.parameters.seed;
     
     if (parametersChanged) {
-      widget.controller.updateTree(
-        growthLevel: widget.growthLevel,
-        size: widget.size,
-        parameters: widget.parameters,
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          widget.controller.updateTree(
+            growthLevel: widget.growthLevel,
+            size: widget.size,
+            parameters: widget.parameters,
+          );
+        }
+      });
     }
   }
   

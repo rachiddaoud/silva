@@ -391,4 +391,123 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get startAddingVictories =>
       'Commencez à ajouter des victoires pour voir vos progrès';
+
+  @override
+  String streakDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'jours',
+      one: 'jour',
+    );
+    return 'Série : $days $_temp0';
+  }
+
+  @override
+  String wateredStreakFlower(int streak) {
+    String _temp0 = intl.Intl.pluralLogic(
+      streak,
+      locale: localeName,
+      other: 'jours',
+      one: 'jour',
+    );
+    return 'Arrosé ! Série : $streak $_temp0. +1 Fleur !';
+  }
+
+  @override
+  String get needVictoriesToWater =>
+      'Besoin de 3 victoires pour arroser l\'arbre !';
+
+  @override
+  String get alreadyWateredToday =>
+      'Déjà arrosé aujourd\'hui ! Revenez demain.';
+
+  @override
+  String get alreadyAddedFlowerToday =>
+      'Fleur déjà ajoutée aujourd\'hui ! Revenez demain.';
+
+  @override
+  String get noLeavesAvailable =>
+      'Aucune feuille disponible. Accomplissez des victoires pour gagner des feuilles !';
+
+  @override
+  String needMoreVictories(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'victoires de plus',
+      one: 'victoire de plus',
+    );
+    return 'Besoin de $count $_temp0 pour arroser l\'arbre !';
+  }
+
+  @override
+  String alreadyWateredAvailableIn(int hours, int minutes) {
+    return 'Déjà arrosé aujourd\'hui ! Disponible dans ${hours}h et ${minutes}min';
+  }
+
+  @override
+  String alreadyWateredAvailableInMinutes(int minutes) {
+    return 'Déjà arrosé aujourd\'hui ! Disponible dans ${minutes}min';
+  }
+
+  @override
+  String alreadyFlowerAvailableIn(int hours, int minutes) {
+    return 'Fleur déjà ajoutée ! Disponible dans ${hours}h et ${minutes}min';
+  }
+
+  @override
+  String alreadyFlowerAvailableInMinutes(int minutes) {
+    return 'Fleur déjà ajoutée ! Disponible dans ${minutes}min';
+  }
+
+  @override
+  String get leafButton => 'Feuille';
+
+  @override
+  String get flowerButton => 'Fleur';
+
+  @override
+  String get waterButton => 'Arroser';
+
+  @override
+  String get waterDone => 'Fait';
+
+  @override
+  String get resetTreeTitle => 'Réinitialiser l\'arbre';
+
+  @override
+  String get resetTreeConfirm =>
+      'Réinitialiser l\'arbre à l\'âge 10 sans feuilles ni fleurs ?';
+
+  @override
+  String get reset => 'Réinitialiser';
+
+  @override
+  String get resetTooltip => 'Réinitialiser';
+
+  @override
+  String get treeInfoTooltip => 'Infos arbre';
+
+  @override
+  String get appleSignInComingSoon => 'Connexion Apple bientôt disponible !';
+
+  @override
+  String get continueWithApple => 'Commencer avec Apple';
+
+  @override
+  String get termsOfService =>
+      'En continuant, vous acceptez nos conditions d\'utilisation';
+
+  @override
+  String get testNotificationsSent => 'Notifications de test envoyées !';
+
+  @override
+  String get soundEffects => 'Effets sonores';
+
+  @override
+  String get hapticFeedback => 'Retour haptique';
+
+  @override
+  String get enabled => 'Activé';
 }

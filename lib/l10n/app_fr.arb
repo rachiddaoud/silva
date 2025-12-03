@@ -209,5 +209,70 @@
   "victoriesChart": "Victoires quotidiennes",
   "moodTrend": "Tendance d'humeur",
   "noDataYet": "Aucune donnée pour le moment",
-  "startAddingVictories": "Commencez à ajouter des victoires pour voir vos progrès"
+  "startAddingVictories": "Commencez à ajouter des victoires pour voir vos progrès",
+  "streakDays": "Série : {days} {days, plural, =1 {jour} other {jours}}",
+  "@streakDays": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "wateredStreakFlower": "Arrosé ! Série : {streak} {streak, plural, =1 {jour} other {jours}}. +1 Fleur !",
+  "@wateredStreakFlower": {
+    "placeholders": {
+      "streak": { "type": "int" }
+    }
+  },
+  "needVictoriesToWater": "Besoin de 3 victoires pour arroser l'arbre !",
+  "alreadyWateredToday": "Déjà arrosé aujourd'hui ! Revenez demain.",
+  "alreadyAddedFlowerToday": "Fleur déjà ajoutée aujourd'hui ! Revenez demain.",
+  "noLeavesAvailable": "Aucune feuille disponible. Accomplissez des victoires pour gagner des feuilles !",
+  "needMoreVictories": "Besoin de {count} {count, plural, =1 {victoire de plus} other {victoires de plus}} pour arroser l'arbre !",
+  "@needMoreVictories": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "alreadyWateredAvailableIn": "Déjà arrosé aujourd'hui ! Disponible dans {hours}h et {minutes}min",
+  "@alreadyWateredAvailableIn": {
+    "placeholders": {
+      "hours": { "type": "int" },
+      "minutes": { "type": "int" }
+    }
+  },
+  "alreadyWateredAvailableInMinutes": "Déjà arrosé aujourd'hui ! Disponible dans {minutes}min",
+  "@alreadyWateredAvailableInMinutes": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "alreadyFlowerAvailableIn": "Fleur déjà ajoutée ! Disponible dans {hours}h et {minutes}min",
+  "@alreadyFlowerAvailableIn": {
+    "placeholders": {
+      "hours": { "type": "int" },
+      "minutes": { "type": "int" }
+    }
+  },
+  "alreadyFlowerAvailableInMinutes": "Fleur déjà ajoutée ! Disponible dans {minutes}min",
+  "@alreadyFlowerAvailableInMinutes": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "leafButton": "Feuille",
+  "flowerButton": "Fleur",
+  "waterButton": "Arroser",
+  "waterDone": "Fait",
+  "resetTreeTitle": "Réinitialiser l'arbre",
+  "resetTreeConfirm": "Réinitialiser l'arbre à l'âge 10 sans feuilles ni fleurs ?",
+  "reset": "Réinitialiser",
+  "resetTooltip": "Réinitialiser",
+  "treeInfoTooltip": "Infos arbre",
+  "appleSignInComingSoon": "Connexion Apple bientôt disponible !",
+  "continueWithApple": "Commencer avec Apple",
+  "termsOfService": "En continuant, vous acceptez nos conditions d'utilisation",
+  "testNotificationsSent": "Notifications de test envoyées !",
+  "soundEffects": "Effets sonores",
+  "hapticFeedback": "Retour haptique",
+  "enabled": "Activé",
+  "specialFlowerUnlocked": "Vous avez débloqué une fleur spéciale ! 🌸"
 }

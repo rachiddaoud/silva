@@ -390,4 +390,158 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get startAddingVictories =>
       'Start adding victories to see your progress';
+
+  @override
+  String streakDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'days',
+      one: 'day',
+    );
+    return 'Streak: $days $_temp0';
+  }
+
+  @override
+  String wateredStreakFlower(int streak) {
+    String _temp0 = intl.Intl.pluralLogic(
+      streak,
+      locale: localeName,
+      other: 'days',
+      one: 'day',
+    );
+    return 'Watered! Streak: $streak $_temp0. +1 Flower!';
+  }
+
+  @override
+  String get needVictoriesToWater => 'Need 3 victories to water the tree!';
+
+  @override
+  String get alreadyWateredToday =>
+      'Already watered today! Come back tomorrow.';
+
+  @override
+  String get alreadyAddedFlowerToday =>
+      'Already added a flower today! Come back tomorrow.';
+
+  @override
+  String get noLeavesAvailable =>
+      'No leaves available. Complete victories to earn leaves!';
+
+  @override
+  String needMoreVictories(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'victories',
+      one: 'victory',
+    );
+    return 'Need $count more $_temp0 to water the tree!';
+  }
+
+  @override
+  String alreadyWateredAvailableIn(int hours, int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: 'hours',
+      one: 'hour',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'minutes',
+      one: 'minute',
+    );
+    return 'Already watered today! Available again in $hours $_temp0 and $minutes $_temp1';
+  }
+
+  @override
+  String alreadyWateredAvailableInMinutes(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'minutes',
+      one: 'minute',
+    );
+    return 'Already watered today! Available again in $minutes $_temp0';
+  }
+
+  @override
+  String alreadyFlowerAvailableIn(int hours, int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: 'hours',
+      one: 'hour',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'minutes',
+      one: 'minute',
+    );
+    return 'Already added a flower today! Available again in $hours $_temp0 and $minutes $_temp1';
+  }
+
+  @override
+  String alreadyFlowerAvailableInMinutes(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'minutes',
+      one: 'minute',
+    );
+    return 'Already added a flower today! Available again in $minutes $_temp0';
+  }
+
+  @override
+  String get leafButton => 'Leaf';
+
+  @override
+  String get flowerButton => 'Flower';
+
+  @override
+  String get waterButton => 'Water';
+
+  @override
+  String get waterDone => 'Done';
+
+  @override
+  String get resetTreeTitle => 'Reset Tree';
+
+  @override
+  String get resetTreeConfirm =>
+      'Reset tree to age 10 with no leaves or flowers?';
+
+  @override
+  String get reset => 'Reset';
+
+  @override
+  String get resetTooltip => 'Reset';
+
+  @override
+  String get treeInfoTooltip => 'Tree Info';
+
+  @override
+  String get appleSignInComingSoon => 'Apple Sign-In coming soon!';
+
+  @override
+  String get continueWithApple => 'Continue with Apple';
+
+  @override
+  String get termsOfService =>
+      'By continuing, you agree to our Terms of Service';
+
+  @override
+  String get testNotificationsSent => 'Test notifications sent!';
+
+  @override
+  String get soundEffects => 'Sound Effects';
+
+  @override
+  String get hapticFeedback => 'Haptic Feedback';
+
+  @override
+  String get enabled => 'Enabled';
 }

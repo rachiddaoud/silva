@@ -171,10 +171,15 @@ class TreeController extends ChangeNotifier {
       // 2. Victories -> Leaves
       final victories = entry.victoryCards.where((v) => v.isAccomplished).length;
       
-      // Rule: When young (< 30 days), 3 victories = 1 leaf. Otherwise 1 victory = 1 leaf.
+      // Rule: 
+      // - Age < 20: 3 victories = 1 leaf
+      // - Age 20-39: 2 victories = 1 leaf
+      // - Age >= 40: 1 victory = 1 leaf
       int leavesToAdd = victories;
-      if (_tree!.age < 30) {
+      if (_tree!.age < 20) {
         leavesToAdd = victories ~/ 3;
+      } else if (_tree!.age < 40) {
+        leavesToAdd = victories ~/ 2;
       }
       
       for (int i = 0; i < leavesToAdd; i++) {
@@ -231,10 +236,10 @@ class TreeController extends ChangeNotifier {
         id: leafId,
         tOnBranch: t,
         side: side,
-        age: 4.0, // Start at age 4 (was 2, added 2 days for visibility)
+        age: 6.0, // Start at age 6.0
         maxAge: maxAge,
         randomSizeFactor: 0.8 + math.Random().nextDouble() * 0.4,
-        currentGrowth: 4.0 / maxAge, // Start at size corresponding to age 4
+        currentGrowth: 6.0 / maxAge, // Start at size corresponding to age 6.0
         healthState: LeafHealthState.alive,
       );
 

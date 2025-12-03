@@ -87,8 +87,8 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Apple Sign-In coming soon!'),
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.appleSignInComingSoon),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -183,9 +183,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _handleAppleSignIn,
                       icon: const Icon(Icons.apple, size: 28, color: Colors.white),
-                      label: const Text(
-                        'Continue with Apple',
-                        style: TextStyle(
+                      label: Text(
+                        AppLocalizations.of(context)!.continueWithApple,
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -204,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 const SizedBox(height: 24),
                 Text(
-                  "En continuant, vous acceptez nos conditions d'utilisation",
+                  AppLocalizations.of(context)!.termsOfService,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: const Color(0xFFB2BEC3),
                     fontSize: 12,

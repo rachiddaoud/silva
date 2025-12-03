@@ -310,7 +310,7 @@ class TreeState {
   List<FlowerState> getAllFlowers() => trunk.getAllFlowers();
 
   double getGrowthLevel() {
-    return (age * 0.01).clamp(0.0, 1.0);
+    return (age * 0.02).clamp(0.0, 1.0);
   }
 
   /// Get total count of leaves across all branches

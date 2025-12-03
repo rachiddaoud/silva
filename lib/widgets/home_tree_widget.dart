@@ -251,17 +251,17 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     // Check conditions
     if (widget.victoryCount < 3) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Need 3 victories to water the tree!')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.needVictoriesToWater)),
       );
       return;
     }
     
-    if (_resources.isWateredToday()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Already watered today! Come back tomorrow.')),
-      );
-      return;
-    }
+    // if (_resources.isWateredToday()) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     SnackBar(content: Text(AppLocalizations.of(context)!.alreadyWateredToday)),
+    //   );
+    //   return;
+    // }
 
     final canWater = _isDebugUnlimited || _resources.canWater();
     if (!canWater) return;
@@ -336,7 +336,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
         _addSparkle(Offset(screenWidth / 2, trunkBaseY), Colors.blue);
         
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Watered! Streak: $newStreak days. +1 Flower!')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.wateredStreakFlower(newStreak))),
         );
       }
       
@@ -349,6 +349,25 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
         );
       });
       
+      // Check for special flower unlock
+      if (newStreak == 7 || newStreak == 30) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('🎉'),
+              content: Text(AppLocalizations.of(context)!.specialFlowerUnlocked),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(AppLocalizations.of(context)!.close),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+
       debugPrint('🔍 STREAK DEBUG: Resources updated in state');
       debugPrint('🔍 STREAK DEBUG: New resources = $_resources');
     });
@@ -359,7 +378,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     
     if (!_isDebugUnlimited && _resources.isFlowerUsedToday()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Already added a flower today! Come back tomorrow.')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.alreadyAddedFlowerToday)),
       );
       return;
     }
@@ -376,10 +395,10 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     bool claimed7 = _resources.hasClaimed7DayFlower;
     bool claimed30 = _resources.hasClaimed30DayFlower;
     
-    if (_resources.streak >= 30 && !claimed30) {
+    if (_resources.streak > 0 && _resources.streak % 30 == 0 && !claimed30) {
       flowerType = 3; // Yellow
       claimed30 = true;
-    } else if (_resources.streak >= 7 && !claimed7) {
+    } else if (_resources.streak > 0 && _resources.streak % 7 == 0 && !claimed7) {
       flowerType = 2; // Blue
       claimed7 = true;
     } else {
@@ -449,12 +468,12 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Reset Tree'),
-        content: const Text('Reset tree to age 10 with no leaves or flowers?'),
+        title: Text(AppLocalizations.of(context)!.resetTreeTitle),
+        content: Text(AppLocalizations.of(context)!.resetTreeConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -486,7 +505,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
                 });
               });
             },
-            child: const Text('Reset'),
+            child: Text(AppLocalizations.of(context)!.reset),
           ),
         ],
       ),
@@ -528,7 +547,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   /// Get message for when leaf button will be available
   String? _getLeafDisabledMessage() {
     if (_resources.leafCount <= 0) {
-      return 'No leaves available. Complete victories to earn leaves!';
+      return AppLocalizations.of(context)!.noLeavesAvailable;
     }
     final remaining = _resources.getLeafCooldownRemaining();
     if (remaining.inMilliseconds > 0) {
@@ -542,20 +561,20 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   String? _getWaterDisabledMessage() {
     if (widget.victoryCount < 3) {
       final needed = 3 - widget.victoryCount;
-      return 'Need $needed more victory${needed != 1 ? 'ies' : 'y'} to water the tree!';
+      return AppLocalizations.of(context)!.needMoreVictories(needed);
     }
-    if (_resources.isWateredToday()) {
-      final now = DateTime.now();
-      final tomorrow = DateTime(now.year, now.month, now.day + 1);
-      final timeUntil = tomorrow.difference(now);
-      final hours = timeUntil.inHours;
-      final minutes = timeUntil.inMinutes % 60;
-      if (hours > 0) {
-        return 'Already watered today! Available again in $hours hour${hours != 1 ? 's' : ''} and $minutes minute${minutes != 1 ? 's' : ''}';
-      } else {
-        return 'Already watered today! Available again in $minutes minute${minutes != 1 ? 's' : ''}';
-      }
-    }
+    // if (_resources.isWateredToday()) {
+    //   final now = DateTime.now();
+    //   final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    //   final timeUntil = tomorrow.difference(now);
+    //   final hours = timeUntil.inHours;
+    //   final minutes = timeUntil.inMinutes % 60;
+    //   if (hours > 0) {
+    //     return AppLocalizations.of(context)!.alreadyWateredAvailableIn(hours, minutes);
+    //   } else {
+    //     return AppLocalizations.of(context)!.alreadyWateredAvailableInMinutes(minutes);
+    //   }
+    // }
     final remaining = _resources.getWaterCooldownRemaining();
     if (remaining.inMilliseconds > 0) {
       final seconds = (remaining.inMilliseconds / 1000).ceil();
@@ -573,9 +592,9 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
       final hours = timeUntil.inHours;
       final minutes = timeUntil.inMinutes % 60;
       if (hours > 0) {
-        return 'Already added a flower today! Available again in $hours hour${hours != 1 ? 's' : ''} and $minutes minute${minutes != 1 ? 's' : ''}';
+        return AppLocalizations.of(context)!.alreadyFlowerAvailableIn(hours, minutes);
       } else {
-        return 'Already added a flower today! Available again in $minutes minute${minutes != 1 ? 's' : ''}';
+        return AppLocalizations.of(context)!.alreadyFlowerAvailableInMinutes(minutes);
       }
     }
     final remaining = _resources.getFlowerCooldownRemaining();
@@ -620,10 +639,8 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     final tertiaryColor = theme.colorScheme.tertiary;
 
     // Check water availability
-    final bool canWater = _isDebugUnlimited || (widget.victoryCount >= 3 && !_resources.isWateredToday());
-    final String waterLabel = !_isDebugUnlimited && _resources.isWateredToday() 
-        ? 'Done' 
-        : (widget.victoryCount >= 3 ? 'Water' : '${widget.victoryCount}/3');
+    final bool canWater = _isDebugUnlimited || (widget.victoryCount >= 3);
+    final String waterLabel = widget.victoryCount >= 3 ? AppLocalizations.of(context)!.waterButton : '${widget.victoryCount}/3';
     
     // Check flower availability (once per day)
     final bool canUseFlower = _isDebugUnlimited || _resources.canUseFlower();
@@ -632,10 +649,10 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     String flowerEmoji = '🌸';
     Color flowerButtonColor = canUseFlower ? secondaryColor : Colors.grey;
     
-    if (_resources.streak >= 30 && !_resources.hasClaimed30DayFlower) {
+    if (_resources.streak > 0 && _resources.streak % 30 == 0 && !_resources.hasClaimed30DayFlower) {
       flowerEmoji = '🌼'; // Yellow flower representation
       flowerButtonColor = canUseFlower ? Colors.yellow : Colors.grey;
-    } else if (_resources.streak >= 7 && !_resources.hasClaimed7DayFlower) {
+    } else if (_resources.streak > 0 && _resources.streak % 7 == 0 && !_resources.hasClaimed7DayFlower) {
       flowerEmoji = '💠'; // Blue flower representation
       flowerButtonColor = canUseFlower ? Colors.blue : Colors.grey;
     }
@@ -701,7 +718,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
                     const Icon(Icons.local_fire_department, color: Colors.orange, size: 16),
                     const SizedBox(width: 4),
                     Text(
-                      'Streak: ${_resources.streak} days',
+                      AppLocalizations.of(context)!.streakDays(_resources.streak),
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -727,7 +744,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
               key: _shareButtonKey,
               icon: const Icon(Icons.share_rounded, size: 20, color: Colors.grey),
               onPressed: _shareTree,
-              tooltip: 'Partager',
+              tooltip: AppLocalizations.of(context)!.share,
             ),
           ),
           
@@ -738,7 +755,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
             child: IconButton(
               icon: const Icon(Icons.info_outline, size: 20, color: Colors.grey),
               onPressed: _showTreeInfo,
-              tooltip: 'Infos arbre',
+              tooltip: AppLocalizations.of(context)!.treeInfoTooltip,
             ),
           ),
           
@@ -749,7 +766,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
             child: IconButton(
               icon: const Icon(Icons.refresh, size: 20, color: Colors.grey),
               onPressed: _handleResetTree,
-              tooltip: 'Reset',
+              tooltip: AppLocalizations.of(context)!.resetTooltip,
             ),
           ),
 
@@ -761,7 +778,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
             left: 20,
             child: CooldownButton(
               emoji: '🍃',
-              label: 'Leaf',
+              label: AppLocalizations.of(context)!.leafButton,
               count: _resources.leafCount,
               color: _resources.canUseLeaf() ? tertiaryColor : Colors.grey,
               isAvailable: _resources.canUseLeaf(),
@@ -797,7 +814,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
             right: 20,
             child: CooldownButton(
               emoji: flowerEmoji,
-              label: 'Flower',
+              label: AppLocalizations.of(context)!.flowerButton,
               count: null, // No counter, once per day
               color: flowerButtonColor,
               isAvailable: canUseFlower,

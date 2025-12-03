@@ -769,6 +769,168 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Commencez à ajouter des victoires pour voir vos progrès'**
   String get startAddingVictories;
+
+  /// No description provided for @streakDays.
+  ///
+  /// In fr, this message translates to:
+  /// **'Série : {days} {days, plural, =1 {jour} other {jours}}'**
+  String streakDays(int days);
+
+  /// No description provided for @wateredStreakFlower.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrosé ! Série : {streak} {streak, plural, =1 {jour} other {jours}}. +1 Fleur !'**
+  String wateredStreakFlower(int streak);
+
+  /// No description provided for @needVictoriesToWater.
+  ///
+  /// In fr, this message translates to:
+  /// **'Besoin de 3 victoires pour arroser l\'arbre !'**
+  String get needVictoriesToWater;
+
+  /// No description provided for @alreadyWateredToday.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déjà arrosé aujourd\'hui ! Revenez demain.'**
+  String get alreadyWateredToday;
+
+  /// No description provided for @alreadyAddedFlowerToday.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fleur déjà ajoutée aujourd\'hui ! Revenez demain.'**
+  String get alreadyAddedFlowerToday;
+
+  /// No description provided for @noLeavesAvailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune feuille disponible. Accomplissez des victoires pour gagner des feuilles !'**
+  String get noLeavesAvailable;
+
+  /// No description provided for @needMoreVictories.
+  ///
+  /// In fr, this message translates to:
+  /// **'Besoin de {count} {count, plural, =1 {victoire de plus} other {victoires de plus}} pour arroser l\'arbre !'**
+  String needMoreVictories(int count);
+
+  /// No description provided for @alreadyWateredAvailableIn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déjà arrosé aujourd\'hui ! Disponible dans {hours}h et {minutes}min'**
+  String alreadyWateredAvailableIn(int hours, int minutes);
+
+  /// No description provided for @alreadyWateredAvailableInMinutes.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déjà arrosé aujourd\'hui ! Disponible dans {minutes}min'**
+  String alreadyWateredAvailableInMinutes(int minutes);
+
+  /// No description provided for @alreadyFlowerAvailableIn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fleur déjà ajoutée ! Disponible dans {hours}h et {minutes}min'**
+  String alreadyFlowerAvailableIn(int hours, int minutes);
+
+  /// No description provided for @alreadyFlowerAvailableInMinutes.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fleur déjà ajoutée ! Disponible dans {minutes}min'**
+  String alreadyFlowerAvailableInMinutes(int minutes);
+
+  /// No description provided for @leafButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Feuille'**
+  String get leafButton;
+
+  /// No description provided for @flowerButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fleur'**
+  String get flowerButton;
+
+  /// No description provided for @waterButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arroser'**
+  String get waterButton;
+
+  /// No description provided for @waterDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fait'**
+  String get waterDone;
+
+  /// No description provided for @resetTreeTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réinitialiser l\'arbre'**
+  String get resetTreeTitle;
+
+  /// No description provided for @resetTreeConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réinitialiser l\'arbre à l\'âge 10 sans feuilles ni fleurs ?'**
+  String get resetTreeConfirm;
+
+  /// No description provided for @reset.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réinitialiser'**
+  String get reset;
+
+  /// No description provided for @resetTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réinitialiser'**
+  String get resetTooltip;
+
+  /// No description provided for @treeInfoTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Infos arbre'**
+  String get treeInfoTooltip;
+
+  /// No description provided for @appleSignInComingSoon.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion Apple bientôt disponible !'**
+  String get appleSignInComingSoon;
+
+  /// No description provided for @continueWithApple.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commencer avec Apple'**
+  String get continueWithApple;
+
+  /// No description provided for @termsOfService.
+  ///
+  /// In fr, this message translates to:
+  /// **'En continuant, vous acceptez nos conditions d\'utilisation'**
+  String get termsOfService;
+
+  /// No description provided for @testNotificationsSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notifications de test envoyées !'**
+  String get testNotificationsSent;
+
+  /// No description provided for @soundEffects.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effets sonores'**
+  String get soundEffects;
+
+  /// No description provided for @hapticFeedback.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour haptique'**
+  String get hapticFeedback;
+
+  /// No description provided for @enabled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Activé'**
+  String get enabled;
 }
 
 class _AppLocalizationsDelegate

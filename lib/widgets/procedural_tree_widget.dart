@@ -35,6 +35,8 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
   ui.Image? _leafDead3Image;
   ui.Image? _flowerImage;
   ui.Image? _jasminImage;
+  ui.Image? _blueFlowerImage;
+  ui.Image? _yellowFlowerImage;
   ui.Image? _grassBackgroundImage;
   ui.Image? _grassForegroundImage;
   ui.Image? _barkImage;
@@ -83,6 +85,8 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
     _leafDead3Image = await _loadImage('assets/tree/leaf_dead_3.png');
     _flowerImage = await _loadImage('assets/tree/flower.png');
     _jasminImage = await _loadImage('assets/tree/jasmin.png');
+    _blueFlowerImage = await _loadImage('assets/tree/blue.png');
+    _yellowFlowerImage = await _loadImage('assets/tree/yellow.png');
     _grassBackgroundImage = await _loadImage('assets/tree/grass_background.png');
     _grassForegroundImage = await _loadImage('assets/tree/grass_foreground.png');
     _barkImage = await _loadImage('assets/tree/bark_texture.png');
@@ -111,6 +115,8 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
     _leafDead3Image?.dispose();
     _flowerImage?.dispose();
     _jasminImage?.dispose();
+    _blueFlowerImage?.dispose();
+    _yellowFlowerImage?.dispose();
     _grassBackgroundImage?.dispose();
     _grassForegroundImage?.dispose();
     _barkImage?.dispose();
@@ -162,6 +168,8 @@ class ProceduralTreeWidgetState extends State<ProceduralTreeWidget>
                 leafDead3Image: _leafDead3Image,
                 flowerImage: _flowerImage,
                 jasminImage: _jasminImage,
+                blueFlowerImage: _blueFlowerImage,
+                yellowFlowerImage: _yellowFlowerImage,
                 grassBackgroundImage: _grassBackgroundImage,
                 grassForegroundImage: _grassForegroundImage,
                 barkImage: _barkImage,

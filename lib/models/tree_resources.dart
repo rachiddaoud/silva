@@ -10,6 +10,8 @@ class TreeResources {
   final DateTime? lastLeafUsed;   // Track last leaf use
   final DateTime lastDailyReset;  // Track daily reset
   final DateTime? lastStreakUpdate; // Track last streak increment
+  final bool hasClaimed7DayFlower; // Track if 7-day flower reward claimed
+  final bool hasClaimed30DayFlower; // Track if 30-day flower reward claimed
 
   const TreeResources({
     this.leafCount = 0,
@@ -20,6 +22,8 @@ class TreeResources {
     this.lastLeafUsed,
     required this.lastDailyReset,
     this.lastStreakUpdate,
+    this.hasClaimed7DayFlower = false,
+    this.hasClaimed30DayFlower = false,
   });
 
   TreeResources copyWith({
@@ -31,6 +35,8 @@ class TreeResources {
     DateTime? lastLeafUsed,
     DateTime? lastDailyReset,
     DateTime? lastStreakUpdate,
+    bool? hasClaimed7DayFlower,
+    bool? hasClaimed30DayFlower,
   }) {
     return TreeResources(
       leafCount: leafCount ?? this.leafCount,
@@ -41,6 +47,8 @@ class TreeResources {
       lastLeafUsed: lastLeafUsed ?? this.lastLeafUsed,
       lastDailyReset: lastDailyReset ?? this.lastDailyReset,
       lastStreakUpdate: lastStreakUpdate ?? this.lastStreakUpdate,
+      hasClaimed7DayFlower: hasClaimed7DayFlower ?? this.hasClaimed7DayFlower,
+      hasClaimed30DayFlower: hasClaimed30DayFlower ?? this.hasClaimed30DayFlower,
     );
   }
 
@@ -122,6 +130,8 @@ class TreeResources {
       'lastLeafUsed': lastLeafUsed?.toIso8601String(),
       'lastDailyReset': lastDailyReset.toIso8601String(),
       'lastStreakUpdate': lastStreakUpdate?.toIso8601String(),
+      'hasClaimed7DayFlower': hasClaimed7DayFlower,
+      'hasClaimed30DayFlower': hasClaimed30DayFlower,
     };
   }
 
@@ -145,6 +155,8 @@ class TreeResources {
       lastStreakUpdate: json['lastStreakUpdate'] != null
           ? DateTime.parse(json['lastStreakUpdate'] as String)
           : null,
+      hasClaimed7DayFlower: json['hasClaimed7DayFlower'] as bool? ?? false,
+      hasClaimed30DayFlower: json['hasClaimed30DayFlower'] as bool? ?? false,
     );
   }
 
@@ -159,12 +171,15 @@ class TreeResources {
       lastLeafUsed: null,
       lastDailyReset: DateTime.now(),
       lastStreakUpdate: null,
+      hasClaimed7DayFlower: false,
+      hasClaimed30DayFlower: false,
     );
   }
 
   @override
   String toString() {
     return 'TreeResources(leafs: $leafCount, flowers: $flowerCount, streak: $streak, '
-           'canWater: ${canWater()}, canUseFlower: ${canUseFlower()}, canUseLeaf: ${canUseLeaf()})';
+           'canWater: ${canWater()}, canUseFlower: ${canUseFlower()}, canUseLeaf: ${canUseLeaf()}, '
+           'claimed7: $hasClaimed7DayFlower, claimed30: $hasClaimed30DayFlower)';
   }
 }

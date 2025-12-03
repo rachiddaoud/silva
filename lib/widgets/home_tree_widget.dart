@@ -40,6 +40,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   final GlobalKey _stackKey = GlobalKey();
   final GlobalKey _shareableTreeKey = GlobalKey();
   final GlobalKey _shareButtonKey = GlobalKey();
+  bool _isDebugUnlimited = false;
 
   @override
   void initState() {
@@ -195,7 +196,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   void _handleLeafButton() {
     debugPrint('🍃 Leaf button clicked');
     // Debug mode: always allow
-    final canUse = _resources.canUseLeaf();
+    final canUse = _isDebugUnlimited || _resources.canUseLeaf();
     
     if (!canUse) {
       debugPrint('❌ Leaf button disabled (cooldown or no resources)');
@@ -262,7 +263,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
       return;
     }
 
-    final canWater = _resources.canWater();
+    final canWater = _isDebugUnlimited || _resources.canWater();
     if (!canWater) return;
 
     _handleAction(() async {
@@ -309,6 +310,14 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
           // Missed a day or more, reset streak
           newStreak = 1;
           debugPrint('🔍 STREAK DEBUG: Missed day(s), resetting to 1');
+          
+          // Reset claimed rewards on streak loss
+          setState(() {
+            _resources = _resources.copyWith(
+              hasClaimed7DayFlower: false,
+              hasClaimed30DayFlower: false,
+            );
+          });
         }
       }
       
@@ -348,23 +357,38 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   void _handleFlowerButton() {
     debugPrint('🌸 Flower button clicked');
     
-    if (_resources.isFlowerUsedToday()) {
+    if (!_isDebugUnlimited && _resources.isFlowerUsedToday()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Already added a flower today! Come back tomorrow.')),
       );
       return;
     }
     
-    final canUse = _resources.canUseFlower();
+    final canUse = _isDebugUnlimited || _resources.canUseFlower();
     
     if (!canUse) {
       debugPrint('❌ Flower button disabled (cooldown)');
       return;
     }
 
+    // Determine flower type based on streak
+    int flowerType;
+    bool claimed7 = _resources.hasClaimed7DayFlower;
+    bool claimed30 = _resources.hasClaimed30DayFlower;
+    
+    if (_resources.streak >= 30 && !claimed30) {
+      flowerType = 3; // Yellow
+      claimed30 = true;
+    } else if (_resources.streak >= 7 && !claimed7) {
+      flowerType = 2; // Blue
+      claimed7 = true;
+    } else {
+      flowerType = DateTime.now().millisecond % 2; // 0 or 1 (Pink or White)
+    }
+
     _handleAction(() async {
-      _treeController.addFlower();
-      debugPrint('✅ Flower added to tree');
+      _treeController.addFlower(flowerType: flowerType);
+      debugPrint('✅ Flower added to tree (Type: $flowerType)');
       
       // Get actual position of the added flower with current wind phase
       final windPhase = _treeWidgetKey.currentState?.currentWindPhase ?? 0.0;
@@ -381,7 +405,15 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
           
           // Convert tree coordinates (relative to tree widget) to Stack coordinates
           final stackPos = treeOffset + flowerPos;
-          _addSparkle(stackPos, Colors.pink);
+          
+          Color sparkleColor;
+          switch (flowerType) {
+            case 2: sparkleColor = Colors.blue; break;
+            case 3: sparkleColor = Colors.yellow; break;
+            case 1: sparkleColor = Colors.white; break;
+            default: sparkleColor = Colors.pink;
+          }
+          _addSparkle(stackPos, sparkleColor);
         } else {
           // Fallback to manual calculation
           final screenWidth = MediaQuery.of(context).size.width;
@@ -390,7 +422,15 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
             screenWidth / 2 - treeSize / 2 + flowerPos.dx,
             flowerPos.dy,
           );
-          _addSparkle(stackPos, Colors.pink);
+          
+          Color sparkleColor;
+          switch (flowerType) {
+            case 2: sparkleColor = Colors.blue; break;
+            case 3: sparkleColor = Colors.yellow; break;
+            case 1: sparkleColor = Colors.white; break;
+            default: sparkleColor = Colors.pink;
+          }
+          _addSparkle(stackPos, sparkleColor);
         }
       }
       
@@ -398,6 +438,8 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
       setState(() {
         _resources = _resources.copyWith(
           lastFlowerUsed: DateTime.now(),
+          hasClaimed7DayFlower: claimed7,
+          hasClaimed30DayFlower: claimed30,
         );
       });
     });
@@ -546,6 +588,24 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
 
   @override
   Widget build(BuildContext context) {
+    // Wrap the original build content with a Stack to add the FAB
+    return Stack(
+      children: [
+        _buildTreeContent(context),
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton(
+            mini: true,
+            onPressed: _showDebugDialog,
+            child: const Icon(Icons.bug_report),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTreeContent(BuildContext context) {
     if (_treeController.tree == null) {
       return const SizedBox(
         height: 250,
@@ -560,13 +620,25 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     final tertiaryColor = theme.colorScheme.tertiary;
 
     // Check water availability
-    final bool canWater = widget.victoryCount >= 3 && !_resources.isWateredToday();
-    final String waterLabel = _resources.isWateredToday() 
+    final bool canWater = _isDebugUnlimited || (widget.victoryCount >= 3 && !_resources.isWateredToday());
+    final String waterLabel = !_isDebugUnlimited && _resources.isWateredToday() 
         ? 'Done' 
         : (widget.victoryCount >= 3 ? 'Water' : '${widget.victoryCount}/3');
     
     // Check flower availability (once per day)
-    final bool canUseFlower = _resources.canUseFlower();
+    final bool canUseFlower = _isDebugUnlimited || _resources.canUseFlower();
+    
+    // Determine next flower type for button icon
+    String flowerEmoji = '🌸';
+    Color flowerButtonColor = canUseFlower ? secondaryColor : Colors.grey;
+    
+    if (_resources.streak >= 30 && !_resources.hasClaimed30DayFlower) {
+      flowerEmoji = '🌼'; // Yellow flower representation
+      flowerButtonColor = canUseFlower ? Colors.yellow : Colors.grey;
+    } else if (_resources.streak >= 7 && !_resources.hasClaimed7DayFlower) {
+      flowerEmoji = '💠'; // Blue flower representation
+      flowerButtonColor = canUseFlower ? Colors.blue : Colors.grey;
+    }
 
     return SizedBox(
       key: _stackKey,
@@ -697,7 +769,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
               totalCooldown: const Duration(milliseconds: 500),
               onTap: _handleLeafButton,
               onCooldownFinished: _onCooldownFinished,
-              disabledMessage: _resources.canUseLeaf() ? null : _getLeafDisabledMessage(),
+              disabledMessage: (_isDebugUnlimited || _resources.canUseLeaf()) ? null : _getLeafDisabledMessage(),
             ),
           ),
 
@@ -709,13 +781,13 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
               emoji: '💧',
               label: waterLabel,
               count: null,
-              color: canWater && _resources.canWater() ? primaryColor : Colors.grey,
-              isAvailable: canWater && _resources.canWater(),
+              color: canWater && (_isDebugUnlimited || _resources.canWater()) ? primaryColor : Colors.grey,
+              isAvailable: canWater && (_isDebugUnlimited || _resources.canWater()),
               remainingCooldown: _resources.getWaterCooldownRemaining(),
               totalCooldown: const Duration(milliseconds: 500),
               onTap: _handleWaterButton,
               onCooldownFinished: _onCooldownFinished,
-              disabledMessage: (canWater && _resources.canWater()) ? null : _getWaterDisabledMessage(),
+              disabledMessage: (canWater && (_isDebugUnlimited || _resources.canWater())) ? null : _getWaterDisabledMessage(),
             ),
           ),
 
@@ -724,10 +796,10 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
             top: 100,
             right: 20,
             child: CooldownButton(
-              emoji: '🌸',
+              emoji: flowerEmoji,
               label: 'Flower',
               count: null, // No counter, once per day
-              color: canUseFlower ? secondaryColor : Colors.grey,
+              color: flowerButtonColor,
               isAvailable: canUseFlower,
               remainingCooldown: _resources.getFlowerCooldownRemaining(),
               totalCooldown: const Duration(milliseconds: 500),
@@ -735,6 +807,108 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
               onCooldownFinished: _onCooldownFinished,
               disabledMessage: canUseFlower ? null : _getFlowerDisabledMessage(),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDebugDialog() {
+    final streakController = TextEditingController(text: _resources.streak.toString());
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Debug Tools'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: streakController,
+              decoration: const InputDecoration(labelText: 'Set Streak'),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              title: const Text('Unlimited Mode'),
+              subtitle: const Text('Bypass all cooldowns'),
+              value: _isDebugUnlimited,
+              onChanged: (value) {
+                setState(() {
+                  _isDebugUnlimited = value;
+                });
+                Navigator.pop(context);
+                // Re-open dialog to show updated state? No, just close it.
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Unlimited Mode: ${value ? "ON" : "OFF"}')),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _resources = _resources.copyWith(
+                    lastFlowerUsed: null,
+                  );
+                });
+                _saveResources();
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Flower cooldown reset!')),
+                );
+              },
+              child: const Text('Reset Flower Cooldown'),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _resources = _resources.copyWith(
+                    lastWatered: null,
+                  );
+                });
+                _saveResources();
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Water cooldown reset!')),
+                );
+              },
+              child: const Text('Reset Water Cooldown'),
+            ),
+             const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () {
+                 setState(() {
+                  _resources = _resources.copyWith(
+                    hasClaimed7DayFlower: false,
+                    hasClaimed30DayFlower: false,
+                  );
+                });
+                _saveResources();
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Reset Claimed Flowers')),
+                );
+              },
+              child: const Text('Reset Claimed Flowers'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final newStreak = int.tryParse(streakController.text) ?? _resources.streak;
+              setState(() {
+                _resources = _resources.copyWith(streak: newStreak);
+              });
+              Navigator.pop(context);
+              _saveResources();
+            },
+            child: const Text('Set Streak'),
           ),
         ],
       ),

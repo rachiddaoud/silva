@@ -15,6 +15,8 @@ class TreePainter extends CustomPainter {
   final ui.Image? leafDead3Image;
   final ui.Image? flowerImage;
   final ui.Image? jasminImage;
+  final ui.Image? blueFlowerImage;
+  final ui.Image? yellowFlowerImage;
   final ui.Image? grassBackgroundImage;
   final ui.Image? grassForegroundImage;
   final ui.Image? barkImage;
@@ -33,6 +35,8 @@ class TreePainter extends CustomPainter {
     this.leafDead3Image,
     this.flowerImage,
     this.jasminImage,
+    this.blueFlowerImage,
+    this.yellowFlowerImage,
     this.grassBackgroundImage,
     this.grassForegroundImage,
     this.barkImage,
@@ -71,7 +75,7 @@ class TreePainter extends CustomPainter {
     }
 
     // Draw flowers using Atlas if images are available
-    if (flowerImage != null || jasminImage != null) {
+    if (flowerImage != null || jasminImage != null || blueFlowerImage != null || yellowFlowerImage != null) {
       _drawFlowersAtlas(canvas, sortedBranches);
     } else {
       // Fallback
@@ -527,7 +531,23 @@ class TreePainter extends CustomPainter {
           deformedPoint.dy + math.sin(perpAngle) * branchRadius * flower.side,
         );
 
-        final imageToUse = flower.flowerType == 1 ? jasminImage : flowerImage;
+        ui.Image? imageToUse;
+        switch (flower.flowerType) {
+          case 0:
+            imageToUse = flowerImage;
+            break;
+          case 1:
+            imageToUse = jasminImage;
+            break;
+          case 2:
+            imageToUse = blueFlowerImage;
+            break;
+          case 3:
+            imageToUse = yellowFlowerImage;
+            break;
+          default:
+            imageToUse = flowerImage;
+        }
         if (imageToUse == null) continue;
 
         final ageFactor = tree.age < 30 
@@ -675,8 +695,26 @@ class TreePainter extends CustomPainter {
     final baseSize = tree.treeSize * 0.08 * ageFactor;
     final flowerSize = baseSize * flower.sizeFactor;
 
+    Color color;
+    switch (flower.flowerType) {
+      case 0:
+        color = Colors.pink;
+        break;
+      case 1:
+        color = Colors.white;
+        break;
+      case 2:
+        color = Colors.blue;
+        break;
+      case 3:
+        color = Colors.yellow;
+        break;
+      default:
+        color = Colors.pink;
+    }
+
     final paint = Paint()
-      ..color = flower.flowerType == 1 ? Colors.white : Colors.pink
+      ..color = color
       ..style = PaintingStyle.fill;
     canvas.drawCircle(flowerPos, flowerSize / 2, paint);
   }
@@ -699,6 +737,8 @@ class TreePainter extends CustomPainter {
     if (oldDelegate.leafImage != leafImage) return true;
     if (oldDelegate.flowerImage != flowerImage) return true;
     if (oldDelegate.jasminImage != jasminImage) return true;
+    if (oldDelegate.blueFlowerImage != blueFlowerImage) return true;
+    if (oldDelegate.yellowFlowerImage != yellowFlowerImage) return true;
     if (oldDelegate.barkImage != barkImage) return true;
     if (oldDelegate.grassBackgroundImage != grassBackgroundImage) return true;
     if (oldDelegate.grassForegroundImage != grassForegroundImage) return true;

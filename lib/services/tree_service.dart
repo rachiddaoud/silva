@@ -282,7 +282,7 @@ class TreeController extends ChangeNotifier {
   }
 
   /// 3. ADD FLOWER: Adds a flower to a specific branch or a random one
-  bool addFlower({String? branchId, double? t, int? side, bool notify = true}) {
+  bool addFlower({String? branchId, double? t, int? side, int? flowerType, bool notify = true}) {
     if (_tree == null) return false;
 
     if (branchId != null && t != null && side != null) {
@@ -298,7 +298,7 @@ class TreeController extends ChangeNotifier {
         tOnBranch: t,
         side: side,
         sizeFactor: sizeFactor,
-        flowerType: math.Random().nextInt(2),
+        flowerType: flowerType ?? math.Random().nextInt(2),
       );
 
       _tree = _addFlowerToBranch(_tree!, branchId, newFlower);
@@ -306,11 +306,11 @@ class TreeController extends ChangeNotifier {
       if (notify) notifyListeners();
       return true;
     } else {
-      return _addRandomFlower(notify: notify);
+      return _addRandomFlower(flowerType: flowerType, notify: notify);
     }
   }
 
-  bool _addRandomFlower({bool notify = true}) {
+  bool _addRandomFlower({int? flowerType, bool notify = true}) {
     if (_tree == null) return false;
     
     final allBranches = _tree!.getAllBranches();
@@ -324,7 +324,7 @@ class TreeController extends ChangeNotifier {
     final t = 0.2 + random.nextDouble() * 0.8;
     final side = random.nextBool() ? 1 : -1;
     
-    return addFlower(branchId: branch.id, t: t, side: side, notify: notify);
+    return addFlower(branchId: branch.id, t: t, side: side, flowerType: flowerType, notify: notify);
   }
 
   /// 4. DECAY LEAF: Starts decaying a random leaf

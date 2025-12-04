@@ -54,95 +54,88 @@ class _DailyQuoteCardState extends State<DailyQuoteCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          maxWidth: 600, // Maximum width for very long quotes
-        ),
-        child: IntrinsicWidth(
-          child: Container(
-            child: Stack(
-              children: [
-                // Hidden Shareable Card (with branding) - Positioned off-screen
-                Transform.translate(
-                  offset: const Offset(-10000, -10000),
-                  child: RepaintBoundary(
-                    key: _globalKey,
-                    child: _QuoteContent(
-                      quote: widget.quote,
-                      showBranding: true,
-                    ),
-                  ),
-                ),
-
-                // Visible Card (without branding)
-                _QuoteContent(
-                  quote: widget.quote,
-                  showBranding: false,
-                ),
-                
-                // Decorative Quote Icon (Top Left)
-                Positioned(
-                  top: 0,
-                  left: 24,
-                  child: Transform.translate(
-                    offset: const Offset(0, -12),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surface,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: theme.shadowColor.withValues(alpha: 0.08),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.format_quote_rounded,
-                        color: theme.colorScheme.primary,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Share Button (Top Right)
-                Positioned(
-                  top: 0,
-                  right: 24,
-                  child: Transform.translate(
-                    offset: const Offset(0, -12),
-                    child: GestureDetector(
-                      onTap: _shareImage,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surface,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: theme.shadowColor.withValues(alpha: 0.08),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.share_rounded,
-                          color: theme.colorScheme.primary,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Stack(
+        children: [
+          // Hidden Shareable Card (with branding) - Positioned off-screen
+          Transform.translate(
+            offset: const Offset(-10000, -10000),
+            child: RepaintBoundary(
+              key: _globalKey,
+              child: _QuoteContent(
+                quote: widget.quote,
+                showBranding: true,
+              ),
             ),
           ),
-        ),
+
+          // Visible Card (without branding)
+          _QuoteContent(
+            quote: widget.quote,
+            showBranding: false,
+          ),
+          
+          // Decorative Quote Icon (Top Left)
+          Positioned(
+            top: 0,
+            left: 24,
+            child: Transform.translate(
+              offset: const Offset(0, -12),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.shadowColor.withValues(alpha: 0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.format_quote_rounded,
+                  color: theme.colorScheme.primary,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+
+          // Share Button (Top Right)
+          Positioned(
+            top: 0,
+            right: 24,
+            child: Transform.translate(
+              offset: const Offset(0, -12),
+              child: GestureDetector(
+                onTap: _shareImage,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.shadowColor.withValues(alpha: 0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.share_rounded,
+                    color: theme.colorScheme.primary,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

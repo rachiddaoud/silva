@@ -14,6 +14,10 @@ abstract class VictoryImages {
   static const String stop = 'assets/doodles/stop-removebg-preview.png';
   static const String smile = 'assets/doodles/smile-removebg-preview.png';
   static const String walk = 'assets/doodles/walk-removebg-preview.png';
+  static const String deepBreath = 'assets/doodles/deep_breath.png';
+  static const String resting = 'assets/doodles/resting.png';
+  static const String snack = 'assets/doodles/snack.png';
+  static const String tidy = 'assets/doodles/tidy.png';
 }
 
 /// Victory ID ranges by category:
@@ -48,9 +52,9 @@ abstract class VictoryRepository {
     VictoryCard(id: 103, text: "J'ai hydraté mon ventre", imagePath: VictoryImages.shower),
     VictoryCard(id: 104, text: "J'ai parlé au bébé", imagePath: VictoryImages.smile),
     VictoryCard(id: 105, text: "Petite marche (15 min)", imagePath: VictoryImages.walk),
-    VictoryCard(id: 106, text: "J’ai préparé une collation saine", imagePath: VictoryImages.walk),
-    VictoryCard(id: 107, text: "Je me suis reposé", imagePath: VictoryImages.walk),
-    VictoryCard(id: 108, text: "’ai respiré profondément", imagePath: VictoryImages.walk),
+    VictoryCard(id: 106, text: "J'ai préparé une collation saine", imagePath: VictoryImages.snack),
+    VictoryCard(id: 107, text: "Je me suis reposé", imagePath: VictoryImages.resting),
+    VictoryCard(id: 108, text: "J'ai respiré profondément", imagePath: VictoryImages.deepBreath),
   ];
 
   /// Victory templates for new mothers (postpartum). IDs: 200-299
@@ -72,12 +76,12 @@ abstract class VictoryRepository {
     VictoryCard(id: 300, text: "J'ai bu de l'eau", imagePath: VictoryImages.drink),
     VictoryCard(id: 301, text: "Déconnexion écrans (1h)", imagePath: VictoryImages.stop),
     VictoryCard(id: 302, text: "J'ai lu 10 pages", imagePath: VictoryImages.breath),
-    VictoryCard(id: 303, text: "J'ai rangé un petit espace", imagePath: VictoryImages.help),
+    VictoryCard(id: 303, text: "J'ai rangé un petit espace", imagePath: VictoryImages.tidy),
     VictoryCard(id: 304, text: "J'ai médité", imagePath: VictoryImages.breath),
     VictoryCard(id: 305, text: "J'ai appelé un(e) ami(e)", imagePath: VictoryImages.smile),
     VictoryCard(id: 306, text: "J'ai fait une pause", imagePath: VictoryImages.sleep),
     VictoryCard(id: 307, text: "J'ai fait de l'exercice", imagePath: VictoryImages.sleep),
-    VictoryCard(id: 307, text: "J’ai pris un moment pour moi", imagePath: VictoryImages.sleep),
+    VictoryCard(id: 308, text: "J'ai pris un moment pour moi", imagePath: VictoryImages.sleep),
 
   ];
 

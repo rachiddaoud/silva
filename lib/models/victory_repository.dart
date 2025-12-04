@@ -48,6 +48,9 @@ abstract class VictoryRepository {
     VictoryCard(id: 103, text: "J'ai hydraté mon ventre", imagePath: VictoryImages.shower),
     VictoryCard(id: 104, text: "J'ai parlé au bébé", imagePath: VictoryImages.smile),
     VictoryCard(id: 105, text: "Petite marche (15 min)", imagePath: VictoryImages.walk),
+    VictoryCard(id: 106, text: "J’ai préparé une collation saine", imagePath: VictoryImages.walk),
+    VictoryCard(id: 107, text: "Je me suis reposé", imagePath: VictoryImages.walk),
+    VictoryCard(id: 108, text: "’ai respiré profondément", imagePath: VictoryImages.walk),
   ];
 
   /// Victory templates for new mothers (postpartum). IDs: 200-299
@@ -60,19 +63,22 @@ abstract class VictoryRepository {
     VictoryCard(id: 205, text: "J'ai posé le bébé 5 min", imagePath: VictoryImages.sleep),
     VictoryCard(id: 206, text: "J'ai dit \"Non\"", imagePath: VictoryImages.stop),
     VictoryCard(id: 207, text: "J'ai souri", imagePath: VictoryImages.smile),
-    VictoryCard(id: 208, text: "J'ai vu le soleil 5 min", imagePath: VictoryImages.walk),
-    VictoryCard(id: 209, text: "J'ai allaité/donné le biberon sereinement", imagePath: VictoryImages.eat),
-    VictoryCard(id: 210, text: "J'ai dormi quand bébé dormait", imagePath: VictoryImages.sleep),
+    //VictoryCard(id: 208, text: "J'ai vu le soleil 5 min", imagePath: VictoryImages.walk),
+    VictoryCard(id: 210, text: "J'ai fait une sieste", imagePath: VictoryImages.sleep),
   ];
 
   /// Victory templates for daily serenity (general wellness). IDs: 300-399
   static const List<VictoryCard> _sereniteQuotidienneVictories = [
-    VictoryCard(id: 300, text: "J'ai bu un grand verre d'eau", imagePath: VictoryImages.drink),
+    VictoryCard(id: 300, text: "J'ai bu de l'eau", imagePath: VictoryImages.drink),
     VictoryCard(id: 301, text: "Déconnexion écrans (1h)", imagePath: VictoryImages.stop),
     VictoryCard(id: 302, text: "J'ai lu 10 pages", imagePath: VictoryImages.breath),
-    VictoryCard(id: 303, text: "J'ai rangé une pièce", imagePath: VictoryImages.help),
+    VictoryCard(id: 303, text: "J'ai rangé un petit espace", imagePath: VictoryImages.help),
     VictoryCard(id: 304, text: "J'ai médité", imagePath: VictoryImages.breath),
     VictoryCard(id: 305, text: "J'ai appelé un(e) ami(e)", imagePath: VictoryImages.smile),
+    VictoryCard(id: 306, text: "J'ai fait une pause", imagePath: VictoryImages.sleep),
+    VictoryCard(id: 307, text: "J'ai fait de l'exercice", imagePath: VictoryImages.sleep),
+    VictoryCard(id: 307, text: "J’ai pris un moment pour moi", imagePath: VictoryImages.sleep),
+
   ];
 
   /// All victory templates indexed by ID for quick lookup.

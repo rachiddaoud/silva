@@ -65,6 +65,8 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
       _loadResources();
       // Also reload tree state in case leaves were removed
       _loadTree();
+      // Check if daily progress triggers streak/growth
+      _checkDailyProgress();
     }
   }
 
@@ -245,95 +247,64 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     });
   }
 
-  void _handleWaterButton() {
-    debugPrint('💧 Water button clicked');
+  /// Automatically check and update streak when user has 1+ victory today
+  void _checkDailyProgress() {
+    if (widget.victoryCount < 1) return; // Need at least 1 victory
     
-    // Check conditions
-    if (widget.victoryCount < 3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.needVictoriesToWater)),
-      );
-      return;
+    final now = DateTime.now();
+    final lastUpdate = _resources.lastStreakUpdate;
+    
+    // Check if already updated today
+    if (lastUpdate != null) {
+      final wasToday = lastUpdate.year == now.year &&
+                       lastUpdate.month == now.month &&
+                       lastUpdate.day == now.day;
+      if (wasToday) return; // Already processed today
     }
     
-    // if (_resources.isWateredToday()) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     SnackBar(content: Text(AppLocalizations.of(context)!.alreadyWateredToday)),
-    //   );
-    //   return;
-    // }
-
-    final canWater = _isDebugUnlimited || _resources.canWater();
-    if (!canWater) return;
-
+    debugPrint('🌱 AUTO GROWTH: Checking daily progress...');
+    debugPrint('🌱 AUTO GROWTH: Victory count = ${widget.victoryCount}');
+    
     _handleAction(() async {
-      _treeController.grow(); // Add +1 day of life
-      debugPrint('✅ Tree watered (Day added)');
+      // Grow tree by one day
+      _treeController.grow();
+      debugPrint('✅ Tree grew by one day');
       
       // Update Streak Logic
-      final now = DateTime.now();
       int newStreak = _resources.streak;
-      final lastUpdate = _resources.lastStreakUpdate;
-      
-      debugPrint('🔍 STREAK DEBUG: Current streak = ${_resources.streak}');
-      debugPrint('🔍 STREAK DEBUG: Last update = $lastUpdate');
-      debugPrint('🔍 STREAK DEBUG: Now = $now');
+      bool resetClaimedFlowers = false;
       
       if (lastUpdate == null) {
-        // First time watering
+        // First time ever
         newStreak = 1;
-        debugPrint('🔍 STREAK DEBUG: First time watering, setting streak to 1');
+        debugPrint('🔍 STREAK: First time, setting streak to 1');
       } else {
-        // Check if last update was yesterday
         final yesterday = now.subtract(const Duration(days: 1));
         final wasYesterday = lastUpdate.year == yesterday.year && 
                              lastUpdate.month == yesterday.month && 
                              lastUpdate.day == yesterday.day;
         
-        // Check if last update was today (shouldn't happen due to isWateredToday guard)
-        final wasToday = lastUpdate.year == now.year &&
-                         lastUpdate.month == now.month &&
-                         lastUpdate.day == now.day;
-        
-        debugPrint('🔍 STREAK DEBUG: Was yesterday? $wasYesterday');
-        debugPrint('🔍 STREAK DEBUG: Was today? $wasToday');
-        
-        if (wasToday) {
-          // Already updated today, keep current streak (shouldn't reach here)
-          newStreak = _resources.streak;
-          debugPrint('🔍 STREAK DEBUG: Same day, keeping streak at $newStreak');
-        } else if (wasYesterday) {
-          // Consecutive day, increment streak
+        if (wasYesterday) {
+          // Consecutive day
           newStreak++;
-          debugPrint('🔍 STREAK DEBUG: Consecutive day, incrementing to $newStreak');
+          debugPrint('🔍 STREAK: Consecutive day, now at $newStreak');
         } else {
-          // Missed a day or more, reset streak
+          // Missed a day or more
           newStreak = 1;
-          debugPrint('🔍 STREAK DEBUG: Missed day(s), resetting to 1');
-          
-          // Reset claimed rewards on streak loss
-          setState(() {
-            _resources = _resources.copyWith(
-              hasClaimed7DayFlower: false,
-              hasClaimed30DayFlower: false,
-            );
-          });
+          resetClaimedFlowers = true;
+          debugPrint('🔍 STREAK: Missed day(s), resetting to 1');
         }
       }
       
-      // Award flower for streak
+      // Award flower for daily streak
       final newFlowerCount = _resources.flowerCount + 1;
       
-      debugPrint('🔍 STREAK DEBUG: Final newStreak = $newStreak');
-      debugPrint('🔍 STREAK DEBUG: New flower count = $newFlowerCount');
-      
-      // Add sparkle at the base of the trunk (lower side)
       if (mounted) {
+        // Show growth feedback
         final screenWidth = MediaQuery.of(context).size.width;
         final treeSize = 250.0;
-        // Trunk base is at treeSize * 0.75 = 187.5, centered horizontally
         final trunkBaseY = treeSize * 0.75;
-        _addSparkle(Offset(screenWidth / 2, trunkBaseY), Colors.blue);
+        _addSparkle(Offset(screenWidth / 2, trunkBaseY), Colors.green);
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppLocalizations.of(context)!.wateredStreakFlower(newStreak))),
@@ -342,14 +313,15 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
       
       setState(() {
         _resources = _resources.copyWith(
-          lastWatered: now,
-          streak: newStreak,
           lastStreakUpdate: now,
+          streak: newStreak,
           flowerCount: newFlowerCount,
+          hasClaimed7DayFlower: resetClaimedFlowers ? false : null,
+          hasClaimed30DayFlower: resetClaimedFlowers ? false : null,
         );
       });
       
-      // Check for special flower unlock
+      // Check for special flower unlock (7 or 30 day milestone)
       if (newStreak == 7 || newStreak == 30) {
         if (mounted) {
           showDialog(
@@ -367,9 +339,8 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
           );
         }
       }
-
-      debugPrint('🔍 STREAK DEBUG: Resources updated in state');
-      debugPrint('🔍 STREAK DEBUG: New resources = $_resources');
+      
+      debugPrint('🌱 AUTO GROWTH: Complete. Streak = $newStreak');
     });
   }
 
@@ -557,31 +528,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     return null;
   }
 
-  /// Get message for when water button will be available
-  String? _getWaterDisabledMessage() {
-    if (widget.victoryCount < 3) {
-      final needed = 3 - widget.victoryCount;
-      return AppLocalizations.of(context)!.needMoreVictories(needed);
-    }
-    // if (_resources.isWateredToday()) {
-    //   final now = DateTime.now();
-    //   final tomorrow = DateTime(now.year, now.month, now.day + 1);
-    //   final timeUntil = tomorrow.difference(now);
-    //   final hours = timeUntil.inHours;
-    //   final minutes = timeUntil.inMinutes % 60;
-    //   if (hours > 0) {
-    //     return AppLocalizations.of(context)!.alreadyWateredAvailableIn(hours, minutes);
-    //   } else {
-    //     return AppLocalizations.of(context)!.alreadyWateredAvailableInMinutes(minutes);
-    //   }
-    // }
-    final remaining = _resources.getWaterCooldownRemaining();
-    if (remaining.inMilliseconds > 0) {
-      final seconds = (remaining.inMilliseconds / 1000).ceil();
-      return 'Water button available in $seconds second${seconds != 1 ? 's' : ''}';
-    }
-    return null;
-  }
+
 
   /// Get message for when flower button will be available
   String? _getFlowerDisabledMessage() {
@@ -633,27 +580,29 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     }
 
     // Get theme colors
+    // Get theme colors
     final theme = Theme.of(context);
-    final primaryColor = theme.colorScheme.primary;
+    // primaryColor removed as it was only used for water button
     final secondaryColor = theme.colorScheme.secondary;
     final tertiaryColor = theme.colorScheme.tertiary;
 
-    // Check water availability
-    final bool canWater = _isDebugUnlimited || (widget.victoryCount >= 3);
-    final String waterLabel = widget.victoryCount >= 3 ? AppLocalizations.of(context)!.waterButton : '${widget.victoryCount}/3';
+
     
     // Check flower availability (once per day)
     final bool canUseFlower = _isDebugUnlimited || _resources.canUseFlower();
     
     // Determine next flower type for button icon
     String flowerEmoji = '🌸';
+    String? flowerImagePath;
     Color flowerButtonColor = canUseFlower ? secondaryColor : Colors.grey;
     
     if (_resources.streak > 0 && _resources.streak % 30 == 0 && !_resources.hasClaimed30DayFlower) {
       flowerEmoji = '🌼'; // Yellow flower representation
+      flowerImagePath = 'assets/tree/yellow.png';
       flowerButtonColor = canUseFlower ? Colors.yellow : Colors.grey;
     } else if (_resources.streak > 0 && _resources.streak % 7 == 0 && !_resources.hasClaimed7DayFlower) {
       flowerEmoji = '💠'; // Blue flower representation
+      flowerImagePath = 'assets/tree/blue.png';
       flowerButtonColor = canUseFlower ? Colors.blue : Colors.grey;
     }
 
@@ -790,23 +739,6 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
             ),
           ),
 
-          // Water Button (Left of Tree, Below Leaf)
-          Positioned(
-            top: 160,
-            left: 20,
-            child: CooldownButton(
-              emoji: '💧',
-              label: waterLabel,
-              count: null,
-              color: canWater && (_isDebugUnlimited || _resources.canWater()) ? primaryColor : Colors.grey,
-              isAvailable: canWater && (_isDebugUnlimited || _resources.canWater()),
-              remainingCooldown: _resources.getWaterCooldownRemaining(),
-              totalCooldown: const Duration(milliseconds: 500),
-              onTap: _handleWaterButton,
-              onCooldownFinished: _onCooldownFinished,
-              disabledMessage: (canWater && (_isDebugUnlimited || _resources.canWater())) ? null : _getWaterDisabledMessage(),
-            ),
-          ),
 
           // Flower Button (Right of Tree)
           Positioned(
@@ -823,6 +755,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
               onTap: _handleFlowerButton,
               onCooldownFinished: _onCooldownFinished,
               disabledMessage: canUseFlower ? null : _getFlowerDisabledMessage(),
+              imageAssetPath: flowerImagePath,
             ),
           ),
         ],
@@ -831,7 +764,6 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
   }
 
   void _showDebugDialog() {
-    final streakController = TextEditingController(text: _resources.streak.toString());
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -839,93 +771,65 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: streakController,
-              decoration: const InputDecoration(labelText: 'Set Streak'),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
-            SwitchListTile(
-              title: const Text('Unlimited Mode'),
-              subtitle: const Text('Bypass all cooldowns'),
-              value: _isDebugUnlimited,
-              onChanged: (value) {
-                setState(() {
-                  _isDebugUnlimited = value;
-                });
+            // Reset Tree button
+            ElevatedButton(
+              onPressed: () {
                 Navigator.pop(context);
-                // Re-open dialog to show updated state? No, just close it.
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Unlimited Mode: ${value ? "ON" : "OFF"}')),
-                );
+                _handleResetTree();
               },
+              child: const Text('Reset Tree'),
             ),
             const SizedBox(height: 8),
+            // Add 10 Leaves button
             ElevatedButton(
               onPressed: () {
-                setState(() {
-                  _resources = _resources.copyWith(
-                    lastFlowerUsed: null,
-                  );
-                });
-                _saveResources();
+                for (int i = 0; i < 10; i++) {
+                  _treeController.addLeaf();
+                }
+                _saveTree();
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Flower cooldown reset!')),
+                  const SnackBar(content: Text('Added 10 leaves!')),
                 );
+                setState(() {});
               },
-              child: const Text('Reset Flower Cooldown'),
+              child: const Text('Add 10 Leaves'),
             ),
             const SizedBox(height: 8),
+            // Add 1 Day button
+            ElevatedButton(
+              onPressed: () {
+                _treeController.grow();
+                _saveTree();
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Tree grew by 1 day!')),
+                );
+                setState(() {});
+              },
+              child: const Text('Add 1 Day'),
+            ),
+            const SizedBox(height: 8),
+            // Streak +1 button
             ElevatedButton(
               onPressed: () {
                 setState(() {
-                  _resources = _resources.copyWith(
-                    lastWatered: null,
-                  );
+                  _resources = _resources.copyWith(streak: _resources.streak + 1);
                 });
                 _saveResources();
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Water cooldown reset!')),
+                  SnackBar(content: Text('Streak: ${_resources.streak}')),
                 );
               },
-              child: const Text('Reset Water Cooldown'),
-            ),
-             const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: () {
-                 setState(() {
-                  _resources = _resources.copyWith(
-                    hasClaimed7DayFlower: false,
-                    hasClaimed30DayFlower: false,
-                  );
-                });
-                _saveResources();
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Reset Claimed Flowers')),
-                );
-              },
-              child: const Text('Reset Claimed Flowers'),
+              child: const Text('Streak +1'),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              final newStreak = int.tryParse(streakController.text) ?? _resources.streak;
-              setState(() {
-                _resources = _resources.copyWith(streak: newStreak);
-              });
-              Navigator.pop(context);
-              _saveResources();
-            },
-            child: const Text('Set Streak'),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -1379,6 +1283,7 @@ class CooldownButton extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onCooldownFinished;
   final String? disabledMessage; // Message to show when disabled button is clicked
+  final String? imageAssetPath;
 
   const CooldownButton({
     super.key,
@@ -1392,6 +1297,7 @@ class CooldownButton extends StatelessWidget {
     required this.onTap,
     this.onCooldownFinished,
     this.disabledMessage,
+    this.imageAssetPath,
   });
 
   @override
@@ -1430,12 +1336,20 @@ class CooldownButton extends StatelessWidget {
           alignment: Alignment.center,
           children: [
             // Emoji with opacity when disabled
+            // Emoji or Image with opacity when disabled
             Opacity(
               opacity: isAvailable ? 1.0 : 0.5,
-              child: Text(
-                emoji,
-                style: TextStyle(fontSize: emojiSize),
-              ),
+              child: imageAssetPath != null
+                  ? Image.asset(
+                      imageAssetPath!,
+                      width: emojiSize,
+                      height: emojiSize,
+                      fit: BoxFit.contain,
+                    )
+                  : Text(
+                      emoji,
+                      style: TextStyle(fontSize: emojiSize),
+                    ),
             ),
             
             // Radial sweep overlay (only when on cooldown)

@@ -582,17 +582,46 @@ class TreePainter extends CustomPainter {
     }
 
     final paint = Paint()..filterQuality = FilterQuality.medium;
-    transforms.forEach((img, transList) {
+    
+    // Draw regular flowers first
+    for (final img in transforms.keys) {
+      if (img == blueFlowerImage || img == yellowFlowerImage) continue;
+      
       canvas.drawAtlas(
         img,
-        transList,
+        transforms[img]!,
         rects[img]!,
         null,
         BlendMode.srcIn,
         null,
         paint,
       );
-    });
+    }
+    
+    // Draw special flowers on top (Blue then Yellow)
+    if (blueFlowerImage != null && transforms.containsKey(blueFlowerImage)) {
+      canvas.drawAtlas(
+        blueFlowerImage!,
+        transforms[blueFlowerImage!]!,
+        rects[blueFlowerImage!]!,
+        null,
+        BlendMode.srcIn,
+        null,
+        paint,
+      );
+    }
+    
+    if (yellowFlowerImage != null && transforms.containsKey(yellowFlowerImage)) {
+      canvas.drawAtlas(
+        yellowFlowerImage!,
+        transforms[yellowFlowerImage!]!,
+        rects[yellowFlowerImage!]!,
+        null,
+        BlendMode.srcIn,
+        null,
+        paint,
+      );
+    }
   }
 
   void _drawLeafFallback(Canvas canvas, LeafState leaf, BranchState branch) {

@@ -56,7 +56,6 @@ class _DailyQuoteCardState extends State<DailyQuoteCard> {
     
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Stack(
         children: [
           // Hidden Shareable Card (with branding) - Positioned off-screen
@@ -155,6 +154,7 @@ class _QuoteContent extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
       decoration: BoxDecoration(
         color: theme.cardColor, // Opaque color for better image capture

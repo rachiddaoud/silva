@@ -10,7 +10,7 @@ import '../l10n/app_localizations.dart';
 import '../utils/localization_utils.dart';
 import '../services/tree_service.dart';
 import '../services/preferences_service.dart';
-import '../screens/charts_screen.dart';
+import '../services/haptic_service.dart';
 
 class HistoryView extends StatefulWidget {
   final VoidCallback? onHistoryChanged;
@@ -245,6 +245,9 @@ class _HistoryViewState extends State<HistoryView> {
   }
 
   Future<void> _deleteVictory(DateTime date, int victoryId) async {
+    // Play haptic feedback for deletion
+    await HapticService().medium();
+    
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       // Check if the deleted victory is from today
@@ -722,8 +725,15 @@ class _VictoryTag extends StatelessWidget {
     return Dismissible(
       key: ValueKey('victory_${victory.id}_${victory.timestamp?.millisecondsSinceEpoch}'),
       direction: DismissDirection.horizontal,
-      confirmDismiss: (direction) => _confirmDelete(context),
-      onDismissed: (direction) => onDelete(),
+      confirmDismiss: (direction) async {
+        // Play haptic when swipe reveals delete action
+        await HapticService().light();
+        return await _confirmDelete(context);
+      },
+      onDismissed: (direction) {
+        // Haptic feedback will be played in _deleteVictory method
+        onDelete();
+      },
       background: Container(
         margin: const EdgeInsets.only(right: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12),

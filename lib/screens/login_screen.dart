@@ -101,19 +101,71 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _handleAppleSignIn() {
-    // Track login attempt for Apple (even though not implemented yet)
-    AnalyticsService.instance.logEvent(
+  Future<void> _handleAppleSignIn() async {
+    // Track login attempt
+    await AnalyticsService.instance.logEvent(
       name: AnalyticsEvents.loginAttempt,
       parameters: {AnalyticsParams.provider: 'apple'},
     );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context)!.appleSignInComingSoon),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final userCredential = await _authService.signInWithApple();
+      
+      if (userCredential != null && userCredential.user != null) {
+        final user = userCredential.user!;
+        if (user.displayName != null) {
+          await PreferencesService.setUserName(user.displayName!);
+        }
+        await PreferencesService.setOnboardingComplete(true);
+        
+        // Track successful login
+        await AnalyticsService.instance.logEvent(
+          name: AnalyticsEvents.loginSuccess,
+          parameters: {AnalyticsParams.provider: 'apple'},
+        );
+        
+        // Check if category is selected
+        final DatabaseService db = DatabaseService();
+        final category = await db.getUserCategory(user.uid);
+        
+        if (category != null) {
+          await PreferencesService.setAppCategory(category);
+        }
+
+        if (mounted) {
+          widget.onLoginSuccess();
+        }
+      }
+    } catch (e) {
+      // Track login failure
+      await AnalyticsService.instance.logEvent(
+        name: AnalyticsEvents.loginFailure,
+        parameters: {
+          AnalyticsParams.provider: 'apple',
+          AnalyticsParams.errorCode: e.toString(),
+        },
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.loginError(e.toString())),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override

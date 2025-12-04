@@ -54,7 +54,7 @@ To test analytics events in debug mode:
 
 **Android:**
 ```bash
-adb shell setprop debug.firebase.analytics.app com.example.silva
+adb shell setprop debug.firebase.analytics.app com.rachid.silva
 ```
 
 **iOS:**

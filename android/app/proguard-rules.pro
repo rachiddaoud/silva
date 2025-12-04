@@ -18,7 +18,7 @@
 -keepattributes InnerClasses
 
 # Keep application classes
--keep class com.example.silva.** { *; }
+-keep class com.rachid.silva.** { *; }
 
 # Keep timezone data classes
 -keep class tzdata.** { *; }

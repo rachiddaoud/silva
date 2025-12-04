@@ -1,4 +1,4 @@
-package com.example.silva
+package com.rachid.silva
 
 import io.flutter.embedding.android.FlutterActivity
 

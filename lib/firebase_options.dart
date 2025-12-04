@@ -47,7 +47,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyANJaths-_q8VgiODSuYqgB8yIy5SOErZc',
-    appId: '1:174370766580:android:88ca971d45e3d0f932a8a1',
+    appId: '1:174370766580:android:edee7ac19d6dcd3a32a8a1',
     messagingSenderId: '174370766580',
     projectId: 'ma-bulle-auth-demo',
     storageBucket: 'ma-bulle-auth-demo.firebasestorage.app',
@@ -55,11 +55,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyA44s9JjLQnbGNV6tbYl7rvh1OwP5mec-w',
-    appId: '1:174370766580:ios:6eead10cbb626bd532a8a1',
+    appId: '1:174370766580:ios:b310590e7dda85f132a8a1',
     messagingSenderId: '174370766580',
     projectId: 'ma-bulle-auth-demo',
     storageBucket: 'ma-bulle-auth-demo.firebasestorage.app',
-    iosBundleId: 'com.example.silva',
+    iosBundleId: 'com.rachid.silva',
   );
 
   static const FirebaseOptions web = FirebaseOptions(

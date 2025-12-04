@@ -20,7 +20,7 @@ echo -e "${BLUE}📦 APK location: build/app/outputs/flutter-apk/app-release.apk
 echo ""
 
 # Your Firebase Android App ID (from google-services.json)
-FIREBASE_APP_ID="1:174370766580:android:88ca971d45e3d0f932a8a1"
+FIREBASE_APP_ID="1:174370766580:android:edee7ac19d6dcd3a32a8a1"
 
 # Get release notes from user
 echo -e "${BLUE}📝 Enter release notes (press Enter when done):${NC}"

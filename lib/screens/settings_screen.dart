@@ -1,4 +1,6 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/theme_config.dart';
 import '../models/app_category.dart';
 import '../models/victory_repository.dart';
@@ -298,169 +300,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showCategorySelector() {
-    final l10n = AppLocalizations.of(context)!;
-    
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 24),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(2),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => _CategorySelectorScreen(
+          currentCategory: _currentCategory,
+          onCategorySelected: (category) async {
+            // Track category change
+            await AnalyticsService.instance.logEvent(
+              name: AnalyticsEvents.profileUpdated,
+              parameters: {
+                AnalyticsParams.category: category.name,
+                'category_display_name': category.displayName,
+              },
+            );
+
+            // Update category in preferences
+            await PreferencesService.setAppCategory(category);
+            
+            // Update category in Firebase if logged in
+            final user = FirebaseAuth.instance.currentUser;
+            if (user != null) {
+              await DatabaseService().updateUserCategory(user.uid, category);
+            }
+
+            // Update today's victories to match the new category
+            final newVictories = VictoryRepository.getVictoriesForCategory(category);
+            await PreferencesService.saveTodayVictories(newVictories);
+            
+            // Sync with Firebase if logged in
+            if (user != null) {
+              await DatabaseService().updateTodayVictories(user.uid, newVictories);
+            }
+
+            setState(() {
+              _currentCategory = category;
+            });
+            
+            if (mounted) {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(AppLocalizations.of(context)!.categoryChanged),
+                  backgroundColor: Theme.of(context).colorScheme.secondary,
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 2),
                 ),
-              ),
-            ),
-            Text(
-              l10n.selectCategory,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 24),
-            for (final category in AppCategory.values) ...[
-              _buildCategoryOption(category),
-              const SizedBox(height: 12),
-            ],
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryOption(AppCategory category) {
-    final isSelected = _currentCategory == category;
-    final theme = Theme.of(context);
-    
-    return InkWell(
-      onTap: () async {
-        // Track category change
-        await AnalyticsService.instance.logEvent(
-          name: AnalyticsEvents.profileUpdated,
-          parameters: {
-            AnalyticsParams.category: category.name,
-            'category_display_name': category.displayName,
+              );
+            }
           },
-        );
-
-        // Update category in preferences
-        await PreferencesService.setAppCategory(category);
-        
-        // Update category in Firebase if logged in
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          await DatabaseService().updateUserCategory(user.uid, category);
-        }
-
-        // Update today's victories to match the new category
-        final newVictories = VictoryRepository.getVictoriesForCategory(category);
-        await PreferencesService.saveTodayVictories(newVictories);
-        
-        // Sync with Firebase if logged in
-        if (user != null) {
-          await DatabaseService().updateTodayVictories(user.uid, newVictories);
-        }
-
-        setState(() {
-          _currentCategory = category;
-        });
-        
-        if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context)!.categoryChanged),
-              backgroundColor: theme.colorScheme.secondary,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      },
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected 
-              ? category.color.withValues(alpha: 0.1)
-              : theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? category.color
-                : theme.colorScheme.onSurface.withValues(alpha: 0.05),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            // Category image
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: category.color.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Image.asset(
-                category.assetPath,
-                fit: BoxFit.contain,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    category.displayName,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                      color: isSelected
-                          ? category.color
-                          : theme.colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    category.description,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            if (isSelected)
-              Icon(
-                Icons.check_circle,
-                color: category.color,
-                size: 24,
-              ),
-          ],
         ),
       ),
     );
   }
+
 
   Widget _buildLanguageOption(Locale? locale, String label) {
     final isSelected = (_currentLocale?.languageCode == locale?.languageCode) &&
@@ -1048,5 +941,404 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
     );
+  }
+}
+
+// Category Selector Screen with circular wheel design
+class _CategorySelectorScreen extends StatefulWidget {
+  final AppCategory? currentCategory;
+  final Future<void> Function(AppCategory) onCategorySelected;
+
+  const _CategorySelectorScreen({
+    required this.currentCategory,
+    required this.onCategorySelected,
+  });
+
+  @override
+  State<_CategorySelectorScreen> createState() => _CategorySelectorScreenState();
+}
+
+class _CategorySelectorScreenState extends State<_CategorySelectorScreen>
+    with SingleTickerProviderStateMixin {
+  AppCategory? _selectedCategory;
+  late AnimationController _controller;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCategory = widget.currentCategory;
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onCategorySelected(AppCategory category) async {
+    setState(() {
+      _selectedCategory = category;
+    });
+    HapticFeedback.selectionClick();
+  }
+
+  Future<void> _onContinue() async {
+    if (_selectedCategory == null) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await widget.onCategorySelected(_selectedCategory!);
+    } catch (e) {
+      debugPrint('Error saving category: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                children: [
+                  Text(
+                    "Où en êtes-vous dans votre cycle de sérénité ?",
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "Choisissez le parcours qui vous correspond le mieux.",
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+
+            Expanded(
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final size = constraints.maxWidth;
+                      final center = size / 2;
+                      final radius = size / 2 * 0.9;
+
+                      // Helper to position widgets
+                      Widget positionImage(
+                          double angleDeg, String assetPath, AppCategory category) {
+                        // Angle in degrees from 3 o'clock
+                        final angleRad = angleDeg * pi / 180;
+                        // Distance from center (e.g. 60% of radius)
+                        final dist = radius * 0.6;
+
+                        final dx = center + dist * cos(angleRad);
+                        final dy = center + dist * sin(angleRad);
+
+                        final isSelected = _selectedCategory == category;
+
+                        return Positioned(
+                          left: dx - 40, // 40 is half of image size (80)
+                          top: dy - 40,
+                          child: IgnorePointer(
+                            child: AnimatedScale(
+                              scale: isSelected ? 1.2 : 1.0,
+                              duration: const Duration(milliseconds: 300),
+                              child: Image.asset(
+                                assetPath,
+                                width: 80,
+                                height: 80,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+
+                      return GestureDetector(
+                        onTapUp: (details) {
+                          _handleTap(details, constraints.maxWidth);
+                        },
+                        child: Stack(
+                          children: [
+                            CustomPaint(
+                              size: Size(constraints.maxWidth, constraints.maxWidth),
+                              painter: CategoryWheelPainter(
+                                selectedCategory: _selectedCategory,
+                                animationValue: _controller.value,
+                              ),
+                            ),
+                            // Future Maman: Top (-90°)
+                            positionImage(-90, AppCategory.futureMaman.assetPath,
+                                AppCategory.futureMaman),
+                            // Nouvelle Maman: Bottom Right (30°)
+                            positionImage(30, AppCategory.nouvelleMaman.assetPath,
+                                AppCategory.nouvelleMaman),
+                            // Serenite: Bottom Left (150°)
+                            positionImage(
+                                150,
+                                AppCategory.sereniteQuotidienne.assetPath,
+                                AppCategory.sereniteQuotidienne),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+
+            // Selected Category Description
+            AnimatedOpacity(
+              opacity: _selectedCategory != null ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                child: Column(
+                  children: [
+                    Text(
+                      _selectedCategory?.displayName ?? "",
+                      style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _selectedCategory?.description ?? "",
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                            height: 1.5,
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 40),
+
+            // Continue Button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+              child: SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed:
+                      _selectedCategory != null && !_isLoading ? _onContinue : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          "Confirmer",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleTap(TapUpDetails details, double size) {
+    final center = Offset(size / 2, size / 2);
+    final touchPoint = details.localPosition;
+    final dy = touchPoint.dy - center.dy;
+    final dx = touchPoint.dx - center.dx;
+
+    double angle = atan2(dy, dx);
+    // angle is now -pi to pi relative to 3 o'clock
+
+    // Normalize to 0-2pi
+    if (angle < 0) {
+      angle += 2 * pi;
+    }
+
+    // Now angle is 0 to 2pi starting at 3 o'clock going clockwise
+
+    // Let's convert touch angle to be relative to Top (0)
+    double angleFromTop = angle + pi / 2;
+    if (angleFromTop < 0) angleFromTop += 2 * pi;
+    if (angleFromTop > 2 * pi) angleFromTop -= 2 * pi;
+
+    // Now 0 is Top, increasing clockwise.
+    // Top segment: 300° to 60°.
+    // Right segment: 60° to 180°.
+    // Left segment: 180° to 300°.
+
+    AppCategory selected;
+    double deg = angleFromTop * 180 / pi;
+
+    if (deg >= 300 || deg < 60) {
+      selected = AppCategory.futureMaman;
+    } else if (deg >= 60 && deg < 180) {
+      selected = AppCategory.nouvelleMaman;
+    } else {
+      selected = AppCategory.sereniteQuotidienne;
+    }
+
+    _onCategorySelected(selected);
+  }
+}
+
+class CategoryWheelPainter extends CustomPainter {
+  final AppCategory? selectedCategory;
+  final double animationValue;
+
+  CategoryWheelPainter({
+    required this.selectedCategory,
+    required this.animationValue,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = min(size.width, size.height) / 2 * 0.9;
+
+    // Draw 3 segments
+    // Future Maman: Top (300° to 60°)
+    // Nouvelle Maman: Right (60° to 180°)
+    // Serenite: Left (180° to 300°)
+
+    // Angles in radians (starting from 3 o'clock = 0)
+    // Top is -90° (-pi/2)
+
+    // Future Maman: -90 - 60 = -150° to -90 + 60 = -30°
+    // Rad: -5pi/6 to -pi/6
+    _drawSegment(
+      canvas,
+      center,
+      radius,
+      -5 * pi / 6,
+      2 * pi / 3,
+      AppCategory.futureMaman,
+    );
+
+    // Nouvelle Maman: -30° to 90°
+    // Rad: -pi/6 to pi/2
+    _drawSegment(
+      canvas,
+      center,
+      radius,
+      -pi / 6,
+      2 * pi / 3,
+      AppCategory.nouvelleMaman,
+    );
+
+    // Serenite: 90° to 210°
+    // Rad: pi/2 to 7pi/6
+    _drawSegment(
+      canvas,
+      center,
+      radius,
+      pi / 2,
+      2 * pi / 3,
+      AppCategory.sereniteQuotidienne,
+    );
+  }
+
+  void _drawSegment(Canvas canvas, Offset center, double radius,
+      double startAngle, double sweepAngle, AppCategory category) {
+    final isSelected = selectedCategory == category;
+    final paint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = category.color;
+
+    if (isSelected) {
+      // Highlight effect
+      paint.color = Color.lerp(category.color, Colors.white, 0.3)!;
+    }
+
+    // Draw arc
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      startAngle,
+      sweepAngle,
+      true,
+      paint,
+    );
+
+    // Draw border
+    final borderPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..color = Colors.white
+      ..strokeWidth = 4;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      startAngle,
+      sweepAngle,
+      true,
+      borderPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CategoryWheelPainter oldDelegate) {
+    return oldDelegate.selectedCategory != selectedCategory ||
+        oldDelegate.animationValue != animationValue;
   }
 }

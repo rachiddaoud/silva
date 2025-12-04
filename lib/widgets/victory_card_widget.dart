@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/victory_card.dart';
-import '../utils/sprite_utils.dart';
+import '../utils/sprite_utils.dart' show VictoryImage;
 import '../utils/localization_utils.dart';
 import '../services/audio_service.dart';
 import '../services/haptic_service.dart';
@@ -131,10 +131,9 @@ class VictoryCardWidget extends StatelessWidget {
                                 ],
                               )
                             : null,
-                        child: SpriteDisplay(
-                          victoryId: card.spriteId,
+                        child: VictoryImage(
+                          imagePath: card.imagePath,
                           size: 48,
-                          showBorder: false,
                         ),
                       ),
                     ),

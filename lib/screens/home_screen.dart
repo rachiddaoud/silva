@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/victory_card.dart';
+import '../models/victory_repository.dart';
 import '../models/emotion.dart';
 import '../models/theme_config.dart';
 import '../models/day_entry.dart';
@@ -51,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _victories = VictoryCard.getDefaultVictories();
+    _victories = VictoryRepository.defaultVictories;
     _pageController = PageController(initialPage: 0);
     _checkAndResetVictories();
     _checkDayCompletion();
@@ -178,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       if (mounted) {
         setState(() {
-          _victories = VictoryCard.getDefaultVictories();
+          _victories = VictoryRepository.defaultVictories;
         });
       }
       
@@ -238,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       MaterialPageRoute(
         builder: (context) => DayCompletionScreen(
           victories: yesterdayEntry.victoryCards.isEmpty 
-              ? VictoryCard.getDefaultVictories() 
+              ? VictoryRepository.defaultVictories 
               : yesterdayEntry.victoryCards,
           onComplete: (emotion, comment) async {
             final user = FirebaseAuth.instance.currentUser;
@@ -289,13 +290,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
-  void _navigateToSettings() {
+  void _navigateToSettings() async {
     // Track settings opened
     AnalyticsService.instance.logEvent(
       name: AnalyticsEvents.settingsOpened,
     );
 
-    Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => SettingsScreen(
@@ -306,6 +307,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       ),
     );
+    
+    // Reload victories when returning from settings (in case category changed)
+    _reloadVictories();
   }
 
   void _toggleVictory(int index) async {
@@ -316,9 +320,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return;
     }
     
+    // Use immutable pattern - create new list with updated victory
     setState(() {
-      _victories[index].isAccomplished = true;
-      _victories[index].timestamp = DateTime.now(); // Set timestamp when accomplished
+      final updatedVictory = _victories[index].copyWith(
+        isAccomplished: true,
+        timestamp: DateTime.now(),
+      );
+      _victories = List<VictoryCard>.from(_victories);
+      _victories[index] = updatedVictory;
     });
     
     // Track activity completion

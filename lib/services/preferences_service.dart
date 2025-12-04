@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/theme_config.dart';
+import '../models/app_category.dart';
 import '../models/day_entry.dart';
 import '../models/emotion.dart';
 import '../models/victory_card.dart';
+import '../models/victory_repository.dart';
 import '../models/tree/tree_state.dart';
 import '../models/tree_resources.dart';
 
@@ -94,7 +96,7 @@ class PreferencesService {
     if (history.isNotEmpty) return; // Ne pas écraser les données existantes
 
     final now = DateTime.now();
-    final defaultVictories = VictoryCard.getDefaultVictories();
+    final defaultVictories = VictoryRepository.defaultVictories;
     final random = Random();
     
     // Liste de commentaires possibles
@@ -144,7 +146,10 @@ class PreferencesService {
         final numVictories = random.nextInt(6) + 2; // 2 à 7 victoires
         final shuffledVictories = List<VictoryCard>.from(defaultVictories);
         shuffledVictories.shuffle(random);
-        final selectedVictories = shuffledVictories.take(numVictories).toList();
+        final selectedVictories = shuffledVictories
+            .take(numVictories)
+            .map((v) => v.copyWith(isAccomplished: true))
+            .toList();
         
         mockEntries.add(DayEntry(
           date: date,
@@ -228,45 +233,54 @@ class PreferencesService {
     await prefs.setBool(_onboardingCompleteKey, complete);
   }
 
+  // App Category
+  static Future<AppCategory?> getAppCategory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final categoryIndex = prefs.getInt('app_category');
+    if (categoryIndex == null) return null;
+    if (categoryIndex >= 0 && categoryIndex < AppCategory.values.length) {
+      return AppCategory.values[categoryIndex];
+    }
+    return null;
+  }
+
+  static Future<void> setAppCategory(AppCategory category) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('app_category', category.index);
+  }
+
   // Victoires du jour
   static Future<List<VictoryCard>> getTodayVictories() async {
     final prefs = await SharedPreferences.getInstance();
     final victoriesJson = prefs.getString(_todayVictoriesKey);
     
     if (victoriesJson == null) {
-      // Si aucune victoire sauvegardée, retourner les victoires par défaut
-      return VictoryCard.getDefaultVictories();
+      // Si aucune victoire sauvegardée, retourner les victoires de la catégorie sélectionnée
+      final category = await getAppCategory();
+      if (category != null) {
+        return VictoryRepository.getVictoriesForCategory(category);
+      }
+      return VictoryRepository.defaultVictories;
     }
     
     try {
       final List<dynamic> jsonList = jsonDecode(victoriesJson);
       return jsonList.map((json) {
         final map = json as Map<String, dynamic>;
-        final timestampString = map['timestamp'] as String?;
-        return VictoryCard(
-          id: map['id'] as int,
-          text: map['text'] as String,
-          emoji: map['emoji'] as String,
-          spriteId: map['spriteId'] as int,
-          isAccomplished: map['isAccomplished'] as bool? ?? false,
-          timestamp: timestampString != null ? DateTime.parse(timestampString) : null,
-        );
+        return VictoryCard.fromJson(map);
       }).toList();
     } catch (e) {
-      return VictoryCard.getDefaultVictories();
+      final category = await getAppCategory();
+      if (category != null) {
+        return VictoryRepository.getVictoriesForCategory(category);
+      }
+      return VictoryRepository.defaultVictories;
     }
   }
 
   static Future<void> saveTodayVictories(List<VictoryCard> victories) async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonList = victories.map((v) => {
-      'id': v.id,
-      'text': v.text,
-      'emoji': v.emoji,
-      'spriteId': v.spriteId,
-      'isAccomplished': v.isAccomplished,
-      'timestamp': v.timestamp?.toIso8601String(),
-    }).toList();
+    final jsonList = victories.map((v) => v.toJson()).toList();
     await prefs.setString(_todayVictoriesKey, jsonEncode(jsonList));
   }
 
@@ -274,8 +288,13 @@ class PreferencesService {
     final victories = await getTodayVictories();
     final index = victories.indexWhere((v) => v.id == victoryId);
     if (index >= 0) {
-      victories[index] = victories[index].copyWith(isAccomplished: true);
-      await saveTodayVictories(victories);
+      // Create a new list with the updated victory (immutable pattern)
+      final updatedVictories = List<VictoryCard>.from(victories);
+      updatedVictories[index] = victories[index].copyWith(
+        isAccomplished: true,
+        timestamp: DateTime.now(),
+      );
+      await saveTodayVictories(updatedVictories);
     }
   }
 
@@ -388,4 +407,3 @@ class PreferencesService {
     await prefs.setString(_treeResourcesKey, jsonEncode(json));
   }
 }
-

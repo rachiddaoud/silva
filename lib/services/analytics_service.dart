@@ -201,6 +201,7 @@ class AnalyticsParams {
   static const String reminderType = 'reminder_type';
   static const String language = 'language';
   static const String theme = 'theme';
+  static const String category = 'category';
 }
 
 

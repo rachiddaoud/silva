@@ -4,7 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import '../models/emotion.dart';
 import '../models/victory_card.dart';
 import '../widgets/wireframe_smiley.dart';
-import '../utils/sprite_utils.dart';
+import '../utils/sprite_utils.dart' show VictoryImage;
 import 'package:intl/intl.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/localization_utils.dart';
@@ -184,7 +184,7 @@ class _DayCompletionScreenState extends State<DayCompletionScreen> {
     );
 
     final victoriesText = _accomplishedVictories
-        .map((v) => '${v.emoji} ${getVictoryText(context, v.id)}')
+        .map((v) => '✓ ${getVictoryText(context, v.id)}')
         .join('\n');
     
     final comment = _commentController.text.trim();
@@ -304,10 +304,9 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
               runSpacing: 12,
               alignment: WrapAlignment.center,
               children: _accomplishedVictories.map((victory) {
-                return SpriteDisplay(
-                  victoryId: victory.spriteId,
+                return VictoryImage(
+                  imagePath: victory.imagePath,
                   size: 40,
-                  showBorder: false,
                 );
               }).toList(),
             ),

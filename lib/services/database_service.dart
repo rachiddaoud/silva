@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import '../models/day_entry.dart';
 import '../models/emotion.dart';
 import '../models/victory_card.dart';
+import '../models/victory_repository.dart';
 import '../models/tree/tree_state.dart';
+import '../models/app_category.dart';
 
 class DatabaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -16,6 +18,38 @@ class DatabaseService {
 
   CollectionReference _daysCollection(String uid) =>
       _userDoc(uid).collection('days');
+
+  // Category
+  Future<void> updateUserCategory(String uid, AppCategory category) async {
+    try {
+      await _userDoc(uid).set({
+        'category': category.index,
+        'categoryName': category.name, // Readable name for debugging
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Error updating user category: $e');
+      rethrow;
+    }
+  }
+
+  Future<AppCategory?> getUserCategory(String uid) async {
+    try {
+      final doc = await _userDoc(uid).get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>?;
+        if (data != null && data.containsKey('category')) {
+          final index = data['category'] as int;
+          if (index >= 0 && index < AppCategory.values.length) {
+            return AppCategory.values[index];
+          }
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting user category: $e');
+      return null;
+    }
+  }
 
   // Save or update a day entry
   Future<void> saveDayEntry(String uid, DayEntry entry) async {
@@ -84,7 +118,7 @@ class DatabaseService {
   // Create fake history for new users
   Future<void> createFakeHistory(String uid) async {
     final now = DateTime.now();
-    final defaultVictories = VictoryCard.getDefaultVictories();
+    final defaultVictories = VictoryRepository.defaultVictories;
     final random = Random();
 
     // Check if user already has data to avoid overwriting

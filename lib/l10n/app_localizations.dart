@@ -320,6 +320,162 @@ abstract class AppLocalizations {
   /// **'voir le soleil 5 min'**
   String get victoryReminderSun;
 
+  /// No description provided for @victoryVitamins.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai pris mes vitamines'**
+  String get victoryVitamins;
+
+  /// No description provided for @victoryWater2L.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai bu 2L d\'eau'**
+  String get victoryWater2L;
+
+  /// No description provided for @victoryLegs.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai surélevé mes jambes'**
+  String get victoryLegs;
+
+  /// No description provided for @victoryBelly.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai hydraté mon ventre'**
+  String get victoryBelly;
+
+  /// No description provided for @victoryTalkBaby.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai parlé au bébé'**
+  String get victoryTalkBaby;
+
+  /// No description provided for @victoryWalk15.
+  ///
+  /// In fr, this message translates to:
+  /// **'Petite marche (15 min)'**
+  String get victoryWalk15;
+
+  /// No description provided for @victoryBreastfeed.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai allaité/donné le biberon sereinement'**
+  String get victoryBreastfeed;
+
+  /// No description provided for @victorySleepBaby.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai dormi quand bébé dormait'**
+  String get victorySleepBaby;
+
+  /// No description provided for @victoryScreens.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déconnexion écrans (1h)'**
+  String get victoryScreens;
+
+  /// No description provided for @victoryRead.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai lu 10 pages'**
+  String get victoryRead;
+
+  /// No description provided for @victoryTidy.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai rangé une pièce'**
+  String get victoryTidy;
+
+  /// No description provided for @victoryMeditate.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai médité'**
+  String get victoryMeditate;
+
+  /// No description provided for @victoryCallFriend.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai appelé un(e) ami(e)'**
+  String get victoryCallFriend;
+
+  /// No description provided for @victoryReminderVitamins.
+  ///
+  /// In fr, this message translates to:
+  /// **'prendre vos vitamines'**
+  String get victoryReminderVitamins;
+
+  /// No description provided for @victoryReminderWater2L.
+  ///
+  /// In fr, this message translates to:
+  /// **'boire 2L d\'eau'**
+  String get victoryReminderWater2L;
+
+  /// No description provided for @victoryReminderLegs.
+  ///
+  /// In fr, this message translates to:
+  /// **'surélever vos jambes'**
+  String get victoryReminderLegs;
+
+  /// No description provided for @victoryReminderBelly.
+  ///
+  /// In fr, this message translates to:
+  /// **'hydrater votre ventre'**
+  String get victoryReminderBelly;
+
+  /// No description provided for @victoryReminderTalkBaby.
+  ///
+  /// In fr, this message translates to:
+  /// **'parler au bébé'**
+  String get victoryReminderTalkBaby;
+
+  /// No description provided for @victoryReminderWalk15.
+  ///
+  /// In fr, this message translates to:
+  /// **'faire une petite marche (15 min)'**
+  String get victoryReminderWalk15;
+
+  /// No description provided for @victoryReminderBreastfeed.
+  ///
+  /// In fr, this message translates to:
+  /// **'allaiter/donner le biberon sereinement'**
+  String get victoryReminderBreastfeed;
+
+  /// No description provided for @victoryReminderSleepBaby.
+  ///
+  /// In fr, this message translates to:
+  /// **'dormir quand bébé dort'**
+  String get victoryReminderSleepBaby;
+
+  /// No description provided for @victoryReminderScreens.
+  ///
+  /// In fr, this message translates to:
+  /// **'vous déconnecter des écrans (1h)'**
+  String get victoryReminderScreens;
+
+  /// No description provided for @victoryReminderRead.
+  ///
+  /// In fr, this message translates to:
+  /// **'lire 10 pages'**
+  String get victoryReminderRead;
+
+  /// No description provided for @victoryReminderTidy.
+  ///
+  /// In fr, this message translates to:
+  /// **'ranger une pièce'**
+  String get victoryReminderTidy;
+
+  /// No description provided for @victoryReminderMeditate.
+  ///
+  /// In fr, this message translates to:
+  /// **'méditer'**
+  String get victoryReminderMeditate;
+
+  /// No description provided for @victoryReminderCallFriend.
+  ///
+  /// In fr, this message translates to:
+  /// **'appeler un(e) ami(e)'**
+  String get victoryReminderCallFriend;
+
   /// No description provided for @today.
   ///
   /// In fr, this message translates to:
@@ -937,6 +1093,30 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Vous avez débloqué une fleur spéciale ! 🌸'**
   String get specialFlowerUnlocked;
+
+  /// No description provided for @category.
+  ///
+  /// In fr, this message translates to:
+  /// **'Parcours'**
+  String get category;
+
+  /// No description provided for @selectCategory.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir un parcours'**
+  String get selectCategory;
+
+  /// No description provided for @categoryChanged.
+  ///
+  /// In fr, this message translates to:
+  /// **'Parcours mis à jour'**
+  String get categoryChanged;
+
+  /// No description provided for @categoryChangedMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos victoires d\'aujourd\'hui ont été mises à jour selon votre nouveau parcours.'**
+  String get categoryChangedMessage;
 }
 
 class _AppLocalizationsDelegate

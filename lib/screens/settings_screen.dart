@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/theme_config.dart';
+import '../models/app_category.dart';
+import '../models/victory_repository.dart';
 import '../services/preferences_service.dart';
+import '../services/database_service.dart';
 import '../services/notification_service.dart';
 import '../services/analytics_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -37,6 +40,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _userName;
   String? _photoURL;
   DateTime? _dateOfBirth;
+  AppCategory? _currentCategory;
   late AppTheme _currentTheme;
   late Locale? _currentLocale;
 
@@ -60,6 +64,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final name = user?.displayName ?? await PreferencesService.getUserName();
     final photoURL = user?.photoURL;
     final dob = await PreferencesService.getDateOfBirth();
+    final category = await PreferencesService.getAppCategory();
     setState(() {
       _notificationsEnabled = enabled;
       _soundEnabled = soundEnabled;
@@ -68,6 +73,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _userName = name;
       _photoURL = photoURL;
       _dateOfBirth = dob;
+      _currentCategory = category;
     });
   }
 
@@ -285,6 +291,171 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 12),
             _buildLanguageOption(const Locale('en'), '🇬🇧 ${l10n.english}'),
             const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCategorySelector() {
+    final l10n = AppLocalizations.of(context)!;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Text(
+              l10n.selectCategory,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 24),
+            for (final category in AppCategory.values) ...[
+              _buildCategoryOption(category),
+              const SizedBox(height: 12),
+            ],
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryOption(AppCategory category) {
+    final isSelected = _currentCategory == category;
+    final theme = Theme.of(context);
+    
+    return InkWell(
+      onTap: () async {
+        // Track category change
+        await AnalyticsService.instance.logEvent(
+          name: AnalyticsEvents.profileUpdated,
+          parameters: {
+            AnalyticsParams.category: category.name,
+            'category_display_name': category.displayName,
+          },
+        );
+
+        // Update category in preferences
+        await PreferencesService.setAppCategory(category);
+        
+        // Update category in Firebase if logged in
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await DatabaseService().updateUserCategory(user.uid, category);
+        }
+
+        // Update today's victories to match the new category
+        final newVictories = VictoryRepository.getVictoriesForCategory(category);
+        await PreferencesService.saveTodayVictories(newVictories);
+        
+        // Sync with Firebase if logged in
+        if (user != null) {
+          await DatabaseService().updateTodayVictories(user.uid, newVictories);
+        }
+
+        setState(() {
+          _currentCategory = category;
+        });
+        
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.categoryChanged),
+              backgroundColor: theme.colorScheme.secondary,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? category.color.withValues(alpha: 0.1)
+              : theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? category.color
+                : theme.colorScheme.onSurface.withValues(alpha: 0.05),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Category image
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: category.color.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Image.asset(
+                category.assetPath,
+                fit: BoxFit.contain,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    category.displayName,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      color: isSelected
+                          ? category.color
+                          : theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    category.description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle,
+                color: category.color,
+                size: 24,
+              ),
           ],
         ),
       ),
@@ -611,6 +782,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
 
                 // Settings List
+                _buildSettingsTile(
+                  icon: Icons.category_outlined,
+                  title: AppLocalizations.of(context)!.category,
+                  subtitle: _currentCategory?.displayName ?? AppLocalizations.of(context)!.selectCategory,
+                  onTap: _showCategorySelector,
+                  color: _currentCategory?.color ?? theme.colorScheme.primary,
+                ),
+                const SizedBox(height: 16),
                 _buildSettingsTile(
                   icon: Icons.palette_outlined,
                   title: AppLocalizations.of(context)!.chooseTheme, // Or "Thème" if I add it to ARB, but "chooseTheme" is close enough or I can add "themeTitle"

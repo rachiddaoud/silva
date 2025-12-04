@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/preferences_service.dart';
 import '../services/analytics_service.dart';
+import '../services/database_service.dart';
 import '../l10n/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -47,7 +48,28 @@ class _LoginScreenState extends State<LoginScreen> {
           parameters: {AnalyticsParams.provider: 'google'},
         );
         
+        // Check if category is selected
+        // We check local prefs first, then Firestore if needed (but for now let's rely on local or assume new login needs check)
+        // Actually, if we just logged in, we might not have the category locally.
+        // Let's check Firestore via DatabaseService
+        final DatabaseService db = DatabaseService();
+        final category = await db.getUserCategory(user.uid);
+        
+        if (category != null) {
+          await PreferencesService.setAppCategory(category);
+        }
+
         if (mounted) {
+          // If category is found, go to Home via onLoginSuccess callback (which usually reloads main)
+          // If not found, we should probably navigate to Onboarding manually or let main handle it?
+          // The current onLoginSuccess callback in main just sets _isOnboardingComplete = true.
+          // We need to change main.dart to handle the routing.
+          // But here, we can just call the callback and let main decide?
+          // Or we can modify the callback to accept a "needsOnboarding" flag?
+          
+          // Let's modify the callback signature or just handle it in main.
+          // For now, let's call the callback. Main will rebuild.
+          // We need to update Main to check for category.
           widget.onLoginSuccess();
         }
       }
@@ -137,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     errorBuilder: (context, error, stackTrace) => Icon(
                       Icons.image_not_supported_rounded,
                       size: 64,
-                      color: theme.colorScheme.primary.withOpacity(0.5),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.5),
                     ),
                   ),
                 ),

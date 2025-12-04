@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart'; // Now contains LoginScreen
+import 'screens/onboarding_screen.dart';
 import 'models/theme_config.dart';
+import 'models/app_category.dart';
 import 'services/preferences_service.dart';
 import 'services/notification_service.dart';
 import 'app_navigator.dart';
@@ -34,7 +36,8 @@ class _MyAppState extends State<MyApp> {
   AppTheme _currentTheme = AppTheme.modernPastel;
   bool _isOnboardingComplete = false;
   bool _isLoading = true;
-  Locale? _locale; // null means use system default
+  Locale? _locale;
+  AppCategory? _currentCategory;
 
   @override
   void initState() {
@@ -48,27 +51,19 @@ class _MyAppState extends State<MyApp> {
     
     // Load theme, onboarding status, and locale
     final themeFuture = PreferencesService.getTheme();
-    final onboardingFuture = PreferencesService.isOnboardingComplete();
     final localeFuture = PreferencesService.getLocale();
+    final categoryFuture = PreferencesService.getAppCategory();
     
     final results = await Future.wait([
       themeFuture,
-      onboardingFuture,
       localeFuture,
-      // We don't strictly need to wait for notifications to show the UI,
-      // but we wait here to ensure everything is ready before potentially
-      // showing the home screen. If this takes too long, we could remove
-      // it from this wait and let it complete in background.
+      categoryFuture,
     ]);
     
     final theme = results[0] as AppTheme;
-    final localeCode = results[2] as String?;
-    // Note: onboardingComplete (results[1]) is intentionally not used
-    // We rely solely on Firebase auth status, not local preferences
+    final localeCode = results[1] as String?;
+    final category = results[2] as AppCategory?;
     
-    // Ensure notifications are initialized (if not already by the wait above, 
-    // though we didn't await notificationFuture in the list, let's just let it run)
-    // Actually, let's just let notifications init in background to not block UI
     notificationFuture.then((_) {
       debugPrint('Notifications initialized');
     });
@@ -99,8 +94,22 @@ class _MyAppState extends State<MyApp> {
           email: user.email,
           locale: localeCode,
         );
+        // Reload category if user changes (e.g. login)
+        final cat = await PreferencesService.getAppCategory();
+        if (mounted) {
+           setState(() {
+             _isOnboardingComplete = true;
+             _currentCategory = cat;
+           });
+        }
       } else {
         await AnalyticsService.instance.setUserId(null);
+        if (mounted) {
+           setState(() {
+             _isOnboardingComplete = false;
+             _currentCategory = null;
+           });
+        }
       }
     });
 
@@ -108,10 +117,8 @@ class _MyAppState extends State<MyApp> {
       setState(() {
         _currentTheme = theme;
         _locale = localeCode != null ? Locale(localeCode) : null;
-        // Strictly check for login status. 
-        // We ignore the local 'onboardingComplete' preference to ensure 
-        // users must be authenticated via Firebase.
         _isOnboardingComplete = isLoggedIn;
+        _currentCategory = category;
         _isLoading = false;
       });
     }
@@ -147,8 +154,16 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _onOnboardingComplete() {
-    setState(() {
-      _isOnboardingComplete = true;
+    // This is called when login is successful.
+    // We need to check if category is set.
+    // Since we just logged in, we might need to fetch it.
+    PreferencesService.getAppCategory().then((category) {
+      if (mounted) {
+        setState(() {
+          _isOnboardingComplete = true;
+          _currentCategory = category;
+        });
+      }
     });
   }
 
@@ -175,15 +190,17 @@ class _MyAppState extends State<MyApp> {
                 child: CircularProgressIndicator(),
               ),
             )
-              : _isOnboardingComplete
-                  ? HomeScreen(
+          : !_isOnboardingComplete
+              ? LoginScreen(
+                  onLoginSuccess: _onOnboardingComplete,
+                )
+              : _currentCategory == null
+                  ? const OnboardingScreen()
+                  : HomeScreen(
                       onThemeChanged: _onThemeChanged,
                       onLocaleChanged: _onLocaleChanged,
                       currentTheme: _currentTheme,
                       currentLocale: _locale,
-                    )
-                  : LoginScreen(
-                      onLoginSuccess: _onOnboardingComplete,
                     ),
     );
   }

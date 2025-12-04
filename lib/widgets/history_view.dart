@@ -4,7 +4,7 @@ import '../models/victory_card.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/day_entry.dart';
 import '../services/database_service.dart';
-import '../utils/sprite_utils.dart';
+import '../utils/sprite_utils.dart' show VictoryImage;
 import 'package:intl/intl.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/localization_utils.dart';
@@ -685,10 +685,9 @@ class _VictoryTag extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SpriteDisplay(
-            victoryId: victory.spriteId,
+          VictoryImage(
+            imagePath: victory.imagePath,
             size: 20,
-            showBorder: false,
           ),
           const SizedBox(width: 4),
           Flexible(

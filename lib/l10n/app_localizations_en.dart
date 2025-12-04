@@ -123,6 +123,84 @@ class AppLocalizationsEn extends AppLocalizations {
   String get victoryReminderSun => 'see the sun for 5 min';
 
   @override
+  String get victoryVitamins => 'I took my vitamins';
+
+  @override
+  String get victoryWater2L => 'I drank 2L of water';
+
+  @override
+  String get victoryLegs => 'I elevated my legs';
+
+  @override
+  String get victoryBelly => 'I moisturized my belly';
+
+  @override
+  String get victoryTalkBaby => 'I talked to the baby';
+
+  @override
+  String get victoryWalk15 => 'Short walk (15 min)';
+
+  @override
+  String get victoryBreastfeed => 'I breastfed/fed the baby peacefully';
+
+  @override
+  String get victorySleepBaby => 'I slept when the baby slept';
+
+  @override
+  String get victoryScreens => 'Screen break (1h)';
+
+  @override
+  String get victoryRead => 'I read 10 pages';
+
+  @override
+  String get victoryTidy => 'I tidied a room';
+
+  @override
+  String get victoryMeditate => 'I meditated';
+
+  @override
+  String get victoryCallFriend => 'I called a friend';
+
+  @override
+  String get victoryReminderVitamins => 'take your vitamins';
+
+  @override
+  String get victoryReminderWater2L => 'drink 2L of water';
+
+  @override
+  String get victoryReminderLegs => 'elevate your legs';
+
+  @override
+  String get victoryReminderBelly => 'moisturize your belly';
+
+  @override
+  String get victoryReminderTalkBaby => 'talk to the baby';
+
+  @override
+  String get victoryReminderWalk15 => 'take a short walk (15 min)';
+
+  @override
+  String get victoryReminderBreastfeed => 'breastfeed/feed the baby peacefully';
+
+  @override
+  String get victoryReminderSleepBaby => 'sleep when the baby sleeps';
+
+  @override
+  String get victoryReminderScreens => 'take a screen break (1h)';
+
+  @override
+  String get victoryReminderRead => 'read 10 pages';
+
+  @override
+  String get victoryReminderTidy => 'tidy a room';
+
+  @override
+  String get victoryReminderMeditate => 'meditate';
+
+  @override
+  String get victoryReminderCallFriend => 'call a friend';
+
+  @override
   String get today => 'Today';
 
   @override
@@ -547,4 +625,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get specialFlowerUnlocked => 'You\'ve unlocked a special flower! 🌸';
+
+  @override
+  String get category => 'Category';
+
+  @override
+  String get selectCategory => 'Select a category';
+
+  @override
+  String get categoryChanged => 'Category updated';
+
+  @override
+  String get categoryChangedMessage =>
+      'Today\'s victories have been updated according to your new category.';
 }

@@ -123,6 +123,85 @@ class AppLocalizationsFr extends AppLocalizations {
   String get victoryReminderSun => 'voir le soleil 5 min';
 
   @override
+  String get victoryVitamins => 'J\'ai pris mes vitamines';
+
+  @override
+  String get victoryWater2L => 'J\'ai bu 2L d\'eau';
+
+  @override
+  String get victoryLegs => 'J\'ai surélevé mes jambes';
+
+  @override
+  String get victoryBelly => 'J\'ai hydraté mon ventre';
+
+  @override
+  String get victoryTalkBaby => 'J\'ai parlé au bébé';
+
+  @override
+  String get victoryWalk15 => 'Petite marche (15 min)';
+
+  @override
+  String get victoryBreastfeed => 'J\'ai allaité/donné le biberon sereinement';
+
+  @override
+  String get victorySleepBaby => 'J\'ai dormi quand bébé dormait';
+
+  @override
+  String get victoryScreens => 'Déconnexion écrans (1h)';
+
+  @override
+  String get victoryRead => 'J\'ai lu 10 pages';
+
+  @override
+  String get victoryTidy => 'J\'ai rangé une pièce';
+
+  @override
+  String get victoryMeditate => 'J\'ai médité';
+
+  @override
+  String get victoryCallFriend => 'J\'ai appelé un(e) ami(e)';
+
+  @override
+  String get victoryReminderVitamins => 'prendre vos vitamines';
+
+  @override
+  String get victoryReminderWater2L => 'boire 2L d\'eau';
+
+  @override
+  String get victoryReminderLegs => 'surélever vos jambes';
+
+  @override
+  String get victoryReminderBelly => 'hydrater votre ventre';
+
+  @override
+  String get victoryReminderTalkBaby => 'parler au bébé';
+
+  @override
+  String get victoryReminderWalk15 => 'faire une petite marche (15 min)';
+
+  @override
+  String get victoryReminderBreastfeed =>
+      'allaiter/donner le biberon sereinement';
+
+  @override
+  String get victoryReminderSleepBaby => 'dormir quand bébé dort';
+
+  @override
+  String get victoryReminderScreens => 'vous déconnecter des écrans (1h)';
+
+  @override
+  String get victoryReminderRead => 'lire 10 pages';
+
+  @override
+  String get victoryReminderTidy => 'ranger une pièce';
+
+  @override
+  String get victoryReminderMeditate => 'méditer';
+
+  @override
+  String get victoryReminderCallFriend => 'appeler un(e) ami(e)';
+
+  @override
   String get today => 'Aujourd\'hui';
 
   @override
@@ -514,4 +593,17 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get specialFlowerUnlocked =>
       'Vous avez débloqué une fleur spéciale ! 🌸';
+
+  @override
+  String get category => 'Parcours';
+
+  @override
+  String get selectCategory => 'Choisir un parcours';
+
+  @override
+  String get categoryChanged => 'Parcours mis à jour';
+
+  @override
+  String get categoryChangedMessage =>
+      'Vos victoires d\'aujourd\'hui ont été mises à jour selon votre nouveau parcours.';
 }

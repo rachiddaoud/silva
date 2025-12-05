@@ -130,17 +130,8 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
 
   void _saveTree() async {
     if (_treeController.tree != null) {
-      // 1. Save locally
+      // Save locally only - Firebase sync happens at end of day
       await PreferencesService.saveTreeState(_treeController.tree!);
-      
-      // 2. Save to Firebase if logged in
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        // Fire and forget (don't await to block UI)
-        DatabaseService().saveTreeState(user.uid, _treeController.tree!).catchError((e) {
-          debugPrint('❌ Error saving tree to Firebase: $e');
-        });
-      }
     }
   }
 

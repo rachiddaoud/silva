@@ -165,16 +165,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           debugPrint('📝 Creating new empty entry for ${lastResetDate.toString().substring(0, 10)} with ${accomplishedVictories.length} victories');
         }
         
-        // Save locally
+        // Save locally only - Firebase sync happens at end of day
         await PreferencesService.saveDayEntry(entryToSave);
-        debugPrint('✅ Saved locally');
-        
-        // Save remotely if logged in
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          await DatabaseService().saveDayEntry(user.uid, entryToSave);
-          debugPrint('✅ Saved to Firebase for user ${user.uid}');
-        }
+        debugPrint('✅ Saved locally (Firebase sync at end of day)');
       }
 
       if (mounted) {
@@ -188,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Reprogrammer les rappels de la journée
       await NotificationService.scheduleDayReminders();
     } else {
-      // Charger les victoires sauvegardées
+      // Charger les victoires sauvegardées localement
       final savedVictories = await PreferencesService.getTodayVictories();
       if (mounted) {
         setState(() {
@@ -196,40 +189,43 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         });
       }
     }
-    
-    // Ensure yesterday exists (persistence check)
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      await DatabaseService().ensureYesterdayExists(user.uid);
-    }
   }
 
 
   Future<void> _checkDayCompletion() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final todayEntry = await DatabaseService().getTodayDayEntry(user.uid);
-      if (mounted) {
-        setState(() {
-          // Day is completed if we have an entry with an emotion
-          _isDayCompleted = todayEntry?.emotion != null;
-        });
-      }
+    // Check from local storage (no Firebase needed)
+    final history = await PreferencesService.getHistory();
+    final now = DateTime.now();
+    final todayEntry = history.where((e) =>
+      e.date.year == now.year &&
+      e.date.month == now.month &&
+      e.date.day == now.day
+    ).firstOrNull;
+    
+    if (mounted) {
+      setState(() {
+        // Day is completed if we have an entry with an emotion
+        _isDayCompleted = todayEntry?.emotion != null;
+      });
     }
   }
 
   Future<void> _checkYesterdayEmotion() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final yesterdayEntry = await DatabaseService().getYesterdayDayEntry(user.uid);
-      
-      // Show prompt if yesterday exists but has no emotion
-      if (yesterdayEntry != null && yesterdayEntry.emotion == null) {
-        // Wait a bit for UI to settle before navigating
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (mounted) {
-          _navigateToYesterdayCompletion(yesterdayEntry);
-        }
+    // Check from local storage (no Firebase needed)
+    final history = await PreferencesService.getHistory();
+    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+    final yesterdayEntry = history.where((e) =>
+      e.date.year == yesterday.year &&
+      e.date.month == yesterday.month &&
+      e.date.day == yesterday.day
+    ).firstOrNull;
+    
+    // Show prompt if yesterday exists but has no emotion
+    if (yesterdayEntry != null && yesterdayEntry.emotion == null) {
+      // Wait a bit for UI to settle before navigating
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) {
+        _navigateToYesterdayCompletion(yesterdayEntry);
       }
     }
   }
@@ -242,14 +238,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ? VictoryRepository.defaultVictories 
               : yesterdayEntry.victoryCards,
           onComplete: (emotion, comment) async {
+            final updatedEntry = DayEntry(
+              date: yesterdayEntry.date,
+              emotion: emotion,
+              comment: comment.isEmpty ? null : comment,
+              victoryCards: yesterdayEntry.victoryCards,
+            );
+            
+            // Save locally first
+            await PreferencesService.saveDayEntry(updatedEntry);
+            
+            // Sync to Firebase (this is an end-of-day action)
             final user = FirebaseAuth.instance.currentUser;
             if (user != null) {
-              final updatedEntry = DayEntry(
-                date: yesterdayEntry.date,
-                emotion: emotion,
-                comment: comment.isEmpty ? null : comment,
-                victoryCards: yesterdayEntry.victoryCards,
-              );
               await DatabaseService().saveDayEntry(user.uid, updatedEntry);
             }
           },
@@ -357,14 +358,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       });
     }
     
-    // Sauvegarder les victoires mises à jour
+    // Sauvegarder les victoires localement (sync Firebase seulement en fin de journée)
     await PreferencesService.saveTodayVictories(_victories);
-    
-    // Sync with Firestore if user is logged in
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      await DatabaseService().updateTodayVictories(user.uid, _victories);
-    }
 
     // Reprogrammer les rappels si nécessaire
     await NotificationService.scheduleDayReminders();
@@ -420,11 +415,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       },
     );
 
-    // Sauvegarder l'entrée
-    // await PreferencesService.saveDayEntry(dayEntry);
+    // === END OF DAY SYNC POINT ===
+    // Save locally first
+    await PreferencesService.saveDayEntry(dayEntry);
+    debugPrint('✅ Saved day entry locally');
+    
+    // Sync to Firebase (end of day is the sync point)
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      // 1. Save today's entry to Firebase
       await DatabaseService().saveDayEntry(user.uid, dayEntry);
+      debugPrint('☁️ Synced day entry to Firebase');
+      
+      // 2. Sync tree state to Firebase
+      final treeState = await PreferencesService.getTreeState();
+      if (treeState != null) {
+        await DatabaseService().saveTreeState(user.uid, treeState);
+        debugPrint('☁️ Synced tree state to Firebase');
+      }
+      
+      // 3. Sync any pending local history entries that weren't synced
+      final localHistory = await PreferencesService.getHistory();
+      for (final entry in localHistory) {
+        // Only sync entries from the past 7 days (to avoid syncing too much)
+        final daysDiff = DateTime.now().difference(entry.date).inDays;
+        if (daysDiff <= 7 && daysDiff >= 0) {
+          await DatabaseService().saveDayEntry(user.uid, entry);
+        }
+      }
+      debugPrint('☁️ Synced recent history to Firebase');
     }
     
     if (mounted) {

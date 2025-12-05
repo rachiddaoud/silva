@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../models/day_entry.dart';
-import '../services/database_service.dart';
+import '../services/preferences_service.dart';
 import '../utils/chart_data_utils.dart';
 import '../widgets/charts/victory_bar_chart.dart';
 import '../widgets/charts/emotion_line_chart.dart';
@@ -32,18 +31,8 @@ class _ChartsScreenState extends State<ChartsScreen> {
       _isLoading = true;
     });
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      if (mounted) {
-        setState(() {
-          _history = [];
-          _isLoading = false;
-        });
-      }
-      return;
-    }
-
-    final history = await DatabaseService().getHistory(user.uid);
+    // Load from local storage (no Firebase needed for charts)
+    final history = await PreferencesService.getHistory();
     history.sort((a, b) => b.date.compareTo(a.date));
 
     if (mounted) {

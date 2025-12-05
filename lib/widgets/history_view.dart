@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/emotion.dart';
 import '../models/victory_card.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../models/day_entry.dart';
 import '../services/database_service.dart';
 import '../utils/sprite_utils.dart' show VictoryImage;
@@ -36,32 +36,26 @@ class _HistoryViewState extends State<HistoryView> {
       _isLoading = true;
     });
 
-    // Initialiser les données mock si l'historique est vide
-    // await PreferencesService.initializeMockData();
-
-    // final history = await PreferencesService.getHistory();
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      if (mounted) {
-        setState(() {
-          _history = [];
-          _isLoading = false;
-        });
-      }
-      return;
-    }
-
-    final history = await DatabaseService().getHistory(user.uid);
+    // Load from local storage first (instant, no network)
+    var history = await PreferencesService.getHistory();
     
-    // Trier par date décroissante (plus récent en premier)
-    history.sort((a, b) => b.date.compareTo(a.date));
-
-    if (mounted) {
-      setState(() {
-        _history = history;
-        _isLoading = false;
-      });
+    // If local is empty and user is logged in, try to restore from Firebase (one-time sync)
+    if (history.isEmpty) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        debugPrint('📥 Local history empty, restoring from Firebase...');
+        history = await DatabaseService().getHistory(user.uid);
+        
+        // Cache Firebase data locally
+        for (final entry in history) {
+          await PreferencesService.saveDayEntry(entry);
+        }
+        debugPrint('✅ Restored ${history.length} entries from Firebase to local');
+      }
     }
+    
+    // Sort by date (most recent first)
+    history.sort((a, b) => b.date.compareTo(a.date));
 
     if (mounted) {
       setState(() {
@@ -248,112 +242,98 @@ class _HistoryViewState extends State<HistoryView> {
     // Play haptic feedback for deletion
     await HapticService().medium();
     
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      // Check if the deleted victory is from today
-      final now = DateTime.now();
-      final isToday = date.year == now.year &&
-                      date.month == now.month &&
-                      date.day == now.day;
-      
-      // Optimistically update the UI first (remove from local state)
-      setState(() {
-        final entryIndex = _history.indexWhere((e) =>
-          e.date.year == date.year &&
-          e.date.month == date.month &&
-          e.date.day == date.day
-        );
+    // Check if the deleted victory is from today
+    final now = DateTime.now();
+    final isToday = date.year == now.year &&
+                    date.month == now.month &&
+                    date.day == now.day;
+    
+    // Find the entry in local state
+    final entryIndex = _history.indexWhere((e) =>
+      e.date.year == date.year &&
+      e.date.month == date.month &&
+      e.date.day == date.day
+    );
+    
+    DayEntry? updatedEntry;
+    
+    // Optimistically update the UI first (remove from local state)
+    setState(() {
+      if (entryIndex >= 0) {
+        final entry = _history[entryIndex];
+        final updatedVictories = entry.victoryCards.where((v) => v.id != victoryId).toList();
         
-        if (entryIndex >= 0) {
-          final entry = _history[entryIndex];
-          final updatedVictories = entry.victoryCards.where((v) => v.id != victoryId).toList();
-          
-          if (updatedVictories.isEmpty) {
-            // Remove entire entry if no victories left
-            _history.removeAt(entryIndex);
-          } else {
-            // Update entry with remaining victories
-            _history[entryIndex] = DayEntry(
-              date: entry.date,
-              emotion: entry.emotion,
-              comment: entry.comment,
-              victoryCards: updatedVictories,
-            );
-          }
-        }
-      });
-      
-      // Then perform the actual deletion and other operations
-      await DatabaseService().deleteVictoryFromEntry(user.uid, date, victoryId);
-      
-      // If the victory is from today, uncheck it in today's victories
-      if (isToday) {
-        final todayVictories = await PreferencesService.getTodayVictories();
-        final updatedVictories = todayVictories.map((v) {
-          if (v.id == victoryId) {
-            return v.copyWith(
-              isAccomplished: false,
-              timestamp: null,
-            );
-          }
-          return v;
-        }).toList();
-        
-        // Save updated victories locally
-        await PreferencesService.saveTodayVictories(updatedVictories);
-        
-        // Sync with Firestore
-        await DatabaseService().updateTodayVictories(user.uid, updatedVictories);
-      }
-      
-      // Also remove a leaf from the tree if it exists
-      // We need to load the tree, remove a leaf, and save it back
-      final treeState = await PreferencesService.getTreeState();
-      if (treeState != null) {
-        // Create a temporary controller to handle logic
-        final tempController = TreeController();
-        tempController.setTree(treeState);
-        
-        // Remove a leaf
-        if (tempController.removeLeaf(notify: false)) {
-          // Save updated tree
-          await PreferencesService.saveTreeState(tempController.tree!);
-          
-          // Also update leaf count in resources
-          final resources = await PreferencesService.getTreeResources();
-          if (resources.leafCount > 0) {
-             await PreferencesService.saveTreeResources(
-               resources.copyWith(leafCount: resources.leafCount - 1)
-             );
-          }
-          
-          // Sync to Firebase
-          DatabaseService().saveTreeState(user.uid, tempController.tree!).catchError((e) {
-            debugPrint('Error syncing tree after leaf removal: $e');
-          });
+        if (updatedVictories.isEmpty) {
+          // Remove entire entry if no victories left
+          _history.removeAt(entryIndex);
+        } else {
+          // Update entry with remaining victories
+          updatedEntry = DayEntry(
+            date: entry.date,
+            emotion: entry.emotion,
+            comment: entry.comment,
+            victoryCards: updatedVictories,
+          );
+          _history[entryIndex] = updatedEntry!;
         }
       }
+    });
+    
+    // Save changes locally only (Firebase sync at end of day)
+    if (updatedEntry != null) {
+      await PreferencesService.saveDayEntry(updatedEntry!);
+    }
+    
+    // If the victory is from today, uncheck it in today's victories
+    if (isToday) {
+      final todayVictories = await PreferencesService.getTodayVictories();
+      final updatedVictories = todayVictories.map((v) {
+        if (v.id == victoryId) {
+          return v.copyWith(
+            isAccomplished: false,
+            timestamp: null,
+          );
+        }
+        return v;
+      }).toList();
+      
+      // Save updated victories locally only
+      await PreferencesService.saveTodayVictories(updatedVictories);
+    }
+    
+    // Also remove a leaf from the tree if it exists
+    final treeState = await PreferencesService.getTreeState();
+    if (treeState != null) {
+      // Create a temporary controller to handle logic
+      final tempController = TreeController();
+      tempController.setTree(treeState);
+      
+      // Remove a leaf
+      if (tempController.removeLeaf(notify: false)) {
+        // Save updated tree locally only
+        await PreferencesService.saveTreeState(tempController.tree!);
+        
+        // Also update leaf count in resources
+        final resources = await PreferencesService.getTreeResources();
+        if (resources.leafCount > 0) {
+           await PreferencesService.saveTreeResources(
+             resources.copyWith(leafCount: resources.leafCount - 1)
+           );
+        }
+      }
+    }
 
-      // Silently reload history in the background to ensure sync (without showing loading)
-      _reloadHistorySilently();
-      
-      // Notify parent that history changed (so home screen can refresh)
-      if (widget.onHistoryChanged != null) {
-        widget.onHistoryChanged!();
-      }
+    // Notify parent that history changed (so home screen can refresh)
+    if (widget.onHistoryChanged != null) {
+      widget.onHistoryChanged!();
     }
   }
 
-  /// Reload history without showing loading indicator
+  /// Reload history from local storage without showing loading indicator
   Future<void> _reloadHistorySilently() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      return;
-    }
-
-    final history = await DatabaseService().getHistory(user.uid);
+    final history = await PreferencesService.getHistory();
     
-    // Trier par date décroissante (plus récent en premier)
+    // Sort by date (most recent first)
     history.sort((a, b) => b.date.compareTo(a.date));
 
     if (mounted) {

@@ -324,12 +324,46 @@ class TreeController extends ChangeNotifier {
     if (candidates.isEmpty) return false;
     
     final random = math.Random();
-    final branch = candidates[random.nextInt(candidates.length)];
+    BranchState branch;
+
+    // Check if it's a special flower (2 = Blue, 3 = Yellow)
+    final isSpecialFlower = flowerType == 2 || flowerType == 3;
+    
+    if (isSpecialFlower) {
+      // Weight by inverse depth (older branches have lower depth numbers)
+      // Exponential weight: 2^(maxDepth - depth)
+      // This makes main branches significantly more likely than twigs
+      final weights = candidates.map(
+        (b) => math.pow(2, _parameters.maxDepth - b.depth).toDouble()
+      ).toList();
+      
+      branch = _weightedRandomSelect(candidates, weights, random);
+    } else {
+      // Normal random selection for regular flowers
+      branch = candidates[random.nextInt(candidates.length)];
+    }
     
     final t = 0.2 + random.nextDouble() * 0.8;
     final side = random.nextBool() ? 1 : -1;
     
     return addFlower(branchId: branch.id, t: t, side: side, flowerType: flowerType, notify: notify);
+  }
+
+  BranchState _weightedRandomSelect(List<BranchState> items, List<double> weights, math.Random random) {
+    if (items.isEmpty) throw ArgumentError('Items list cannot be empty');
+    if (items.length != weights.length) throw ArgumentError('Items and weights must have same length');
+
+    final totalWeight = weights.fold(0.0, (sum, w) => sum + w);
+    final randomValue = random.nextDouble() * totalWeight;
+    
+    double currentSum = 0.0;
+    for (int i = 0; i < items.length; i++) {
+      currentSum += weights[i];
+      if (randomValue <= currentSum) {
+        return items[i];
+      }
+    }
+    return items.last;
   }
 
   /// 4. DECAY LEAF: Starts decaying a random leaf

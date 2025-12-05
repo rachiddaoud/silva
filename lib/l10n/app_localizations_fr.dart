@@ -386,13 +386,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get treeInfoHowItWorks => 'Comment ça fonctionne';
 
   @override
-  String get treeInfoWateringTitle => 'Arrosage';
-
-  @override
-  String get treeInfoWateringDescription =>
-      'Arrosez votre arbre une fois par jour après avoir complété 3 victoires. Cela fait grandir votre arbre et maintient votre streak !';
-
-  @override
   String get treeInfoLeavesTitle => 'Feuilles';
 
   @override
@@ -490,16 +483,8 @@ class AppLocalizationsFr extends AppLocalizations {
       other: 'jours',
       one: 'jour',
     );
-    return 'Arrosé ! Série : $streak $_temp0. +1 Fleur !';
+    return 'Série mise à jour ! Série : $streak $_temp0. +1 Fleur !';
   }
-
-  @override
-  String get needVictoriesToWater =>
-      'Besoin de 3 victoires pour arroser l\'arbre !';
-
-  @override
-  String get alreadyWateredToday =>
-      'Déjà arrosé aujourd\'hui ! Revenez demain.';
 
   @override
   String get alreadyAddedFlowerToday =>
@@ -508,27 +493,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get noLeavesAvailable =>
       'Aucune feuille disponible. Accomplissez des victoires pour gagner des feuilles !';
-
-  @override
-  String needMoreVictories(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'victoires de plus',
-      one: 'victoire de plus',
-    );
-    return 'Besoin de $count $_temp0 pour arroser l\'arbre !';
-  }
-
-  @override
-  String alreadyWateredAvailableIn(int hours, int minutes) {
-    return 'Déjà arrosé aujourd\'hui ! Disponible dans ${hours}h et ${minutes}min';
-  }
-
-  @override
-  String alreadyWateredAvailableInMinutes(int minutes) {
-    return 'Déjà arrosé aujourd\'hui ! Disponible dans ${minutes}min';
-  }
 
   @override
   String alreadyFlowerAvailableIn(int hours, int minutes) {
@@ -545,9 +509,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get flowerButton => 'Fleur';
-
-  @override
-  String get waterButton => 'Arroser';
 
   @override
   String get waterDone => 'Fait';

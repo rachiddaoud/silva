@@ -207,8 +207,7 @@
   "treeInfoSubtitle": "Informations de croissance",
   "treeInfoDescription": "Cet arbre représente votre croissance personnelle. Chaque jour que vous complétez, chaque victoire que vous accomplissez, et chaque émotion que vous exprimez contribuent à faire grandir votre arbre unique.",
   "treeInfoHowItWorks": "Comment ça fonctionne",
-  "treeInfoWateringTitle": "Arrosage",
-  "treeInfoWateringDescription": "Arrosez votre arbre une fois par jour après avoir complété 3 victoires. Cela fait grandir votre arbre et maintient votre streak !",
+
   "treeInfoLeavesTitle": "Feuilles",
   "treeInfoLeavesDescription": "Gagnez des feuilles en complétant vos victoires quotidiennes. Utilisez-les pour décorer votre arbre !",
   "treeInfoFlowersTitle": "Fleurs",
@@ -242,35 +241,16 @@
       "days": { "type": "int" }
     }
   },
-  "wateredStreakFlower": "Arrosé ! Série : {streak} {streak, plural, =1 {jour} other {jours}}. +1 Fleur !",
+  "wateredStreakFlower": "Série mise à jour ! Série : {streak} {streak, plural, =1 {jour} other {jours}}. +1 Fleur !",
   "@wateredStreakFlower": {
     "placeholders": {
       "streak": { "type": "int" }
     }
   },
-  "needVictoriesToWater": "Besoin de 3 victoires pour arroser l'arbre !",
-  "alreadyWateredToday": "Déjà arrosé aujourd'hui ! Revenez demain.",
+
   "alreadyAddedFlowerToday": "Fleur déjà ajoutée aujourd'hui ! Revenez demain.",
   "noLeavesAvailable": "Aucune feuille disponible. Accomplissez des victoires pour gagner des feuilles !",
-  "needMoreVictories": "Besoin de {count} {count, plural, =1 {victoire de plus} other {victoires de plus}} pour arroser l'arbre !",
-  "@needMoreVictories": {
-    "placeholders": {
-      "count": { "type": "int" }
-    }
-  },
-  "alreadyWateredAvailableIn": "Déjà arrosé aujourd'hui ! Disponible dans {hours}h et {minutes}min",
-  "@alreadyWateredAvailableIn": {
-    "placeholders": {
-      "hours": { "type": "int" },
-      "minutes": { "type": "int" }
-    }
-  },
-  "alreadyWateredAvailableInMinutes": "Déjà arrosé aujourd'hui ! Disponible dans {minutes}min",
-  "@alreadyWateredAvailableInMinutes": {
-    "placeholders": {
-      "minutes": { "type": "int" }
-    }
-  },
+
   "alreadyFlowerAvailableIn": "Fleur déjà ajoutée ! Disponible dans {hours}h et {minutes}min",
   "@alreadyFlowerAvailableIn": {
     "placeholders": {
@@ -286,7 +266,7 @@
   },
   "leafButton": "Feuille",
   "flowerButton": "Fleur",
-  "waterButton": "Arroser",
+
   "waterDone": "Fait",
   "resetTreeTitle": "Réinitialiser l'arbre",
   "resetTreeConfirm": "Réinitialiser l'arbre à l'âge 10 sans feuilles ni fleurs ?",

@@ -379,6 +379,39 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     
     // Sauvegarder les victoires localement (sync Firebase seulement en fin de journée)
     await PreferencesService.saveTodayVictories(_victories);
+    
+    // Update today's entry in history so History view shows the updated victories
+    final now = DateTime.now();
+    final history = await PreferencesService.getHistory();
+    final todayEntryIndex = history.indexWhere((e) =>
+      e.date.year == now.year &&
+      e.date.month == now.month &&
+      e.date.day == now.day
+    );
+    
+    // Get only accomplished victories for the history entry
+    final accomplishedVictories = _victories.where((v) => v.isAccomplished).toList();
+    
+    if (todayEntryIndex >= 0) {
+      // Update existing today entry with new victories (preserve emotion/comment)
+      final existingEntry = history[todayEntryIndex];
+      final updatedEntry = DayEntry(
+        date: existingEntry.date,
+        emotion: existingEntry.emotion,
+        comment: existingEntry.comment,
+        victoryCards: accomplishedVictories,
+      );
+      await PreferencesService.saveDayEntry(updatedEntry);
+    } else if (accomplishedVictories.isNotEmpty) {
+      // Create new today entry with victories (no emotion yet)
+      final newEntry = DayEntry(
+        date: now,
+        emotion: null,
+        comment: null,
+        victoryCards: accomplishedVictories,
+      );
+      await PreferencesService.saveDayEntry(newEntry);
+    }
 
     // Reprogrammer les rappels si nécessaire
     await NotificationService.scheduleDayReminders();

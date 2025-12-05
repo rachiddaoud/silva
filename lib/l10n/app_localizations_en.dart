@@ -162,6 +162,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get victoryCallFriend => 'I called a friend';
 
   @override
+  String get victorySnack => 'I prepared a healthy snack';
+
+  @override
+  String get victoryResting => 'I rested';
+
+  @override
+  String get victoryDeepBreath => 'I breathed deeply';
+
+  @override
+  String get victoryBreak => 'I took a break';
+
+  @override
+  String get victoryExercise => 'I exercised';
+
+  @override
+  String get victoryMeTime => 'I took a moment for myself';
+
+  @override
   String get victoryReminderVitamins => 'take your vitamins';
 
   @override
@@ -199,6 +217,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get victoryReminderCallFriend => 'call a friend';
+
+  @override
+  String get victoryReminderSnack => 'prepare a healthy snack';
+
+  @override
+  String get victoryReminderResting => 'rest';
+
+  @override
+  String get victoryReminderDeepBreath => 'breathe deeply';
+
+  @override
+  String get victoryReminderBreak => 'take a break';
+
+  @override
+  String get victoryReminderExercise => 'exercise';
+
+  @override
+  String get victoryReminderMeTime => 'take a moment for yourself';
 
   @override
   String get today => 'Today';

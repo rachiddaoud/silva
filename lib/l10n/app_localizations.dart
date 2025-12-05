@@ -398,6 +398,42 @@ abstract class AppLocalizations {
   /// **'J\'ai appelé un(e) ami(e)'**
   String get victoryCallFriend;
 
+  /// No description provided for @victorySnack.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai préparé une collation saine'**
+  String get victorySnack;
+
+  /// No description provided for @victoryResting.
+  ///
+  /// In fr, this message translates to:
+  /// **'Je me suis reposé'**
+  String get victoryResting;
+
+  /// No description provided for @victoryDeepBreath.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai respiré profondément'**
+  String get victoryDeepBreath;
+
+  /// No description provided for @victoryBreak.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai fait une pause'**
+  String get victoryBreak;
+
+  /// No description provided for @victoryExercise.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai fait de l\'exercice'**
+  String get victoryExercise;
+
+  /// No description provided for @victoryMeTime.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai pris un moment pour moi'**
+  String get victoryMeTime;
+
   /// No description provided for @victoryReminderVitamins.
   ///
   /// In fr, this message translates to:
@@ -475,6 +511,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'appeler un(e) ami(e)'**
   String get victoryReminderCallFriend;
+
+  /// No description provided for @victoryReminderSnack.
+  ///
+  /// In fr, this message translates to:
+  /// **'préparer une collation saine'**
+  String get victoryReminderSnack;
+
+  /// No description provided for @victoryReminderResting.
+  ///
+  /// In fr, this message translates to:
+  /// **'vous reposer'**
+  String get victoryReminderResting;
+
+  /// No description provided for @victoryReminderDeepBreath.
+  ///
+  /// In fr, this message translates to:
+  /// **'respirer profondément'**
+  String get victoryReminderDeepBreath;
+
+  /// No description provided for @victoryReminderBreak.
+  ///
+  /// In fr, this message translates to:
+  /// **'faire une pause'**
+  String get victoryReminderBreak;
+
+  /// No description provided for @victoryReminderExercise.
+  ///
+  /// In fr, this message translates to:
+  /// **'faire de l\'exercice'**
+  String get victoryReminderExercise;
+
+  /// No description provided for @victoryReminderMeTime.
+  ///
+  /// In fr, this message translates to:
+  /// **'prendre un moment pour vous'**
+  String get victoryReminderMeTime;
 
   /// No description provided for @today.
   ///

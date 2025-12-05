@@ -23,6 +23,12 @@ String _getVictoryTextFromL10n(AppLocalizations l10n, int victoryId) {
       return l10n.victoryTalkBaby;
     case 105:
       return l10n.victoryWalk15;
+    case 106:
+      return l10n.victorySnack;
+    case 107:
+      return l10n.victoryResting;
+    case 108:
+      return l10n.victoryDeepBreath;
     
     // nouvelleMaman (200-210)
     case 200:
@@ -48,7 +54,7 @@ String _getVictoryTextFromL10n(AppLocalizations l10n, int victoryId) {
     case 210:
       return l10n.victorySleepBaby;
     
-    // sereniteQuotidienne (300-305)
+    // sereniteQuotidienne (300-308)
     case 300:
       return l10n.victoryWater;
     case 301:
@@ -61,6 +67,12 @@ String _getVictoryTextFromL10n(AppLocalizations l10n, int victoryId) {
       return l10n.victoryMeditate;
     case 305:
       return l10n.victoryCallFriend;
+    case 306:
+      return l10n.victoryBreak;
+    case 307:
+      return l10n.victoryExercise;
+    case 308:
+      return l10n.victoryMeTime;
     
     // Legacy IDs (0-8) - for backwards compatibility
     case 0:
@@ -134,6 +146,12 @@ String _getVictoryReminderTextFromL10n(AppLocalizations l10n, int victoryId) {
       return l10n.victoryReminderTalkBaby;
     case 105:
       return l10n.victoryReminderWalk15;
+    case 106:
+      return l10n.victoryReminderSnack;
+    case 107:
+      return l10n.victoryReminderResting;
+    case 108:
+      return l10n.victoryReminderDeepBreath;
     
     // nouvelleMaman (200-210)
     case 200:
@@ -159,7 +177,7 @@ String _getVictoryReminderTextFromL10n(AppLocalizations l10n, int victoryId) {
     case 210:
       return l10n.victoryReminderSleepBaby;
     
-    // sereniteQuotidienne (300-305)
+    // sereniteQuotidienne (300-308)
     case 300:
       return l10n.victoryReminderWater;
     case 301:
@@ -172,6 +190,12 @@ String _getVictoryReminderTextFromL10n(AppLocalizations l10n, int victoryId) {
       return l10n.victoryReminderMeditate;
     case 305:
       return l10n.victoryReminderCallFriend;
+    case 306:
+      return l10n.victoryReminderBreak;
+    case 307:
+      return l10n.victoryReminderExercise;
+    case 308:
+      return l10n.victoryReminderMeTime;
     
     // Legacy IDs (0-8) - for backwards compatibility
     case 0:

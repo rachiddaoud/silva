@@ -330,14 +330,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       },
     );
     
-    // Update leaf counter in tree resources
+    // Update leaf counter based on tree age and total victories
     final resources = await PreferencesService.getTreeResources();
-    // Since we only allow toggling ON, we always add a leaf
-    final newLeafCount = resources.leafCount + 1;
+    final treeState = await PreferencesService.getTreeState();
+    final treeAge = treeState?.age ?? 0;
     
-    await PreferencesService.saveTreeResources(
-      resources.copyWith(leafCount: newLeafCount),
-    );
+    // Calculate total victories accomplished today
+    final totalVictories = _victories.where((v) => v.isAccomplished).length;
+    
+    // Calculate how many leaves should be earned based on age
+    int leavesToEarn = 0;
+    if (treeAge < 7) {
+      // 1 leaf per 3 victories
+      leavesToEarn = totalVictories ~/ 3;
+    } else if (treeAge < 15) {
+      // 1 leaf per 2 victories
+      leavesToEarn = totalVictories ~/ 2;
+    } else {
+      // 1 leaf per victory
+      leavesToEarn = totalVictories;
+    }
+    
+    // Only update if the leaf count should change
+    if (leavesToEarn != resources.leafCount) {
+      await PreferencesService.saveTreeResources(
+        resources.copyWith(leafCount: leavesToEarn),
+      );
+    }
     
     // Refresh the tree widget to show updated leaf count
     // The widget will reload resources in didUpdateWidget when victoryCount changes

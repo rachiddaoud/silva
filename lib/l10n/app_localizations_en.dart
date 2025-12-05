@@ -306,13 +306,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get treeInfoHowItWorks => 'How it works';
 
   @override
-  String get treeInfoWateringTitle => 'Watering';
-
-  @override
-  String get treeInfoWateringDescription =>
-      'Water your tree once a day after completing 3 victories. This makes your tree grow and maintains your streak!';
-
-  @override
   String get treeInfoLeavesTitle => 'Leaves';
 
   @override
@@ -410,15 +403,8 @@ class AppLocalizationsEn extends AppLocalizations {
       other: 'days',
       one: 'day',
     );
-    return 'Watered! Streak: $streak $_temp0. +1 Flower!';
+    return 'Streak updated! Streak: $streak $_temp0. +1 Flower!';
   }
-
-  @override
-  String get needVictoriesToWater => 'Need 3 victories to water the tree!';
-
-  @override
-  String get alreadyWateredToday =>
-      'Already watered today! Come back tomorrow.';
 
   @override
   String get alreadyAddedFlowerToday =>
@@ -427,45 +413,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get noLeavesAvailable =>
       'No leaves available. Complete victories to earn leaves!';
-
-  @override
-  String needMoreVictories(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'victories',
-      one: 'victory',
-    );
-    return 'Need $count more $_temp0 to water the tree!';
-  }
-
-  @override
-  String alreadyWateredAvailableIn(int hours, int minutes) {
-    String _temp0 = intl.Intl.pluralLogic(
-      hours,
-      locale: localeName,
-      other: 'hours',
-      one: 'hour',
-    );
-    String _temp1 = intl.Intl.pluralLogic(
-      minutes,
-      locale: localeName,
-      other: 'minutes',
-      one: 'minute',
-    );
-    return 'Already watered today! Available again in $hours $_temp0 and $minutes $_temp1';
-  }
-
-  @override
-  String alreadyWateredAvailableInMinutes(int minutes) {
-    String _temp0 = intl.Intl.pluralLogic(
-      minutes,
-      locale: localeName,
-      other: 'minutes',
-      one: 'minute',
-    );
-    return 'Already watered today! Available again in $minutes $_temp0';
-  }
 
   @override
   String alreadyFlowerAvailableIn(int hours, int minutes) {
@@ -500,9 +447,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get flowerButton => 'Flower';
-
-  @override
-  String get waterButton => 'Water';
 
   @override
   String get waterDone => 'Done';

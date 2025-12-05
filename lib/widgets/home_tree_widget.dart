@@ -316,8 +316,9 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
           lastStreakUpdate: now,
           streak: newStreak,
           flowerCount: newFlowerCount,
-          hasClaimed7DayFlower: resetClaimedFlowers ? false : null,
-          hasClaimed30DayFlower: resetClaimedFlowers ? false : null,
+          // Only reset milestones when streak is lost
+          lastClaimed7DayMilestone: resetClaimedFlowers ? 0 : null,
+          lastClaimed30DayMilestone: resetClaimedFlowers ? 0 : null,
         );
       });
       
@@ -361,17 +362,17 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
       return;
     }
 
-    // Determine flower type based on streak
+    // Determine flower type based on streak and available special flowers
     int flowerType;
-    bool claimed7 = _resources.hasClaimed7DayFlower;
-    bool claimed30 = _resources.hasClaimed30DayFlower;
+    int? newMilestone7;
+    int? newMilestone30;
     
-    if (_resources.streak > 0 && _resources.streak % 30 == 0 && !claimed30) {
+    if (_resources.hasSpecial30DayFlower) {
       flowerType = 3; // Yellow
-      claimed30 = true;
-    } else if (_resources.streak > 0 && _resources.streak % 7 == 0 && !claimed7) {
+      newMilestone30 = _resources.current30DayMilestone;
+    } else if (_resources.hasSpecial7DayFlower) {
       flowerType = 2; // Blue
-      claimed7 = true;
+      newMilestone7 = _resources.current7DayMilestone;
     } else {
       flowerType = DateTime.now().millisecond % 2; // 0 or 1 (Pink or White)
     }
@@ -424,12 +425,12 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
         }
       }
       
-      // Update cooldown (don't decrement count, flower is once per day)
+      // Update cooldown and claim milestones
       setState(() {
         _resources = _resources.copyWith(
           lastFlowerUsed: DateTime.now(),
-          hasClaimed7DayFlower: claimed7,
-          hasClaimed30DayFlower: claimed30,
+          lastClaimed7DayMilestone: newMilestone7,
+          lastClaimed30DayMilestone: newMilestone30,
         );
       });
     });
@@ -596,11 +597,11 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     String? flowerImagePath;
     Color flowerButtonColor = canUseFlower ? secondaryColor : Colors.grey;
     
-    if (_resources.streak > 0 && _resources.streak % 30 == 0 && !_resources.hasClaimed30DayFlower) {
+    if (_resources.hasSpecial30DayFlower) {
       flowerEmoji = '🌼'; // Yellow flower representation
       flowerImagePath = 'assets/tree/yellow.png';
       flowerButtonColor = canUseFlower ? Colors.yellow : Colors.grey;
-    } else if (_resources.streak > 0 && _resources.streak % 7 == 0 && !_resources.hasClaimed7DayFlower) {
+    } else if (_resources.hasSpecial7DayFlower) {
       flowerEmoji = '💠'; // Blue flower representation
       flowerImagePath = 'assets/tree/blue.png';
       flowerButtonColor = canUseFlower ? Colors.blue : Colors.grey;
@@ -697,10 +698,10 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
             ),
           ),
           
-          // Info Button (Below Share Button)
+          // Info Button (Top Left)
           Positioned(
-            top: 40,
-            right: 0,
+            top: 0,
+            left: 0,
             child: IconButton(
               icon: const Icon(Icons.info_outline, size: 20, color: Colors.grey),
               onPressed: _showTreeInfo,
@@ -708,16 +709,7 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
             ),
           ),
           
-          // Reset Button (Top Left)
-          Positioned(
-            top: 0,
-            left: 0,
-            child: IconButton(
-              icon: const Icon(Icons.refresh, size: 20, color: Colors.grey),
-              onPressed: _handleResetTree,
-              tooltip: AppLocalizations.of(context)!.resetTooltip,
-            ),
-          ),
+
 
           // --- Action Buttons ---
 
@@ -771,6 +763,20 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Unlimited toggle
+            SwitchListTile(
+              title: const Text('Unlimited Flowers & Leaves'),
+              subtitle: Text(_isDebugUnlimited ? 'Enabled' : 'Disabled'),
+              value: _isDebugUnlimited,
+              onChanged: (value) {
+                setState(() {
+                  _isDebugUnlimited = value;
+                });
+                Navigator.pop(context);
+                _showDebugDialog(); // Reopen to show updated state
+              },
+            ),
+            const Divider(),
             // Reset Tree button
             ElevatedButton(
               onPressed: () {
@@ -783,15 +789,16 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
             // Add 10 Leaves button
             ElevatedButton(
               onPressed: () {
-                for (int i = 0; i < 10; i++) {
-                  _treeController.addLeaf();
-                }
-                _saveTree();
+                setState(() {
+                  _resources = _resources.copyWith(
+                    leafCount: _resources.leafCount + 10,
+                  );
+                });
+                _saveResources();
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Added 10 leaves!')),
+                  const SnackBar(content: Text('Added 10 leaves to counter!')),
                 );
-                setState(() {});
               },
               child: const Text('Add 10 Leaves'),
             ),
@@ -801,7 +808,6 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
               onPressed: () {
                 _treeController.grow();
                 _saveTree();
-                Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Tree grew by 1 day!')),
                 );
@@ -813,13 +819,14 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
             // Streak +1 button
             ElevatedButton(
               onPressed: () {
+                final newStreak = _resources.streak + 1;
                 setState(() {
-                  _resources = _resources.copyWith(streak: _resources.streak + 1);
+                  _resources = _resources.copyWith(streak: newStreak);
                 });
                 _saveResources();
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Streak: ${_resources.streak}')),
+                  SnackBar(content: Text('Streak: $newStreak (Special 7: ${_resources.hasSpecial7DayFlower}, 30: ${_resources.hasSpecial30DayFlower})')),
                 );
               },
               child: const Text('Streak +1'),
@@ -1011,15 +1018,6 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
                   
                   _buildInfoCard(
                     context,
-                    '💧',
-                    l10n.treeInfoWateringTitle,
-                    l10n.treeInfoWateringDescription,
-                    colorScheme.primary,
-                  ),
-                  const SizedBox(height: 12),
-                  
-                  _buildInfoCard(
-                    context,
                     '🍃',
                     l10n.treeInfoLeavesTitle,
                     l10n.treeInfoLeavesDescription,
@@ -1128,31 +1126,6 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      // Debug button (only in debug mode)
-                      if (const bool.fromEnvironment('dart.vm.product') == false)
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              _resources = _resources.copyWith(
-                                leafCount: _resources.leafCount + 10,
-                                flowerCount: _resources.flowerCount + 10,
-                              );
-                            });
-                            _saveResources();
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Added 10 leaves and 10 flowers (Debug)')),
-                            );
-                          },
-                          child: Text(
-                            'Debug',
-                            style: TextStyle(
-                              color: colorScheme.onSurface.withValues(alpha: 0.5),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      const SizedBox(width: 8),
                       ElevatedButton(
                         onPressed: () => Navigator.pop(context),
                         style: ElevatedButton.styleFrom(

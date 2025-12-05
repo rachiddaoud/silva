@@ -626,18 +626,6 @@ abstract class AppLocalizations {
   /// **'Comment ça fonctionne'**
   String get treeInfoHowItWorks;
 
-  /// No description provided for @treeInfoWateringTitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Arrosage'**
-  String get treeInfoWateringTitle;
-
-  /// No description provided for @treeInfoWateringDescription.
-  ///
-  /// In fr, this message translates to:
-  /// **'Arrosez votre arbre une fois par jour après avoir complété 3 victoires. Cela fait grandir votre arbre et maintient votre streak !'**
-  String get treeInfoWateringDescription;
-
   /// No description provided for @treeInfoLeavesTitle.
   ///
   /// In fr, this message translates to:
@@ -779,20 +767,8 @@ abstract class AppLocalizations {
   /// No description provided for @wateredStreakFlower.
   ///
   /// In fr, this message translates to:
-  /// **'Arrosé ! Série : {streak} {streak, plural, =1 {jour} other {jours}}. +1 Fleur !'**
+  /// **'Série mise à jour ! Série : {streak} {streak, plural, =1 {jour} other {jours}}. +1 Fleur !'**
   String wateredStreakFlower(int streak);
-
-  /// No description provided for @needVictoriesToWater.
-  ///
-  /// In fr, this message translates to:
-  /// **'Besoin de 3 victoires pour arroser l\'arbre !'**
-  String get needVictoriesToWater;
-
-  /// No description provided for @alreadyWateredToday.
-  ///
-  /// In fr, this message translates to:
-  /// **'Déjà arrosé aujourd\'hui ! Revenez demain.'**
-  String get alreadyWateredToday;
 
   /// No description provided for @alreadyAddedFlowerToday.
   ///
@@ -805,24 +781,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Aucune feuille disponible. Accomplissez des victoires pour gagner des feuilles !'**
   String get noLeavesAvailable;
-
-  /// No description provided for @needMoreVictories.
-  ///
-  /// In fr, this message translates to:
-  /// **'Besoin de {count} {count, plural, =1 {victoire de plus} other {victoires de plus}} pour arroser l\'arbre !'**
-  String needMoreVictories(int count);
-
-  /// No description provided for @alreadyWateredAvailableIn.
-  ///
-  /// In fr, this message translates to:
-  /// **'Déjà arrosé aujourd\'hui ! Disponible dans {hours}h et {minutes}min'**
-  String alreadyWateredAvailableIn(int hours, int minutes);
-
-  /// No description provided for @alreadyWateredAvailableInMinutes.
-  ///
-  /// In fr, this message translates to:
-  /// **'Déjà arrosé aujourd\'hui ! Disponible dans {minutes}min'**
-  String alreadyWateredAvailableInMinutes(int minutes);
 
   /// No description provided for @alreadyFlowerAvailableIn.
   ///
@@ -847,12 +805,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Fleur'**
   String get flowerButton;
-
-  /// No description provided for @waterButton.
-  ///
-  /// In fr, this message translates to:
-  /// **'Arroser'**
-  String get waterButton;
 
   /// No description provided for @waterDone.
   ///

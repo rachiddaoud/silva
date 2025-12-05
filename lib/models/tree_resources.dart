@@ -10,8 +10,8 @@ class TreeResources {
   final DateTime? lastLeafUsed;   // Track last leaf use
   final DateTime lastDailyReset;  // Track daily reset
   final DateTime? lastStreakUpdate; // Track last streak increment
-  final bool hasClaimed7DayFlower; // Track if 7-day flower reward claimed
-  final bool hasClaimed30DayFlower; // Track if 30-day flower reward claimed
+  final int lastClaimed7DayMilestone; // Last 7-day milestone where flower was claimed (0, 7, 14, 21...)
+  final int lastClaimed30DayMilestone; // Last 30-day milestone where flower was claimed (0, 30, 60...)
 
   const TreeResources({
     this.leafCount = 0,
@@ -22,9 +22,33 @@ class TreeResources {
     this.lastLeafUsed,
     required this.lastDailyReset,
     this.lastStreakUpdate,
-    this.hasClaimed7DayFlower = false,
-    this.hasClaimed30DayFlower = false,
+    this.lastClaimed7DayMilestone = 0,
+    this.lastClaimed30DayMilestone = 0,
   });
+
+  /// Check if 7-day special flower is available to claim
+  bool get hasSpecial7DayFlower {
+    if (streak < 7) return false;
+    final currentMilestone = (streak ~/ 7) * 7;
+    return currentMilestone > lastClaimed7DayMilestone;
+  }
+
+  /// Check if 30-day special flower is available to claim
+  bool get hasSpecial30DayFlower {
+    if (streak < 30) return false;
+    final currentMilestone = (streak ~/ 30) * 30;
+    return currentMilestone > lastClaimed30DayMilestone;
+  }
+
+  /// Get current 7-day milestone
+  int get current7DayMilestone => (streak ~/ 7) * 7;
+  
+  /// Get current 30-day milestone
+  int get current30DayMilestone => (streak ~/ 30) * 30;
+
+  // Backwards compatibility properties
+  bool get hasClaimed7DayFlower => !hasSpecial7DayFlower;
+  bool get hasClaimed30DayFlower => !hasSpecial30DayFlower;
 
   TreeResources copyWith({
     int? leafCount,
@@ -35,20 +59,40 @@ class TreeResources {
     DateTime? lastLeafUsed,
     DateTime? lastDailyReset,
     DateTime? lastStreakUpdate,
+    int? lastClaimed7DayMilestone,
+    int? lastClaimed30DayMilestone,
+    // Backwards compatibility - convert bool to milestone if passed
     bool? hasClaimed7DayFlower,
     bool? hasClaimed30DayFlower,
   }) {
+    int new7DayMilestone = lastClaimed7DayMilestone ?? this.lastClaimed7DayMilestone;
+    int new30DayMilestone = lastClaimed30DayMilestone ?? this.lastClaimed30DayMilestone;
+    
+    // Handle backwards compatibility with boolean flags
+    final effectiveStreak = streak ?? this.streak;
+    if (hasClaimed7DayFlower == true) {
+      new7DayMilestone = (effectiveStreak ~/ 7) * 7;
+    } else if (hasClaimed7DayFlower == false) {
+      // Only reset if explicitly set to false (streak lost)
+      new7DayMilestone = 0;
+    }
+    if (hasClaimed30DayFlower == true) {
+      new30DayMilestone = (effectiveStreak ~/ 30) * 30;
+    } else if (hasClaimed30DayFlower == false) {
+      new30DayMilestone = 0;
+    }
+    
     return TreeResources(
       leafCount: leafCount ?? this.leafCount,
       flowerCount: flowerCount ?? this.flowerCount,
-      streak: streak ?? this.streak,
+      streak: effectiveStreak,
       lastWatered: lastWatered ?? this.lastWatered,
       lastFlowerUsed: lastFlowerUsed ?? this.lastFlowerUsed,
       lastLeafUsed: lastLeafUsed ?? this.lastLeafUsed,
       lastDailyReset: lastDailyReset ?? this.lastDailyReset,
       lastStreakUpdate: lastStreakUpdate ?? this.lastStreakUpdate,
-      hasClaimed7DayFlower: hasClaimed7DayFlower ?? this.hasClaimed7DayFlower,
-      hasClaimed30DayFlower: hasClaimed30DayFlower ?? this.hasClaimed30DayFlower,
+      lastClaimed7DayMilestone: new7DayMilestone,
+      lastClaimed30DayMilestone: new30DayMilestone,
     );
   }
 
@@ -130,16 +174,33 @@ class TreeResources {
       'lastLeafUsed': lastLeafUsed?.toIso8601String(),
       'lastDailyReset': lastDailyReset.toIso8601String(),
       'lastStreakUpdate': lastStreakUpdate?.toIso8601String(),
-      'hasClaimed7DayFlower': hasClaimed7DayFlower,
-      'hasClaimed30DayFlower': hasClaimed30DayFlower,
+      'lastClaimed7DayMilestone': lastClaimed7DayMilestone,
+      'lastClaimed30DayMilestone': lastClaimed30DayMilestone,
     };
   }
 
   factory TreeResources.fromJson(Map<String, dynamic> json) {
+    // Handle migration from old boolean format to new milestone format
+    int milestone7 = json['lastClaimed7DayMilestone'] as int? ?? 0;
+    int milestone30 = json['lastClaimed30DayMilestone'] as int? ?? 0;
+    final streak = json['streak'] as int? ?? 0;
+    
+    // Migrate from old boolean format
+    if (json.containsKey('hasClaimed7DayFlower') && !json.containsKey('lastClaimed7DayMilestone')) {
+      if (json['hasClaimed7DayFlower'] == true) {
+        milestone7 = (streak ~/ 7) * 7;
+      }
+    }
+    if (json.containsKey('hasClaimed30DayFlower') && !json.containsKey('lastClaimed30DayMilestone')) {
+      if (json['hasClaimed30DayFlower'] == true) {
+        milestone30 = (streak ~/ 30) * 30;
+      }
+    }
+    
     return TreeResources(
       leafCount: json['leafCount'] as int? ?? 0,
       flowerCount: json['flowerCount'] as int? ?? 0,
-      streak: json['streak'] as int? ?? 0,
+      streak: streak,
       lastWatered: json['lastWatered'] != null
           ? DateTime.parse(json['lastWatered'] as String)
           : null,
@@ -155,8 +216,8 @@ class TreeResources {
       lastStreakUpdate: json['lastStreakUpdate'] != null
           ? DateTime.parse(json['lastStreakUpdate'] as String)
           : null,
-      hasClaimed7DayFlower: json['hasClaimed7DayFlower'] as bool? ?? false,
-      hasClaimed30DayFlower: json['hasClaimed30DayFlower'] as bool? ?? false,
+      lastClaimed7DayMilestone: milestone7,
+      lastClaimed30DayMilestone: milestone30,
     );
   }
 
@@ -171,8 +232,8 @@ class TreeResources {
       lastLeafUsed: null,
       lastDailyReset: DateTime.now(),
       lastStreakUpdate: null,
-      hasClaimed7DayFlower: false,
-      hasClaimed30DayFlower: false,
+      lastClaimed7DayMilestone: 0,
+      lastClaimed30DayMilestone: 0,
     );
   }
 
@@ -180,6 +241,7 @@ class TreeResources {
   String toString() {
     return 'TreeResources(leafs: $leafCount, flowers: $flowerCount, streak: $streak, '
            'canWater: ${canWater()}, canUseFlower: ${canUseFlower()}, canUseLeaf: ${canUseLeaf()}, '
-           'claimed7: $hasClaimed7DayFlower, claimed30: $hasClaimed30DayFlower)';
+           'milestone7: $lastClaimed7DayMilestone, milestone30: $lastClaimed30DayMilestone, '
+           'hasSpecial7: $hasSpecial7DayFlower, hasSpecial30: $hasSpecial30DayFlower)';
   }
 }

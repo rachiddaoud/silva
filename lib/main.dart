@@ -131,6 +131,13 @@ class _MyAppState extends State<MyApp> {
     final permissionGranted = await NotificationService.requestPermissions();
     debugPrint('🔔 Notification permissions granted: $permissionGranted');
     
+    // Check and request exact alarm permission (Android 12+)
+    final canScheduleExact = await NotificationService.canScheduleExactAlarms();
+    if (!canScheduleExact) {
+      debugPrint('⚠️ Exact alarms not allowed, requesting permission...');
+      await NotificationService.requestExactAlarmPermission();
+    }
+    
     await NotificationService.scheduleDailyNotification();
     await NotificationService.scheduleMorningNotification();
     await NotificationService.scheduleDayReminders();

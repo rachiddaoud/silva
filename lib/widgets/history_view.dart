@@ -39,19 +39,57 @@ class _HistoryViewState extends State<HistoryView> {
     // Load from local storage first (instant, no network)
     var history = await PreferencesService.getHistory();
     
-    // If local is empty and user is logged in, try to restore from Firebase (one-time sync)
-    if (history.isEmpty) {
+    // Check if we have already migrated old history from Firebase
+    final hasMigrated = await PreferencesService.isHistoryMigrated();
+    
+    // Only check Firebase if we haven't migrated yet
+    // This ensures we don't lose data when switching from DB to local storage
+    // AND we don't hit the DB unnecessarily after migration
+    if (!hasMigrated) {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        debugPrint('📥 Local history empty, restoring from Firebase...');
-        history = await DatabaseService().getHistory(user.uid);
-        
-        // Cache Firebase data locally
-        for (final entry in history) {
-          await PreferencesService.saveDayEntry(entry);
+        try {
+          debugPrint('📥 Doing one-time migration from Firebase...');
+          final firebaseHistory = await DatabaseService().getHistory(user.uid);
+          
+          if (firebaseHistory.isNotEmpty) {
+            // Merge Firebase history with local history
+            // Create a map of local entries by date for quick lookup
+            final localEntriesMap = <String, DayEntry>{};
+            for (final entry in history) {
+              final dateKey = '${entry.date.year}-${entry.date.month}-${entry.date.day}';
+              localEntriesMap[dateKey] = entry;
+            }
+            
+            // Add Firebase entries that don't exist locally
+            int addedCount = 0;
+            for (final fbEntry in firebaseHistory) {
+              final dateKey = '${fbEntry.date.year}-${fbEntry.date.month}-${fbEntry.date.day}';
+              if (!localEntriesMap.containsKey(dateKey)) {
+                history.add(fbEntry);
+                await PreferencesService.saveDayEntry(fbEntry);
+                addedCount++;
+              }
+            }
+            
+            if (addedCount > 0) {
+              debugPrint('✅ Added $addedCount missing entries from Firebase to local storage');
+            } else {
+              debugPrint('✅ Local storage is up to date with Firebase');
+            }
+          }
+          
+          // Mark migration as complete so we don't check again
+          await PreferencesService.setHistoryMigrated(true);
+          debugPrint('🏁 History migration marked as complete');
+          
+        } catch (e) {
+          debugPrint('⚠️ Error syncing from Firebase: $e');
+          // Don't mark as complete if it failed, retry next time
         }
-        debugPrint('✅ Restored ${history.length} entries from Firebase to local');
       }
+    } else {
+      debugPrint('⚡ Loading history from local storage only (Migration complete)');
     }
     
     // Sort by date (most recent first)

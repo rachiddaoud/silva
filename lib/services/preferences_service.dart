@@ -26,6 +26,18 @@ class PreferencesService {
   static const String _hapticEnabledKey = 'haptic_enabled';
   static const String _soundVolumeKey = 'sound_volume';
   static const String _treeResourcesKey = 'tree_resources';
+  static const String _historyMigratedKey = 'history_migrated';
+
+  // Migration Status
+  static Future<bool> isHistoryMigrated() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_historyMigratedKey) ?? false;
+  }
+
+  static Future<void> setHistoryMigrated(bool migrated) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_historyMigratedKey, migrated);
+  }
 
   // Thème
   static Future<AppTheme> getTheme() async {

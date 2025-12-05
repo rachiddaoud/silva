@@ -86,6 +86,63 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
+    // Create notification channels for Android 8.0+
+    // This is REQUIRED for notifications to work on Android
+    final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    
+    if (androidPlugin != null) {
+      // Daily reminder channel (evening notification)
+      await androidPlugin.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'daily_reminder',
+          'Daily reminder',
+          description: 'Reminder to finish the day at 10 PM',
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+      
+      // Morning quote channel
+      await androidPlugin.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'morning_quote',
+          'Morning quote',
+          description: 'Quote of the day at 9 AM',
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+      
+      // Day reminder channel
+      await androidPlugin.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'day_reminder',
+          'Day reminder',
+          description: 'Reminders for daily actions',
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+      
+      // Test channel
+      await androidPlugin.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'test_channel',
+          'Test Channel',
+          description: 'Channel for testing scheduled notifications',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+      
+      debugPrint('✅ Android notification channels created');
+    }
+
     debugPrint('✅ Notification service initialized');
     
     // Les catégories d'actions iOS sont configurées nativement dans AppDelegate.swift
@@ -691,6 +748,89 @@ class NotificationService {
         debugPrint('    Payload: ${notification.payload}');
       }
     }
+  }
+
+  /// Check if exact alarms are allowed (Android 12+)
+  static Future<bool> canScheduleExactAlarms() async {
+    final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    
+    if (androidPlugin != null) {
+      final canSchedule = await androidPlugin.canScheduleExactNotifications();
+      debugPrint('📱 Can schedule exact alarms: $canSchedule');
+      return canSchedule ?? false;
+    }
+    
+    return true; // iOS or other platforms
+  }
+
+  /// Request exact alarm permission (Android 12+)
+  static Future<bool> requestExactAlarmPermission() async {
+    final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    
+    if (androidPlugin != null) {
+      final result = await androidPlugin.requestExactAlarmsPermission();
+      debugPrint('📱 Exact alarm permission result: $result');
+      return result ?? false;
+    }
+    
+    return true; // iOS or other platforms
+  }
+
+  /// Debug method to test scheduled notifications - schedules one for 1 minute from now
+  static Future<void> debugScheduleTestNotification() async {
+    // First check if we can schedule exact alarms
+    final canSchedule = await canScheduleExactAlarms();
+    if (!canSchedule) {
+      debugPrint('⚠️ Cannot schedule exact alarms! Requesting permission...');
+      final granted = await requestExactAlarmPermission();
+      if (!granted) {
+        debugPrint('❌ Exact alarm permission denied!');
+        return;
+      }
+    }
+    
+    final now = tz.TZDateTime.now(tz.local);
+    final scheduledTime = now.add(const Duration(minutes: 1));
+    
+    debugPrint('🧪 Current time: $now');
+    debugPrint('🧪 Scheduling TEST notification for $scheduledTime (in 1 minute)');
+    
+    try {
+      await _notifications.zonedSchedule(
+        9999, // Test notification ID
+        '🧪 Test Notification',
+        'This is a TEST scheduled notification! Time: ${scheduledTime.hour}:${scheduledTime.minute}',
+        scheduledTime,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'test_channel',
+            'Test Channel',
+            channelDescription: 'Channel for testing scheduled notifications',
+            importance: Importance.max,
+            priority: Priority.max,
+            playSound: true,
+            enableVibration: true,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+      
+      debugPrint('✅ Test notification scheduled successfully for $scheduledTime');
+    } catch (e) {
+      debugPrint('❌ Error scheduling test notification: $e');
+    }
+    
+    // Print pending notifications after scheduling
+    await debugPrintPendingNotifications();
   }
 }
 

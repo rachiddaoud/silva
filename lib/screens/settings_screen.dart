@@ -1163,36 +1163,40 @@ class _CategorySelectorScreenState extends State<_CategorySelectorScreen>
             ),
 
             // Selected Category Description
-            AnimatedOpacity(
-              opacity: _selectedCategory != null ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 300),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                child: Column(
-                  children: [
-                    Text(
-                      _selectedCategory?.displayName ?? "",
-                      style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _selectedCategory?.description ?? "",
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                            height: 1.5,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+            SizedBox(
+              height: 160,
+              child: AnimatedOpacity(
+                opacity: _selectedCategory != null ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 300),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _selectedCategory?.displayName ?? "",
+                        style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _selectedCategory?.description ?? "",
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                              height: 1.5,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 20),
 
             // Continue Button
             Padding(
@@ -1242,35 +1246,50 @@ class _CategorySelectorScreenState extends State<_CategorySelectorScreen>
     final dy = touchPoint.dy - center.dy;
     final dx = touchPoint.dx - center.dx;
 
+    // Calculate angle in radians from positive X axis (Right)
+    // Range: -pi to pi
     double angle = atan2(dy, dx);
-    // angle is now -pi to pi relative to 3 o'clock
 
-    // Normalize to 0-2pi
-    if (angle < 0) {
-      angle += 2 * pi;
+    // Convert to degrees: -180 to 180
+    double deg = angle * 180 / pi;
+
+    // Normalize to 0-360 (counter-clockwise notation usually, but here atan2 is:
+    // 0 = Right, 90 = Bottom, 180 = Left, -90 = Top)
+    // Let's normalize to standard 0-360 clockwise from Right (since Y is down)
+    if (deg < 0) {
+      deg += 360;
     }
 
-    // Now angle is 0 to 2pi starting at 3 o'clock going clockwise
-
-    // Let's convert touch angle to be relative to Top (0)
-    double angleFromTop = angle + pi / 2;
-    if (angleFromTop < 0) angleFromTop += 2 * pi;
-    if (angleFromTop > 2 * pi) angleFromTop -= 2 * pi;
-
-    // Now 0 is Top, increasing clockwise.
-    // Top segment: 300° to 60°.
-    // Right segment: 60° to 180°.
-    // Left segment: 180° to 300°.
+    // Now:
+    // 0° = Right
+    // 90° = Bottom
+    // 180° = Left
+    // 270° = Top
 
     AppCategory selected;
-    double deg = angleFromTop * 180 / pi;
 
-    if (deg >= 300 || deg < 60) {
-      selected = AppCategory.futureMaman;
-    } else if (deg >= 60 && deg < 180) {
+    // Define Segments matching the Painter
+
+    // Nouvelle Maman: Right Segment
+    // Painter: -30° (-pi/6) to 90° (pi/2)
+    // -30° corresponds to 330°
+    // Range: [330, 360] U [0, 90]
+    if (deg >= 330 || deg < 90) {
       selected = AppCategory.nouvelleMaman;
-    } else {
+    }
+    // Serenite: Bottom-Left Segment
+    // Painter: 90° (pi/2) to 210° (7pi/6)
+    // Range: [90, 210]
+    else if (deg >= 90 && deg < 210) {
       selected = AppCategory.sereniteQuotidienne;
+    }
+    // Future Maman: Top-Left Segment
+    // Painter: -150° (-5pi/6) to -30° (-pi/6)
+    // -150° corresponds to 210°
+    // -30° corresponds to 330°
+    // Range: [210, 330]
+    else {
+      selected = AppCategory.futureMaman;
     }
 
     _onCategorySelected(selected);

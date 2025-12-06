@@ -206,37 +206,41 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
               ),
             ),
 
-            // Selected Category Description
-            AnimatedOpacity(
-              opacity: _selectedCategory != null ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 300),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                child: Column(
-                  children: [
-                    Text(
-                      _selectedCategory?.displayName ?? "",
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF2D3436),
+            // Selected Category Description - Fixed Height to prevent circle resizing
+            SizedBox(
+              height: 160,
+              child: AnimatedOpacity(
+                opacity: _selectedCategory != null ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 300),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                  child: Column( // Center the content
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _selectedCategory?.displayName ?? "",
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF2D3436),
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _selectedCategory?.description ?? "",
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF636E72),
-                        height: 1.5,
+                      const SizedBox(height: 8),
+                      Text(
+                        _selectedCategory?.description ?? "",
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: const Color(0xFF636E72),
+                          height: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 20), // Reduced spacing as we have fixed height
 
             // Continue Button
             Padding(
@@ -285,94 +289,50 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
     final dy = touchPoint.dy - center.dy;
     final dx = touchPoint.dx - center.dx;
     
-    // Calculate angle in radians, adding pi/2 to rotate 0 to top
-    // atan2 returns angle from -pi to pi
-    // We want 0 at top (12 o'clock)
-    
-    // Standard atan2: 0 is Right (3 o'clock), positive clockwise
-    // Let's adjust so 0 is Top (-pi/2 in standard)
-    
+    // Calculate angle in radians from positive X axis (Right)
+    // Range: -pi to pi
     double angle = atan2(dy, dx);
-    // angle is now -pi to pi relative to 3 o'clock
     
-    // Normalize to 0-2pi
-    if (angle < 0) {
-      angle += 2 * pi;
+    // Convert to degrees: -180 to 180
+    double deg = angle * 180 / pi;
+    
+    // Normalize to 0-360 (counter-clockwise notation usually, but here atan2 is:
+    // 0 = Right, 90 = Bottom, 180 = Left, -90 = Top)
+    // Let's normalize to standard 0-360 clockwise from Right (since Y is down)
+    if (deg < 0) {
+      deg += 360;
     }
     
-    // Now angle is 0 to 2pi starting at 3 o'clock going clockwise
-    
-    // Segments:
-    // We want 3 segments.
-    // Let's say:
-    // 1. Top-Right to Top-Left (Future Maman)
-    // 2. Top-Left to Bottom (Nouvelle Maman)
-    // 3. Bottom to Top-Right (Sérénité)
-    
-    // Or simpler:
-    // 0 to 120 degrees (0 to 2pi/3)
-    // 120 to 240 degrees (2pi/3 to 4pi/3)
-    // 240 to 360 degrees (4pi/3 to 2pi)
-    
-    // But we need to rotate the whole thing so the split is nice.
-    // Let's put "Future Maman" at the top.
-    // So -30 to 90 degrees? Or -60 to 60?
-    // 3 segments = 120 degrees each.
-    // Segment 1: -90 (top) - 60 to -90 + 60 => -150 to -30 ?
-    
-    // Let's stick to the visual description: "Un grand cercle divisé en trois segments égaux"
-    // Usually one segment is top, one bottom-right, one bottom-left.
-    // Or one top-right, one top-left, one bottom.
-    
-    // Let's do:
-    // Segment 1 (Future Maman): Top (-150° to -30°) -> 210° to 330° in standard?
-    // No, let's just use simple ranges on the 0-2pi scale (starting at 3 o'clock).
-    
-    // Segment 1: 330° (-30°) to 90° (Top-Right + Bottom-Right?) No.
-    
-    // Let's define the segments relative to 12 o'clock (Top).
-    // Top is -pi/2.
-    // Segment 1: -pi/2 - pi/3 to -pi/2 + pi/3 (Top centered) -> Future Maman
-    // Segment 2: -pi/2 + pi/3 to -pi/2 + pi (Right/Bottom) -> Nouvelle Maman
-    // Segment 3: -pi/2 + pi to -pi/2 - pi/3 (Left/Bottom) -> Sérénité
-    
-    // Let's convert touch angle to be relative to Top (0)
-    double angleFromTop = angle + pi / 2;
-    if (angleFromTop < 0) angleFromTop += 2 * pi;
-    if (angleFromTop > 2 * pi) angleFromTop -= 2 * pi;
-    
-    // Now 0 is Top, increasing clockwise.
-    // Segment 1 (Future Maman): 300° to 60° (or 5pi/3 to pi/3) -> Let's center it at Top.
-    // Wait, 3 segments. 360 / 3 = 120.
-    // Top Center: 300° to 60°. (Crossing 0).
-    // Right Bottom: 60° to 180°.
-    // Left Bottom: 180° to 300°.
+    // Now:
+    // 0° = Right
+    // 90° = Bottom
+    // 180° = Left
+    // 270° = Top
     
     AppCategory selected;
-    if (angleFromTop >= 0 && angleFromTop < 2 * pi / 3) {
-      // 0 to 120 -> Right side
-      selected = AppCategory.nouvelleMaman; // Let's put Nouvelle Maman here
-    } else if (angleFromTop >= 2 * pi / 3 && angleFromTop < 4 * pi / 3) {
-      // 120 to 240 -> Bottom
-      selected = AppCategory.sereniteQuotidienne;
-    } else {
-      // 240 to 360 -> Top Left?
-      selected = AppCategory.futureMaman;
-    }
     
-    // Let's rotate it so Future Maman is Top.
-    // Top segment: 300° to 60°.
-    // Right segment: 60° to 180°.
-    // Left segment: 180° to 300°.
+    // Define Segments matching the Painter
     
-    double deg = angleFromTop * 180 / pi;
-    
-    if (deg >= 300 || deg < 60) {
-      selected = AppCategory.futureMaman;
-    } else if (deg >= 60 && deg < 180) {
+    // Nouvelle Maman: Right Segment
+    // Painter: -30° (-pi/6) to 90° (pi/2)
+    // -30° corresponds to 330°
+    // Range: [330, 360] U [0, 90]
+    if (deg >= 330 || deg < 90) {
       selected = AppCategory.nouvelleMaman;
-    } else {
+    }
+    // Serenite: Bottom-Left Segment
+    // Painter: 90° (pi/2) to 210° (7pi/6)
+    // Range: [90, 210]
+    else if (deg >= 90 && deg < 210) {
       selected = AppCategory.sereniteQuotidienne;
+    }
+    // Future Maman: Top-Left Segment
+    // Painter: -150° (-5pi/6) to -30° (-pi/6)
+    // -150° corresponds to 210°
+    // -30° corresponds to 330°
+    // Range: [210, 330]
+    else {
+      selected = AppCategory.futureMaman;
     }
     
     _onCategorySelected(selected);

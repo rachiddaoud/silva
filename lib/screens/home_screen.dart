@@ -170,9 +170,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         debugPrint('✅ Saved locally (Firebase sync at end of day)');
       }
 
+      final category = await PreferencesService.getAppCategory();
+      final initialVictories = category != null 
+          ? VictoryRepository.getVictoriesForCategory(category)
+          : VictoryRepository.defaultVictories;
+
       if (mounted) {
         setState(() {
-          _victories = VictoryRepository.defaultVictories;
+          _victories = initialVictories;
         });
       }
       

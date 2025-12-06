@@ -624,8 +624,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final themeConfig = ThemeConfig.themes[widget.currentTheme];
-    final backgroundPath = themeConfig?.backgroundPath;
+    final backgroundPath = theme.extension<AppThemeAttributes>()?.backgroundPath;
     
     return Scaffold(
       body: Stack(

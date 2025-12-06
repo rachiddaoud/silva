@@ -15,6 +15,29 @@ enum AppTheme {
   modernPastel,
 }
 
+class AppThemeAttributes extends ThemeExtension<AppThemeAttributes> {
+  final String? backgroundPath;
+
+  const AppThemeAttributes({
+    required this.backgroundPath,
+  });
+
+  @override
+  AppThemeAttributes copyWith({String? backgroundPath}) {
+    return AppThemeAttributes(
+      backgroundPath: backgroundPath ?? this.backgroundPath,
+    );
+  }
+
+  @override
+  AppThemeAttributes lerp(ThemeExtension<AppThemeAttributes>? other, double t) {
+    if (other is! AppThemeAttributes) {
+      return this;
+    }
+    return t < 0.5 ? this : other;
+  }
+}
+
 class ThemeConfig {
   final String name;
   final Color primary;
@@ -285,6 +308,9 @@ class ThemeConfig {
           borderRadius: BorderRadius.circular(24),
         ),
       ),
+      extensions: [
+        AppThemeAttributes(backgroundPath: backgroundPath),
+      ],
     );
   }
 }

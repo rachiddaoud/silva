@@ -25,14 +25,15 @@ abstract class VictoryImages {
   static const String deconnecting = 'assets/doodles/deconnecting.png';
   static const String deepBreathing = 'assets/doodles/deep_breathing.png';
   static const String exercice = 'assets/doodles/exercice.png';
-  static const String hydrating = 'assets/doodles/pregenant_hydrating.png';
-  static const String pregnantDrinking = 'assets/doodles/pregenant_drinking.png';
-  static const String pregnantWalking = 'assets/doodles/pregenant_walking.png';
+  static const String hydrating = 'assets/doodles/pregnant_hydrating.png';
+  static const String pregnantDrinking = 'assets/doodles/pregnant_drinking.png';
+  static const String pregnantWalking = 'assets/doodles/pregnant_walking.png';
   static const String readingBook = 'assets/doodles/reading_book.png';
   static const String resting1 = 'assets/doodles/resting_1.png';
-  static const String talkingBaby = 'assets/doodles/pregenant_talking_baby.png';
+  static const String talkingBaby = 'assets/doodles/pregnant_talking_baby.png';
   static const String tidy2 = 'assets/doodles/tidy_2.png';
-  static const String vitamine = 'assets/doodles/pregenant_vitamine.png';
+  static const String vitamine = 'assets/doodles/pregnant_vitamine.png';
+  static const String pregnantRisingLegs = 'assets/doodles/pregnant_rising_legs.png';
 }
 
 /// Victory ID ranges by category:
@@ -63,7 +64,7 @@ abstract class VictoryRepository {
   static const List<VictoryCard> _futureMamanVictories = [
     VictoryCard(id: 100, text: "J'ai pris mes vitamines", imagePath: VictoryImages.vitamine),
     VictoryCard(id: 101, text: "J'ai bu 2L d'eau", imagePath: VictoryImages.pregnantDrinking),
-    VictoryCard(id: 102, text: "J'ai surélevé mes jambes", imagePath: VictoryImages.resting1),
+    VictoryCard(id: 102, text: "J'ai surélevé mes jambes", imagePath: VictoryImages.pregnantRisingLegs),
     VictoryCard(id: 103, text: "J'ai hydraté mon ventre", imagePath: VictoryImages.hydrating),
     VictoryCard(id: 104, text: "J'ai parlé au bébé", imagePath: VictoryImages.talkingBaby),
     VictoryCard(id: 105, text: "Petite marche (15 min)", imagePath: VictoryImages.pregnantWalking),
@@ -83,7 +84,7 @@ abstract class VictoryRepository {
     VictoryCard(id: 206, text: "J'ai dit \"Non\"", imagePath: VictoryImages.stop),
     VictoryCard(id: 207, text: "J'ai souri", imagePath: VictoryImages.smile),
     //VictoryCard(id: 208, text: "J'ai vu le soleil 5 min", imagePath: VictoryImages.walk),
-    VictoryCard(id: 210, text: "J'ai fait une sieste", imagePath: VictoryImages.resting1),
+    VictoryCard(id: 210, text: "J'ai fait une sieste", imagePath: VictoryImages.sleep),
   ];
 
   /// Victory templates for daily serenity (general wellness). IDs: 300-399
@@ -92,7 +93,7 @@ abstract class VictoryRepository {
     VictoryCard(id: 301, text: "Déconnexion écrans (1h)", imagePath: VictoryImages.deconnecting),
     VictoryCard(id: 302, text: "J'ai lu 10 pages", imagePath: VictoryImages.readingBook),
     VictoryCard(id: 303, text: "J'ai rangé un petit espace", imagePath: VictoryImages.tidy2),
-    VictoryCard(id: 304, text: "J'ai médité", imagePath: VictoryImages.deepBreathing),
+    VictoryCard(id: 304, text: "J'ai médité", imagePath: VictoryImages.breath),
     VictoryCard(id: 305, text: "J'ai appelé un(e) ami(e)", imagePath: VictoryImages.calling),
     VictoryCard(id: 306, text: "J'ai fait une pause", imagePath: VictoryImages.breakTime),
     VictoryCard(id: 307, text: "J'ai fait de l'exercice", imagePath: VictoryImages.exercice),

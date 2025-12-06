@@ -27,6 +27,10 @@ class PreferencesService {
   static const String _soundVolumeKey = 'sound_volume';
   static const String _treeResourcesKey = 'tree_resources';
   static const String _historyMigratedKey = 'history_migrated';
+  static const String _quoteLastShownDateKey = 'quote_last_shown_date';
+
+  static String _getQuoteOrderKey(String languageCode) => 'quote_order_$languageCode';
+  static String _getCurrentQuoteIndexKey(String languageCode) => 'current_quote_index_$languageCode';
 
   // Migration Status
   static Future<bool> isHistoryMigrated() async {
@@ -418,4 +422,45 @@ class PreferencesService {
     final json = resources.toJson();
     await prefs.setString(_treeResourcesKey, jsonEncode(json));
   }
+
+  // Daily Quotes
+  static Future<List<int>?> getQuoteOrder(String languageCode) async {
+    final prefs = await SharedPreferences.getInstance();
+    final orderString = prefs.getString(_getQuoteOrderKey(languageCode));
+    if (orderString == null) return null;
+    try {
+      final List<dynamic> jsonList = jsonDecode(orderString);
+      return jsonList.cast<int>();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static Future<void> saveQuoteOrder(String languageCode, List<int> order) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_getQuoteOrderKey(languageCode), jsonEncode(order));
+  }
+
+  static Future<int> getCurrentQuoteIndex(String languageCode) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_getCurrentQuoteIndexKey(languageCode)) ?? 0;
+  }
+
+  static Future<void> saveCurrentQuoteIndex(String languageCode, int index) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_getCurrentQuoteIndexKey(languageCode), index);
+  }
+
+  static Future<DateTime?> getQuoteLastShownDate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final dateString = prefs.getString(_quoteLastShownDateKey);
+    if (dateString == null) return null;
+    return DateTime.parse(dateString);
+  }
+
+  static Future<void> saveQuoteLastShownDate(DateTime date) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_quoteLastShownDateKey, date.toIso8601String());
+  }
 }
+

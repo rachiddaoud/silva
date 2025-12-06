@@ -47,6 +47,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   ViewMode _currentView = ViewMode.today;
   bool _isDayCompleted = false;
   // final List<String> _dailyQuotes = dailyQuotes; // Removed, using getDailyQuotes dynamically
+  String _todaysQuote = "";
+
 
   @override
   void initState() {
@@ -62,6 +64,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Track screen view
     AnalyticsService.instance.logScreenView(screenName: 'home');
   }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadDailyQuote();
+  }
+
+  @override
+  void didUpdateWidget(HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.currentLocale != oldWidget.currentLocale) {
+      _loadDailyQuote();
+    }
+  }
+
 
   void _setupNotificationCallback() {
     // Définir le callback pour gérer les clics sur les notifications
@@ -101,6 +118,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _refreshMorningNotification();
       // Recharger les victoires pour refléter les changements depuis les notifications
       _reloadVictories();
+      _loadDailyQuote();
     }
   }
   
@@ -112,6 +130,63 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       });
     }
   }
+  
+  Future<void> _loadDailyQuote() async {
+    final languageCode = widget.currentLocale?.languageCode ?? 
+        Localizations.localeOf(context).languageCode;
+    
+    // Get available quotes
+    final quotes = getDailyQuotes(languageCode);
+    if (quotes.isEmpty) return;
+    
+    // Get saved order
+    var order = await PreferencesService.getQuoteOrder(languageCode);
+    
+    // Initialize or re-initialize if length changed
+    if (order == null || order.length != quotes.length) {
+      // Create new shuffled order
+      order = List<int>.generate(quotes.length, (i) => i);
+      order.shuffle();
+      await PreferencesService.saveQuoteOrder(languageCode, order);
+      // Reset index to start from beginning of new order
+      await PreferencesService.saveCurrentQuoteIndex(languageCode, 0);
+    }
+    
+    // Check if we need to advance the quote (new day)
+    final lastShownDate = await PreferencesService.getQuoteLastShownDate();
+    final now = DateTime.now();
+    var currentIndex = await PreferencesService.getCurrentQuoteIndex(languageCode);
+    
+    final isSameDay = lastShownDate != null && 
+        lastShownDate.year == now.year && 
+        lastShownDate.month == now.month && 
+        lastShownDate.day == now.day;
+        
+    if (!isSameDay) {
+      if (lastShownDate != null) {
+        // Prepare next quote for the new day
+        currentIndex = (currentIndex + 1) % quotes.length;
+        await PreferencesService.saveCurrentQuoteIndex(languageCode, currentIndex);
+      }
+      // Update last shown date to today
+      await PreferencesService.saveQuoteLastShownDate(now);
+    }
+    
+    // Get the quote
+    if (currentIndex >= order.length) {
+      currentIndex = 0; // Safety fallback
+    }
+    
+    final quoteIndex = order[currentIndex];
+    final quote = quotes[quoteIndex];
+    
+    if (mounted) {
+      setState(() {
+        _todaysQuote = quote;
+      });
+    }
+  }
+
 
   Future<void> _refreshMorningNotification() async {
     // Reprogrammer les notifications pour mettre à jour la citation du jour et le nom de l'utilisateur
@@ -537,15 +612,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   String get _currentQuote {
-    // Pour le POC, utiliser la première citation
-    // Ou rotation simple basée sur le jour
-    final dayOfYear = DateTime.now().difference(
-      DateTime(DateTime.now().year, 1, 1),
-    ).inDays;
-    final locale = Localizations.localeOf(context).languageCode;
-    final quotes = getDailyQuotes(locale);
-    return quotes[dayOfYear % quotes.length];
+    if (_todaysQuote.isNotEmpty) {
+      return _todaysQuote;
+    }
+    // Fallback while loading
+    final locale = widget.currentLocale?.languageCode ?? 
+        Localizations.localeOf(context).languageCode;
+    return getDailyQuotes(locale).first;
   }
+
 
   Widget _buildTodayView() {
     final theme = Theme.of(context);

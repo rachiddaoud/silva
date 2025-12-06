@@ -421,7 +421,11 @@ ${comment.isNotEmpty ? '💬 $comment' : ''}
 
             // Sélection de l'émotion
             Text(
-              AppLocalizations.of(context)!.howDoYouFeel,
+              (targetDate.year == DateTime.now().year &&
+                      targetDate.month == DateTime.now().month &&
+                      targetDate.day == DateTime.now().day)
+                  ? AppLocalizations.of(context)!.howDoYouFeel
+                  : AppLocalizations.of(context)!.howWasYourDay,
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,

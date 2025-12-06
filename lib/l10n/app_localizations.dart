@@ -608,6 +608,12 @@ abstract class AppLocalizations {
   /// **'Comment vous sentez-vous aujourd\'hui ?'**
   String get howDoYouFeel;
 
+  /// No description provided for @howWasYourDay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Comment s\'est passée votre journée ?'**
+  String get howWasYourDay;
+
   /// No description provided for @wordAboutDay.
   ///
   /// In fr, this message translates to:

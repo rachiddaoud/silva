@@ -271,6 +271,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get howDoYouFeel => 'How do you feel today?';
 
   @override
+  String get howWasYourDay => 'How was your day?';
+
+  @override
   String get wordAboutDay => 'A word about your day?';
 
   @override

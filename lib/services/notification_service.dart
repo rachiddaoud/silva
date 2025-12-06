@@ -49,11 +49,39 @@ class NotificationService {
   }
 
   // Get current quote in the appropriate language
-  static Future<String> _getCurrentQuote() async {
+  static Future<String> _getCurrentQuote({DateTime? targetDate}) async {
     final localeCode = await _getLocaleCode();
     final quotes = getDailyQuotes(localeCode);
-    final dayOfYear = DateTime.now().difference(
-      DateTime(DateTime.now().year, 1, 1),
+    if (quotes.isEmpty) return "";
+
+    final date = targetDate ?? DateTime.now();
+
+    // Try to use randomized order
+    final order = await PreferencesService.getQuoteOrder(localeCode);
+    
+    if (order != null && order.length == quotes.length) {
+      var currentIndex = await PreferencesService.getCurrentQuoteIndex(localeCode);
+      final lastShownDate = await PreferencesService.getQuoteLastShownDate();
+      
+      if (lastShownDate != null) {
+        // Calculate difference in days to predict the index
+        final d1 = DateTime(lastShownDate.year, lastShownDate.month, lastShownDate.day);
+        final d2 = DateTime(date.year, date.month, date.day);
+        final diff = d2.difference(d1).inDays;
+        
+        if (diff > 0) {
+          currentIndex = (currentIndex + diff) % quotes.length;
+        }
+      }
+      
+      if (currentIndex < order.length) {
+        return quotes[order[currentIndex]];
+      }
+    }
+
+    // Fallback to deterministic logic if preference is missing or invalid
+    final dayOfYear = date.difference(
+      DateTime(date.year, 1, 1),
     ).inDays;
     return quotes[dayOfYear % quotes.length];
   }
@@ -371,8 +399,11 @@ class NotificationService {
     final userName = await PreferencesService.getUserName();
     final name = userName ?? (localeCode == 'en' ? 'you' : 'vous');
     
-    // Get quote of the day
-    final quote = await _getCurrentQuote();
+    // Calculate schedule time
+    final scheduledDate = _nextInstanceOf9AM();
+
+    // Get quote of the day for that date
+    final quote = await _getCurrentQuote(targetDate: scheduledDate);
     
     // Format message
     final title = l10n.notifGoodMorning(name);
@@ -382,7 +413,7 @@ class NotificationService {
       1, // Different ID from evening notification (0)
       title,
       body,
-      _nextInstanceOf9AM(),
+      scheduledDate,
       NotificationDetails(
         android: AndroidNotificationDetails(
           'morning_quote',
@@ -404,7 +435,7 @@ class NotificationService {
       payload: _morningNotificationType,
     );
     
-    debugPrint('✅ Scheduled morning notification for ${_nextInstanceOf9AM()}');
+    debugPrint('✅ Scheduled morning notification for $scheduledDate');
   }
 
   static tz.TZDateTime _nextInstanceOf9AM() {

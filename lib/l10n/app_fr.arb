@@ -108,6 +108,7 @@
     }
   },
   "howDoYouFeel": "Comment vous sentez-vous aujourd'hui ?",
+  "howWasYourDay": "Comment s'est passée votre journée ?",
   "wordAboutDay": "Un mot sur votre journée ?",
   "share": "Partager",
   "validate": "Valider",

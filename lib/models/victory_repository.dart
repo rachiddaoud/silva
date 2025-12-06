@@ -34,6 +34,8 @@ abstract class VictoryImages {
   static const String tidy2 = 'assets/doodles/tidy_2.png';
   static const String vitamine = 'assets/doodles/pregnant_vitamine.png';
   static const String pregnantRisingLegs = 'assets/doodles/pregnant_rising_legs.png';
+  static const String pregnantBreathing = 'assets/doodles/pregnant_breathing.png';
+  static const String motherPuttingDownBaby = 'assets/doodles/mother_putting_down_baby.png';
 }
 
 /// Victory ID ranges by category:
@@ -70,7 +72,7 @@ abstract class VictoryRepository {
     VictoryCard(id: 105, text: "Petite marche (15 min)", imagePath: VictoryImages.pregnantWalking),
     VictoryCard(id: 106, text: "J'ai préparé une collation saine", imagePath: VictoryImages.snack),
     VictoryCard(id: 107, text: "Je me suis reposé", imagePath: VictoryImages.resting1),
-    VictoryCard(id: 108, text: "J'ai respiré profondément", imagePath: VictoryImages.deepBreathing),
+    VictoryCard(id: 108, text: "J'ai respiré profondément", imagePath: VictoryImages.pregnantBreathing),
   ];
 
   /// Victory templates for new mothers (postpartum). IDs: 200-299
@@ -80,7 +82,7 @@ abstract class VictoryRepository {
     VictoryCard(id: 202, text: "J'ai demandé de l'aide", imagePath: VictoryImages.help),
     VictoryCard(id: 203, text: "J'ai mangé un repas chaud", imagePath: VictoryImages.eat),
     VictoryCard(id: 204, text: "J'ai respiré 1 minute", imagePath: VictoryImages.deepBreathing),
-    VictoryCard(id: 205, text: "J'ai posé le bébé 5 min", imagePath: VictoryImages.breakTime),
+    VictoryCard(id: 205, text: "J'ai posé le bébé 5 min", imagePath: VictoryImages.motherPuttingDownBaby),
     VictoryCard(id: 206, text: "J'ai dit \"Non\"", imagePath: VictoryImages.stop),
     VictoryCard(id: 207, text: "J'ai souri", imagePath: VictoryImages.smile),
     //VictoryCard(id: 208, text: "J'ai vu le soleil 5 min", imagePath: VictoryImages.walk),

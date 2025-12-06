@@ -272,6 +272,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get howDoYouFeel => 'Comment vous sentez-vous aujourd\'hui ?';
 
   @override
+  String get howWasYourDay => 'Comment s\'est passée votre journée ?';
+
+  @override
   String get wordAboutDay => 'Un mot sur votre journée ?';
 
   @override

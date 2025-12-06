@@ -780,24 +780,24 @@ class NotificationService {
 
   /// Debug method to test scheduled notifications - schedules one for 1 minute from now
   static Future<void> debugScheduleTestNotification() async {
-    // First check if we can schedule exact alarms
-    final canSchedule = await canScheduleExactAlarms();
-    if (!canSchedule) {
-      debugPrint('⚠️ Cannot schedule exact alarms! Requesting permission...');
-      final granted = await requestExactAlarmPermission();
-      if (!granted) {
-        debugPrint('❌ Exact alarm permission denied!');
-        return;
-      }
-    }
-    
-    final now = tz.TZDateTime.now(tz.local);
-    final scheduledTime = now.add(const Duration(minutes: 1));
-    
-    debugPrint('🧪 Current time: $now');
-    debugPrint('🧪 Scheduling TEST notification for $scheduledTime (in 1 minute)');
-    
     try {
+      // First check if we can schedule exact alarms
+      final canSchedule = await canScheduleExactAlarms();
+      if (!canSchedule) {
+        debugPrint('⚠️ Cannot schedule exact alarms! Requesting permission...');
+        final granted = await requestExactAlarmPermission();
+        if (!granted) {
+          debugPrint('❌ Exact alarm permission denied!');
+          return;
+        }
+      }
+      
+      final now = tz.TZDateTime.now(tz.local);
+      final scheduledTime = now.add(const Duration(minutes: 1));
+      
+      debugPrint('🧪 Current time: $now');
+      debugPrint('🧪 Scheduling TEST notification for $scheduledTime (in 1 minute)');
+      
       await _notifications.zonedSchedule(
         9999, // Test notification ID
         '🧪 Test Notification',
@@ -825,12 +825,15 @@ class NotificationService {
       );
       
       debugPrint('✅ Test notification scheduled successfully for $scheduledTime');
-    } catch (e) {
-      debugPrint('❌ Error scheduling test notification: $e');
+      
+      // Print pending notifications after scheduling
+      await debugPrintPendingNotifications();
+    } catch (e, stackTrace) {
+      debugPrint('❌ CRITICAL ERROR scheduling test notification: $e');
+      debugPrint(stackTrace.toString());
+      // Re-throw to let the UI know something went wrong
+      throw Exception('Failed to schedule notification: $e');
     }
-    
-    // Print pending notifications after scheduling
-    await debugPrintPendingNotifications();
   }
 }
 

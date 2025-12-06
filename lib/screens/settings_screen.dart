@@ -771,16 +771,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: 'Schedule a notification for 1 minute from now',
                   color: Colors.orange,
                   onTap: () async {
-                    await NotificationService.debugScheduleTestNotification();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Test notification scheduled for 1 minute from now!'),
-                          backgroundColor: theme.colorScheme.secondary,
-                          behavior: SnackBarBehavior.floating,
-                          duration: const Duration(seconds: 3),
-                        ),
-                      );
+                    try {
+                      await NotificationService.debugScheduleTestNotification();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Test notification scheduled for 1 minute from now!'),
+                            backgroundColor: theme.colorScheme.secondary,
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 3),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error: $e'),
+                            backgroundColor: theme.colorScheme.error,
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 5),
+                          ),
+                        );
+                      }
                     }
                   },
                 ),

@@ -6,14 +6,15 @@
 -keep class io.flutter.**  { *; }
 -keep class io.flutter.plugins.**  { *; }
 
-# Gson uses generic type information stored in a class file when working with fields. Proguard
-# removes such information by default, so configure it to keep all of it.
+# Gson Configuration
+# prevent code shrinking for Gson
+-keep class com.google.gson.** { *; }
+-keep class com.google.gson.reflect.TypeToken { *; }
+-keep class * extends com.google.gson.reflect.TypeToken
+
+# Keep generic type information for Gson
 -keepattributes Signature
-
-# For using GSON @Expose annotation
 -keepattributes *Annotation*
-
-# Gson specific classes
 -keepattributes EnclosingMethod
 -keepattributes InnerClasses
 
@@ -25,8 +26,13 @@
 -keep class com.brightsoftwaresolutions.timezone.** { *; }
 -dontwarn com.brightsoftwaresolutions.timezone.**
 
-# Keep notification classes
+# Keep notification classes and their members
 -keep class com.dexterous.flutterlocalnotifications.** { *; }
+-keep class com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver { *; }
+-keep class com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver { *; }
+-keepnames class com.dexterous.flutterlocalnotifications.** { *; }
+
+# Keep AndroidX Work (used by local notifications)
 -keep class androidx.work.** { *; }
 -dontwarn androidx.work.**
 
@@ -36,11 +42,11 @@
 # Keep Google Fonts
 -keep class dev.fluttercommunity.plus.share.** { *; }
 
-# Ignore missing Google Play Core classes (optional dependency)
+# Play Core
 -dontwarn com.google.android.play.core.**
 -keep class com.google.android.play.core.** { *; }
 
-# Preserve line numbers for debugging
+# Debugging
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 

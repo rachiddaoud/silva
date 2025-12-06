@@ -25,14 +25,14 @@ abstract class VictoryImages {
   static const String deconnecting = 'assets/doodles/deconnecting.png';
   static const String deepBreathing = 'assets/doodles/deep_breathing.png';
   static const String exercice = 'assets/doodles/exercice.png';
-  static const String hydrating = 'assets/doodles/hydrating.png';
+  static const String hydrating = 'assets/doodles/pregenant_hydrating.png';
   static const String pregnantDrinking = 'assets/doodles/pregenant_drinking.png';
   static const String pregnantWalking = 'assets/doodles/pregenant_walking.png';
   static const String readingBook = 'assets/doodles/reading_book.png';
   static const String resting1 = 'assets/doodles/resting_1.png';
-  static const String talkingBaby = 'assets/doodles/talking_baby.png';
+  static const String talkingBaby = 'assets/doodles/pregenant_talking_baby.png';
   static const String tidy2 = 'assets/doodles/tidy_2.png';
-  static const String vitamine = 'assets/doodles/vitamine.png';
+  static const String vitamine = 'assets/doodles/pregenant_vitamine.png';
 }
 
 /// Victory ID ranges by category:
@@ -62,9 +62,9 @@ abstract class VictoryRepository {
   /// Victory templates for future mothers (pregnancy). IDs: 100-199
   static const List<VictoryCard> _futureMamanVictories = [
     VictoryCard(id: 100, text: "J'ai pris mes vitamines", imagePath: VictoryImages.vitamine),
-    VictoryCard(id: 101, text: "J'ai bu 2L d'eau", imagePath: VictoryImages.hydrating),
+    VictoryCard(id: 101, text: "J'ai bu 2L d'eau", imagePath: VictoryImages.pregnantDrinking),
     VictoryCard(id: 102, text: "J'ai surélevé mes jambes", imagePath: VictoryImages.resting1),
-    VictoryCard(id: 103, text: "J'ai hydraté mon ventre", imagePath: VictoryImages.shower),
+    VictoryCard(id: 103, text: "J'ai hydraté mon ventre", imagePath: VictoryImages.hydrating),
     VictoryCard(id: 104, text: "J'ai parlé au bébé", imagePath: VictoryImages.talkingBaby),
     VictoryCard(id: 105, text: "Petite marche (15 min)", imagePath: VictoryImages.pregnantWalking),
     VictoryCard(id: 106, text: "J'ai préparé une collation saine", imagePath: VictoryImages.snack),

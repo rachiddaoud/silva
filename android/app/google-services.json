@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "174370766580-32423oumu43ff6uvitl8ardgjg854j6k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rachid.silva",
+            "certificate_hash": "50f38357768393181fceff5ad2decc4076fa8f47"
+          }
+        },
+        {
           "client_id": "174370766580-h345ostpe267pl0ambdkte3jji6c8btn.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -34,7 +42,7 @@
               "client_id": "174370766580-i2gbdaov6kd5ov6tg2tuhg66nbaf3k0f.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.rachid.silva"
+                "bundle_id": "com.example.silva"
               }
             }
           ]

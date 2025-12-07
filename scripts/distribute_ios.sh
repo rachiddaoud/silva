@@ -20,11 +20,11 @@ echo -e "${BLUE}📦 IPA location: build/ios/ipa/silva.ipa${NC}"
 echo ""
 
 # Your iOS Firebase App ID (from GoogleService-Info.plist - GOOGLE_APP_ID)
-FIREBASE_APP_ID="1:174370766580:ios:6eead10cbb626bd532a8a1"
+FIREBASE_APP_ID="1:174370766580:ios:b310590e7dda85f132a8a1"
 
 # Get release notes from user
-echo -e "${BLUE}📝 Enter release notes (press Enter when done):${NC}"
-read RELEASE_NOTES
+# echo -e "${BLUE}📝 Enter release notes (press Enter when done):${NC}"
+# read RELEASE_NOTES
 
 # Default release notes if empty
 if [ -z "$RELEASE_NOTES" ]; then

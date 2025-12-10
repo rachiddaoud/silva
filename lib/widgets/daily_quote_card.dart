@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../l10n/app_localizations.dart';
+import '../services/home_widget_service.dart';
 
 class DailyQuoteCard extends StatefulWidget {
   final String quote;
@@ -21,6 +22,28 @@ class DailyQuoteCard extends StatefulWidget {
 
 class _DailyQuoteCardState extends State<DailyQuoteCard> {
   final GlobalKey _globalKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    // Update the home screen widget when this card is first loaded
+    _updateHomeWidget();
+  }
+
+  @override
+  void didUpdateWidget(DailyQuoteCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.quote != widget.quote) {
+      _updateHomeWidget();
+    }
+  }
+
+  void _updateHomeWidget() {
+    // Schedule update to avoid build-phase issues
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      HomeWidgetService.updateQuote(widget.quote);
+    });
+  }
 
   Future<void> _shareImage() async {
     try {

@@ -23,8 +23,8 @@ echo ""
 FIREBASE_APP_ID="1:174370766580:android:edee7ac19d6dcd3a32a8a1"
 
 # Get release notes from user
-echo -e "${BLUE}📝 Enter release notes (press Enter when done):${NC}"
-read RELEASE_NOTES
+# echo -e "${BLUE}📝 Enter release notes (press Enter when done):${NC}"
+# read RELEASE_NOTES
 
 # Default release notes if empty
 if [ -z "$RELEASE_NOTES" ]; then

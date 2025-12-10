@@ -10,6 +10,41 @@ import UserNotifications
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
     
+    // Register platform channel for saving widget images to App Group
+    // We'll set this up after the engine is ready
+    if let controller = window?.rootViewController as? FlutterViewController {
+      let channel = FlutterMethodChannel(
+        name: "com.rachid.silva/widget_image",
+        binaryMessenger: controller.binaryMessenger
+      )
+      
+      channel.setMethodCallHandler { (call: FlutterMethodCall, result: @escaping FlutterResult) in
+        if call.method == "saveImageToAppGroup" {
+          guard let args = call.arguments as? [String: Any],
+                let imageData = args["imageData"] as? FlutterStandardTypedData,
+                let filename = args["filename"] as? String else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments", details: nil))
+            return
+          }
+          
+          let appGroup = "group.com.rachid.silva.widgets"
+          if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup) {
+            let fileURL = containerURL.appendingPathComponent(filename)
+            do {
+              try imageData.data.write(to: fileURL)
+              result(filename) // Return filename for UserDefaults
+            } catch {
+              result(FlutterError(code: "SAVE_ERROR", message: error.localizedDescription, details: nil))
+            }
+          } else {
+            result(FlutterError(code: "APP_GROUP_ERROR", message: "Could not access App Group container", details: nil))
+          }
+        } else {
+          result(FlutterMethodNotImplemented)
+        }
+      }
+    }
+    
     // Configurer les catégories de notifications avec actions pour iOS
     if #available(iOS 10.0, *) {
       UNUserNotificationCenter.current().delegate = self

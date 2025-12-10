@@ -16,6 +16,7 @@ import 'package:silva/models/tree/tree_state.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/home_widget_service.dart';
 
 class HomeTreeWidget extends StatefulWidget {
   final int victoryCount;
@@ -112,6 +113,10 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     
     if (mounted) {
       setState(() {});
+      // Update widget after first frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        HomeWidgetService.updateTreeFromKey(_shareableTreeKey);
+      });
     }
   }
 
@@ -134,6 +139,12 @@ class _HomeTreeWidgetState extends State<HomeTreeWidget> {
     if (_treeController.tree != null) {
       // Save locally only - Firebase sync happens at end of day
       await PreferencesService.saveTreeState(_treeController.tree!);
+      
+      // Update the widget snapshot
+      // Using addPostFrameCallback to ensure the frame is ready for capture if this was called during a build/tick
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        HomeWidgetService.updateTreeFromKey(_shareableTreeKey);
+      });
     }
   }
 

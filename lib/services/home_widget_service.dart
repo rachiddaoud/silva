@@ -24,12 +24,14 @@ class HomeWidgetService {
       // Save data
       await HomeWidget.saveWidgetData<String>(keyQuoteText, quote);
       
+      debugPrint('✅ [HomeWidget] Quote saved to storage: "${quote.substring(0, quote.length.clamp(0, 30))}..."');
+      
       // Update Native Widgets
       await HomeWidget.updateWidget(
         iOSName: quoteWidgetName,
         androidName: 'QuoteWidgetProvider',
       );
-      debugPrint('✅ [HomeWidget] Quote Updated: "${quote.substring(0, 10)}..."');
+      debugPrint('✅ [HomeWidget] Quote widget update triggered');
     } catch (e) {
       debugPrint('❌ [HomeWidget] Error updating quote: $e');
     }
@@ -38,6 +40,10 @@ class HomeWidgetService {
   /// Render and update the tree image from a Flutter widget key
   static Future<void> updateTreeFromKey(GlobalKey key) async {
     try {
+      // Wait a bit to ensure all images in the tree are fully loaded
+      // The tree loads leaf, flower, grass, and bark images asynchronously
+      await Future.delayed(const Duration(milliseconds: 500));
+      
       // Get the RenderRepaintBoundary from the key's context
       final context = key.currentContext;
       if (context == null) {
@@ -51,8 +57,8 @@ class HomeWidgetService {
         return;
       }
       
-      // Capture the image from the RepaintBoundary
-      final image = await renderObject.toImage(pixelRatio: 2.0);
+      // Capture the image from the RepaintBoundary with high quality
+      final image = await renderObject.toImage(pixelRatio: 3.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) {
         debugPrint('❌ [HomeWidget] Failed to convert image to byte data');

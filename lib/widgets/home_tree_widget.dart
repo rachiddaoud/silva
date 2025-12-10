@@ -1468,53 +1468,28 @@ class _ShareableTreeContent extends StatelessWidget {
     final theme = Theme.of(context);
     
     return Container(
-      width: 400,
-      height: 500,
-      padding: const EdgeInsets.all(24),
+      width: 300,
+      height: 350,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
+        color: theme.scaffoldBackgroundColor.withOpacity(0.85),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          // Tree - reduced size to fit
-          Flexible(
-            child: SizedBox(
-              width: 280,
-              height: 280,
-              child: Center(child: treeWidget),
+          // App Icon at top
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 8),
+            child: Image.asset(
+              'assets/icons/icon2.png',
+              width: 32,
+              height: 32,
             ),
           ),
-          const SizedBox(height: 20),
-          // Decorative Divider
-          Container(
-            width: 40,
-            height: 2,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 12),
-          // Branding
-          Text(
-            "Silva",
-            style: GoogleFonts.greatVibes(
-              fontSize: 28,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            "Mon arbre de croissance",
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              letterSpacing: 1,
-              fontWeight: FontWeight.w500,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
+          // Tree - larger to show grass properly
+          Expanded(
+            child: Center(child: treeWidget),
           ),
         ],
       ),

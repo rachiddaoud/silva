@@ -14,7 +14,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import '../l10n/app_localizations.dart';
 import 'services/analytics_service.dart';
-import 'package:home_widget/home_widget.dart';
+import 'package:home_widget/home_widget.dart' as hw;
 import 'services/home_widget_service.dart';
 
 void main() async {
@@ -25,7 +25,7 @@ void main() async {
   // Initialize analytics service
   await AnalyticsService.instance.init();
   // Initialize HomeWidget with app group ID
-  await HomeWidget.setAppGroupId(HomeWidgetService.appGroupId);
+  await hw.HomeWidget.setAppGroupId(HomeWidgetService.appGroupId);
   runApp(const MyApp());
 }
 

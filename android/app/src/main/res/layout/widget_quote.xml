@@ -1,22 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-   android:layout_height="match_parent"
-    android:padding="12dp"
+    android:layout_height="match_parent"
+    android:padding="16dp"
     android:background="@drawable/widget_background">
 
+    <!-- Quote Text -->
     <TextView
         android:id="@+id/widget_quote_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
+        android:layout_centerVertical="true"
+        android:layout_marginBottom="8dp"
         android:fontFamily="serif"
         android:gravity="center"
         android:lineSpacingMultiplier="1.4"
-        android:padding="16dp"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:paddingTop="24dp"
         android:text="Loading quote..."
         android:textColor="#333333"
-        android:textSize="16sp"
+        android:textSize="17sp"
         android:textStyle="italic" />
+
+    <!-- Decorative Icon (Quote marks) -->
+    <TextView
+        android:id="@+id/quote_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:text="❝"
+        android:textColor="#5CA0C5"
+        android:textSize="32sp"
+        android:paddingTop="4dp" />
+
+    <!-- Small Label at Bottom -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/widget_quote_text"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="12dp"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.15"
+        android:text="SILVA"
+        android:textAllCaps="true"
+        android:textColor="#999999"
+        android:textSize="9sp" />
 
 </RelativeLayout>

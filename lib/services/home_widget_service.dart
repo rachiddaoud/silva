@@ -4,8 +4,9 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
 import 'dart:io';
+import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
-import 'package:home_widget/home_widget.dart';
+import 'package:home_widget/home_widget.dart' as hw;
 
 class HomeWidgetService {
   static const String appGroupId = 'group.com.rachid.silva.widgets';
@@ -16,22 +17,46 @@ class HomeWidgetService {
 
   // Key names for UserDefaults/SharedPreferences
   static const String keyQuoteText = 'quote_text';
-  static const String keyTreeImage = 'tree_image'; // This is the filename suffix usually
+  static const String keyTreeImage = 'tree_image';
+  static const String keyTreeImageData = 'tree_image_data'; // Base64 encoded for iOS
 
   /// Update the quote text in the widget
   static Future<void> updateQuote(String quote) async {
     try {
-      // Save data
-      await HomeWidget.saveWidgetData<String>(keyQuoteText, quote);
+      // iOS workaround: Save directly to App Group via platform channel
+      if (Platform.isIOS) {
+        try {
+          const platform = MethodChannel('com.rachid.silva/widget');
+          await platform.invokeMethod('saveToAppGroup', {
+            'key': keyQuoteText,
+            'value': quote,
+          });
+          debugPrint('✅ [HomeWidget] Quote saved via platform channel to App Group');
+        } catch (e) {
+          debugPrint('⚠️ [HomeWidget] Platform channel failed: $e');
+        }
+      }
       
-      debugPrint('✅ [HomeWidget] Quote saved to storage: "${quote.substring(0, quote.length.clamp(0, 30))}..."');
+      // Also save via home_widget package (for Android and as fallback)
+      // Save data - home_widget handles App Group automatically
+      await hw.HomeWidget.saveWidgetData<String>(keyQuoteText, quote);
+      
+      debugPrint('✅ [HomeWidget] Quote saved: "${quote.substring(0, quote.length.clamp(0, 30))}..."');
+      
+      // VERIFY: Try to read it back immediately
+      final readBack = await hw.HomeWidget.getWidgetData<String>(keyQuoteText);
+      if (readBack != null) {
+        debugPrint('✅ [HomeWidget] Quote verified - can read back: "${readBack.substring(0, readBack.length.clamp(0, 30))}..."');
+      } else {
+        debugPrint('❌ [HomeWidget] ERROR: Cannot read back saved quote!');
+      }
       
       // Update Native Widgets
-      await HomeWidget.updateWidget(
+      await hw.HomeWidget.updateWidget(
         iOSName: quoteWidgetName,
         androidName: 'QuoteWidgetProvider',
       );
-      debugPrint('✅ [HomeWidget] Quote widget update triggered');
+      debugPrint('✅ [HomeWidget] Quote widget updated');
     } catch (e) {
       debugPrint('❌ [HomeWidget] Error updating quote: $e');
     }
@@ -40,8 +65,7 @@ class HomeWidgetService {
   /// Render and update the tree image from a Flutter widget key
   static Future<void> updateTreeFromKey(GlobalKey key) async {
     try {
-      // Wait a bit to ensure all images in the tree are fully loaded
-      // The tree loads leaf, flower, grass, and bark images asynchronously
+      // Wait to ensure images are loaded
       await Future.delayed(const Duration(milliseconds: 500));
       
       // Get the RenderRepaintBoundary from the key's context
@@ -67,51 +91,27 @@ class HomeWidgetService {
       
       final pngBytes = byteData.buffer.asUint8List();
       
-      // Save the image to a location accessible by the widget
-      // For iOS: Save to App Group container via platform channel
-      // For Android: Save to app's files directory
-      String imagePath;
-      
+      // Save differently for iOS and Android
       if (Platform.isIOS) {
-        // iOS: Use platform channel to save to App Group container
-        const platform = MethodChannel('com.rachid.silva/widget_image');
-        try {
-          final filename = await platform.invokeMethod<String>(
-            'saveImageToAppGroup',
-            {
-              'imageData': pngBytes,
-              'filename': 'tree_snapshot.png',
-            },
-          );
-          imagePath = filename ?? 'tree_snapshot.png';
-          debugPrint('✅ [HomeWidget] Tree image saved to App Group (iOS): $imagePath');
-        } catch (e) {
-          debugPrint('❌ [HomeWidget] Error saving to App Group: $e');
-          // Fallback: save to app support directory (won't be accessible by widget)
-          final appSupportDir = await getApplicationSupportDirectory();
-          final file = File('${appSupportDir.path}/tree_snapshot.png');
-          await file.writeAsBytes(pngBytes);
-          imagePath = 'tree_snapshot.png';
-          debugPrint('⚠️ [HomeWidget] Fallback: saved to app support: ${file.path}');
-        }
+        // iOS: Save as base64 string which can be stored in UserDefaults
+        final base64Image = base64Encode(pngBytes);
+        await hw.HomeWidget.saveWidgetData<String>(keyTreeImageData, base64Image);
+        debugPrint('✅ [HomeWidget] Tree image data saved (iOS) - ${pngBytes.length} bytes');
       } else {
-        // Android: Save to app files directory
+        // Android: Save to file
         final appDir = await getApplicationDocumentsDirectory();
         final file = File('${appDir.path}/tree_snapshot.png');
         await file.writeAsBytes(pngBytes);
-        imagePath = file.path; // Full path for Android
+        await hw.HomeWidget.saveWidgetData<String>(keyTreeImage, file.path);
         debugPrint('✅ [HomeWidget] Tree image saved (Android): ${file.path}');
       }
       
-      // Save the path/filename to UserDefaults/SharedPreferences
-      await HomeWidget.saveWidgetData<String>(keyTreeImage, imagePath);
-
       // Update the widget
-      await HomeWidget.updateWidget(
+      await hw.HomeWidget.updateWidget(
         iOSName: treeWidgetName,
         androidName: 'TreeWidgetProvider',
       );
-      debugPrint('✅ [HomeWidget] Tree Updated from snapshot');
+      debugPrint('✅ [HomeWidget] Tree widget update triggered');
     } catch (e) {
       debugPrint('❌ [HomeWidget] Error updating tree: $e');
     }

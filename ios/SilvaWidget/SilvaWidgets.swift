@@ -28,7 +28,16 @@ struct QuoteProvider: TimelineProvider {
     
     private func loadQuote() -> String {
         let userDefaults = UserDefaults(suiteName: WidgetConstants.appGroup)
-        return userDefaults?.string(forKey: WidgetConstants.keyQuote) ?? "Open Silva to see your daily thought."
+        print("🔍 [Widget] App Group: \(WidgetConstants.appGroup)")
+        print("🔍 [Widget] UserDefaults exists: \(userDefaults != nil)")
+        
+        if let quote = userDefaults?.string(forKey: WidgetConstants.keyQuote) {
+            print("✅ [Widget] Quote found: \(quote.prefix(30))...")
+            return quote
+        }
+        
+        print("❌ [Widget] No quote found in UserDefaults")
+        return "Open Silva to see your daily thought."
     }
 }
 
@@ -48,9 +57,7 @@ struct QuoteWidgetEntryView : View {
                 .padding()
                 .foregroundColor(Color(UIColor.darkGray))
         }
-        .containerBackground(for: .widget) {
-            Color.white
-        }
+        .background(Color.white)
     }
 }
 
@@ -59,14 +66,7 @@ struct QuoteWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: QuoteProvider()) { entry in
-            if #available(iOS 17.0, *) {
-                QuoteWidgetEntryView(entry: entry)
-                    .containerBackground(.fill.tertiary, for: .widget)
-            } else {
-                QuoteWidgetEntryView(entry: entry)
-                    .padding()
-                    .background()
-            }
+            QuoteWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("Daily Quote")
         .description("Your daily thought from Silva.")
@@ -94,6 +94,15 @@ struct TreeProvider: TimelineProvider {
     
     private func loadTreeImage() -> UIImage? {
         let userDefaults = UserDefaults(suiteName: WidgetConstants.appGroup)
+        
+        // Try to load base64 encoded image data
+        if let base64String = userDefaults?.string(forKey: "tree_image_data") {
+            if let imageData = Data(base64Encoded: base64String) {
+                return UIImage(data: imageData)
+            }
+        }
+        
+        // Fallback: try to load from file (for backward compatibility)
         if let filename = userDefaults?.string(forKey: WidgetConstants.keyTreeImage) {
             let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: WidgetConstants.appGroup)
             if let fileUrl = url?.appendingPathComponent(filename) {
@@ -102,6 +111,7 @@ struct TreeProvider: TimelineProvider {
                 }
             }
         }
+        
         return nil
     }
 }
@@ -128,9 +138,7 @@ struct TreeWidgetEntryView : View {
                     .foregroundColor(.gray)
             }
         }
-        .containerBackground(for: .widget) {
-            Color.white
-        }
+        .background(Color.white)
     }
 }
 
@@ -139,17 +147,12 @@ struct TreeWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: TreeProvider()) { entry in
-             if #available(iOS 17.0, *) {
-                TreeWidgetEntryView(entry: entry)
-                    .containerBackground(.fill.tertiary, for: .widget)
-            } else {
-                TreeWidgetEntryView(entry: entry)
-                    .padding()
-                    .background()
-            }
+            TreeWidgetEntryView(entry: entry)
+                .padding()
+                .background(Color.white)
         }
         .configurationDisplayName("My Silva Tree")
         .description("View the growth of your digital tree.")
-        .supportedFamilies([.systemSmall, .systemLarge])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
